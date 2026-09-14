@@ -1,10 +1,12 @@
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  throw new Error(
-    "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY",
-  );
+if (!SUPABASE_URL) {
+  throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
+}
+
+if (!SUPABASE_ANON_KEY) {
+  throw new Error("Missing NEXT_PUBLIC_SUPABASE_ANON_KEY");
 }
 
 const FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`;
@@ -42,31 +44,15 @@ async function callFunction<T extends ApiResponse>(
   if (!response.ok || !data.success) {
     const error = new Error(
       data.error || "Something went wrong. Please try again.",
-    );
+    ) as Error & {
+      status?: number;
+      code?: string;
+      data?: T;
+    };
 
-    (
-      error as Error & {
-        status?: number;
-        code?: string;
-        data?: T;
-      }
-    ).status = response.status;
-
-    (
-      error as Error & {
-        status?: number;
-        code?: string;
-        data?: T;
-      }
-    ).code = data.code;
-
-    (
-      error as Error & {
-        status?: number;
-        code?: string;
-        data?: T;
-      }
-    ).data = data;
+    error.status = response.status;
+    error.code = data.code;
+    error.data = data;
 
     throw error;
   }
@@ -74,9 +60,9 @@ async function callFunction<T extends ApiResponse>(
   return data;
 }
 
-/* =========================
-   SIGN UP
-========================= */
+/* =========================================
+   SIGNUP
+========================================= */
 
 export type SignupResponse = {
   success: boolean;
@@ -86,19 +72,16 @@ export type SignupResponse = {
   expires_in_seconds: number;
 };
 
-export async function signup(
-  email: string,
-  password: string,
-): Promise<SignupResponse> {
+export async function signup(email: string, password: string) {
   return callFunction<SignupResponse>("signup", {
     email,
     password,
   });
 }
 
-/* =========================
+/* =========================================
    VERIFY OTP
-========================= */
+========================================= */
 
 export type VerifyOtpResponse = {
   success: boolean;
@@ -107,19 +90,16 @@ export type VerifyOtpResponse = {
   email: string;
 };
 
-export async function verifyOtp(
-  email: string,
-  otp: string,
-): Promise<VerifyOtpResponse> {
+export async function verifyOtp(email: string, otp: string) {
   return callFunction<VerifyOtpResponse>("verify-otp", {
     email,
     otp,
   });
 }
 
-/* =========================
+/* =========================================
    RESEND OTP
-========================= */
+========================================= */
 
 export type ResendOtpResponse = {
   success: boolean;
@@ -128,25 +108,25 @@ export type ResendOtpResponse = {
   retry_after_seconds?: number;
 };
 
-export async function resendOtp(
-  email: string,
-): Promise<ResendOtpResponse> {
+export async function resendOtp(email: string) {
   return callFunction<ResendOtpResponse>("resend-otp", {
     email,
   });
 }
 
-/* =========================
+/* =========================================
    LOGIN
-========================= */
+========================================= */
 
 export type LoginResponse = {
   success: boolean;
   message: string;
+
   user: {
     id: string;
     email: string;
   };
+
   session: {
     access_token: string;
     refresh_token: string;
@@ -156,19 +136,16 @@ export type LoginResponse = {
   };
 };
 
-export async function login(
-  email: string,
-  password: string,
-): Promise<LoginResponse> {
+export async function login(email: string, password: string) {
   return callFunction<LoginResponse>("login", {
     email,
     password,
   });
 }
 
-/* =========================
+/* =========================================
    FORGOT PASSWORD
-========================= */
+========================================= */
 
 export type ForgotPasswordResponse = {
   success: boolean;
@@ -177,17 +154,15 @@ export type ForgotPasswordResponse = {
   retry_after_seconds?: number;
 };
 
-export async function forgotPassword(
-  email: string,
-): Promise<ForgotPasswordResponse> {
+export async function forgotPassword(email: string) {
   return callFunction<ForgotPasswordResponse>("forgot-password", {
     email,
   });
 }
 
-/* =========================
+/* =========================================
    RESET PASSWORD
-========================= */
+========================================= */
 
 export type ResetPasswordResponse = {
   success: boolean;
@@ -198,10 +173,10 @@ export async function resetPassword(
   email: string,
   otp: string,
   newPassword: string,
-): Promise<ResetPasswordResponse> {
+) {
   return callFunction<ResetPasswordResponse>("reset-password", {
     email,
     otp,
     new_password: newPassword,
   });
-}
+  }
