@@ -9,7 +9,14 @@ if (!SUPABASE_ANON_KEY) {
   throw new Error("Missing NEXT_PUBLIC_SUPABASE_ANON_KEY");
 }
 
-const FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`;
+/*
+ * These constants are explicitly typed as strings so TypeScript
+ * knows they are definitely available inside our functions.
+ */
+const supabaseUrl: string = SUPABASE_URL;
+const supabaseAnonKey: string = SUPABASE_ANON_KEY;
+
+const FUNCTIONS_URL = `${supabaseUrl}/functions/v1`;
 
 type ApiResponse<T = unknown> = {
   success: boolean;
@@ -27,8 +34,8 @@ async function callFunction<T extends ApiResponse>(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      apikey: supabaseAnonKey,
+      Authorization: `Bearer ${supabaseAnonKey}`,
     },
     body: JSON.stringify(body),
   });
@@ -179,4 +186,4 @@ export async function resetPassword(
     otp,
     new_password: newPassword,
   });
-  }
+      }
