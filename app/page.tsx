@@ -1,69 +1,282 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
 
 export default function Home() {
+  const [search, setSearch] = useState("");
+
+  const categories = [
+    "Restaurants",
+    "Fashion",
+    "Beauty",
+    "Electronics",
+    "Supermarkets",
+    "Construction",
+    "Services",
+    "More",
+  ];
+
+  const businesses = [
+    {
+      name: "Bella Kitchen",
+      category: "Restaurant",
+      location: "Abuja, Nigeria",
+      rating: "4.8",
+    },
+    {
+      name: "Prime Furniture",
+      category: "Furniture & Interior",
+      location: "Lagos, Nigeria",
+      rating: "4.7",
+    },
+    {
+      name: "TechZone Africa",
+      category: "Technology",
+      location: "Abuja, Nigeria",
+      rating: "4.9",
+    },
+  ];
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
+    <main>
+      {/* NAVBAR */}
+      <nav className="navbar">
+        <div className="nav-container">
+          <div>
+            <div className="logo">
+              IFC <span>BIZGROWTH</span>
+            </div>
+
+            <p className="logo-text">
+              Helping businesses get discovered
+            </p>
+          </div>
+
+          <div className="nav-links">
+            <a href="#discover">Discover</a>
+            <a href="#businesses">For Businesses</a>
+            <a href="#how-it-works">How It Works</a>
+
+            <button className="primary-button">
+              List Your Business
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* HERO */}
+      <section className="hero">
+        <div className="hero-content">
+          <div className="badge">
+            Built to help African businesses grow
+          </div>
+
+          <h1>
+            Discover businesses.
+            <br />
+            <span>Grow your brand.</span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+
+          <p>
+            IFC BIZGROWTH connects customers with businesses while
+            helping businesses improve their visibility, advertising
+            and customer reach.
+          </p>
+
+          {/* SEARCH */}
+          <div className="search-box">
+            <input
+              type="text"
+              placeholder="Search for a business..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+
+            <button className="search-button">
+              Search
+            </button>
+          </div>
+
+          <p className="search-help">
+            Try: restaurant, fashion, electronics, beauty...
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </section>
+
+      {/* CATEGORIES */}
+      <section className="section" id="discover">
+        <div>
+          <p className="section-label">
+            Explore
+          </p>
+
+          <h2 className="section-title">
+            Find businesses by category
+          </h2>
         </div>
-      </main>
-    </div>
+
+        <div className="categories">
+          {categories.map((category) => (
+            <button
+              className="category"
+              key={category}
+            >
+              <div className="category-icon">
+                ✓
+              </div>
+
+              <strong>{category}</strong>
+
+              <p>
+                Discover businesses
+              </p>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* FOR BUSINESSES */}
+      <section
+        className="business-section"
+        id="businesses"
+      >
+        <div className="business-content">
+          <div>
+            <p className="section-label">
+              For business owners
+            </p>
+
+            <h2>
+              Your business deserves to be seen.
+            </h2>
+
+            <p>
+              Put your business in front of potential
+              customers and access advertising and growth
+              services designed to help your brand get noticed.
+            </p>
+
+            <div className="business-buttons">
+              <button className="business-button">
+                Grow My Business
+              </button>
+
+              <button className="business-button secondary">
+                Learn More
+              </button>
+            </div>
+          </div>
+
+          {/* STATS */}
+          <div className="stats">
+            <div className="stat">
+              <h3>10K+</h3>
+              <p>Potential customers</p>
+            </div>
+
+            <div className="stat">
+              <h3>54</h3>
+              <p>African markets</p>
+            </div>
+
+            <div className="stat">
+              <h3>24/7</h3>
+              <p>Business visibility</p>
+            </div>
+
+            <div className="stat">
+              <h3>Growth</h3>
+              <p>Focused platform</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FEATURED BUSINESSES */}
+      <section
+        className="section"
+        id="how-it-works"
+      >
+        <p className="section-label">
+          Featured
+        </p>
+
+        <h2 className="section-title">
+          Businesses getting noticed
+        </h2>
+
+        <div className="businesses">
+          {businesses.map((business) => (
+            <div
+              className="business-card"
+              key={business.name}
+            >
+              <div className="business-image">
+                Business Image
+              </div>
+
+              <div className="business-info">
+                <div className="business-header">
+                  <div>
+                    <h3 className="business-name">
+                      {business.name}
+                    </h3>
+
+                    <p className="business-category">
+                      {business.category}
+                    </p>
+                  </div>
+
+                  <span className="rating">
+                    ★ {business.rating}
+                  </span>
+                </div>
+
+                <p className="location">
+                  📍 {business.location}
+                </p>
+
+                <button className="view-button">
+                  View Business
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="cta">
+        <h2>
+          Ready to grow your business?
+        </h2>
+
+        <p>
+          Join IFC BIZGROWTH and put your business
+          in front of more potential customers.
+        </p>
+
+        <button>
+          Get Started
+        </button>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="footer">
+        <div className="footer-container">
+          <p>
+            © {new Date().getFullYear()} IFC BIZGROWTH.
+            All rights reserved.
+          </p>
+
+          <p>
+            A product of{" "}
+            <strong>
+              IFC BRIDGE LAB
+            </strong>
+          </p>
+        </div>
+      </footer>
+    </main>
   );
-}
+      }
