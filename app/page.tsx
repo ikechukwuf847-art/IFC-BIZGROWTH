@@ -3,14 +3,9 @@ import Link from "next/link";
 export default function Home() {
   return (
     <main className="landing-page">
-
-      {/* =========================================
-          NAVBAR
-      ========================================= */}
-
+      {/* NAVBAR */}
       <header className="site-navbar">
         <div className="navbar-inner">
-
           <Link href="/" className="site-logo">
             IFC <span>BIZGROWTH</span>
           </Link>
@@ -30,34 +25,28 @@ export default function Home() {
               List Your Business
             </Link>
           </div>
-
         </div>
       </header>
 
-
-      {/* =========================================
-          HERO
-      ========================================= */}
-
+      {/* HERO */}
       <section className="hero-section">
         <div className="hero-container">
-
           <div className="hero-content">
-
             <div className="hero-eyebrow">
-              AFRICAN BUSINESS DISCOVERY PLATFORM
+              AFRICAN BUSINESS-GROWTH PLATFORM
             </div>
 
             <h1 className="hero-title">
-              Find businesses.
+              Discover businesses.
               <br />
               <span>Connect with confidence.</span>
             </h1>
 
             <p className="hero-description">
-              Discover businesses, products and services across Africa.
-              Explore trusted business information and connect directly
-              with the businesses you need.
+              IFC BIZGROWTH helps people discover businesses,
+              products and services while giving businesses the
+              tools and support they need to become easier to find,
+              connect with customers and grow.
             </p>
 
             <div className="hero-actions">
@@ -77,66 +66,55 @@ export default function Home() {
             </div>
 
             <div className="hero-trust">
+              <div className="hero-trust-item">
+                Business discovery
+              </div>
 
               <div className="hero-trust-item">
                 Verified businesses
               </div>
 
               <div className="hero-trust-item">
-                Business information
-              </div>
-
-              <div className="hero-trust-item">
                 Direct connections
               </div>
-
             </div>
-
           </div>
 
-
-          {/* =====================================
-              BUSINESS PREVIEW
-          ===================================== */}
-
+          {/* HERO VISUAL */}
           <div className="hero-visual">
-
             <div className="business-preview">
-
               <div className="business-preview-header">
-
                 <div className="business-avatar">
-                  GT
+                  IFC
                 </div>
-
               </div>
 
               <div className="business-preview-body">
+                <div className="business-preview-title">
+                  Business Profile
+                </div>
 
-                <h2 className="business-preview-title">
-                  Golden Touch Spa
-                </h2>
-
-                <p className="business-preview-location">
-                  Abuja, Nigeria
-                </p>
+                <div className="business-preview-location">
+                  Your business information
+                </div>
 
                 <div className="business-verified">
-                  ✓ Verified Business
+                  ✓ Verification available
                 </div>
 
                 <p className="business-preview-description">
-                  Beauty and wellness services for individuals,
-                  families and businesses.
+                  Create a professional business presence where
+                  customers can discover your business, products,
+                  services and contact information.
                 </p>
 
                 <div className="business-preview-tags">
                   <span className="business-preview-tag">
-                    Beauty
+                    Business
                   </span>
 
                   <span className="business-preview-tag">
-                    Wellness
+                    Products
                   </span>
 
                   <span className="business-preview-tag">
@@ -145,34 +123,23 @@ export default function Home() {
                 </div>
 
                 <div className="business-preview-actions">
-
                   <div className="business-preview-button primary">
-                    View Business
+                    Business Profile
                   </div>
 
                   <div className="business-preview-button">
-                    Contact
+                    Connect
                   </div>
-
                 </div>
-
               </div>
-
             </div>
-
           </div>
-
         </div>
       </section>
 
-
-      {/* =========================================
-          TRUST STRIP
-      ========================================= */}
-
+      {/* TRUST STRIP */}
       <section className="trust-strip">
         <div className="trust-strip-inner">
-
           <div className="trust-item">
             <span className="trust-icon">B</span>
             Business Discovery
@@ -192,146 +159,101 @@ export default function Home() {
             <span className="trust-icon">→</span>
             Direct Connection
           </div>
-
         </div>
       </section>
 
-
-      {/* =========================================
-          WHY IFC BIZGROWTH
-      ========================================= */}
-
+      {/* WHY IFC BIZGROWTH */}
       <section className="section">
         <div className="section-container">
-
           <div className="section-heading">
-
             <span className="section-label">
               WHY IFC BIZGROWTH
             </span>
 
             <h2 className="section-title">
-              A simpler way to discover businesses.
+              A better way to discover and grow businesses.
             </h2>
 
             <p className="section-description">
-              We make it easier for people to discover businesses
-              and easier for businesses to put themselves in front
-              of potential customers.
+              IFC BIZGROWTH brings business discovery, business
+              visibility, advertising and marketing support together
+              in one platform.
             </p>
-
           </div>
-
 
           <div className="why-grid">
-
             <article className="why-card">
+              <div className="why-icon">◉</div>
 
-              <div className="why-icon">
-                ◉
-              </div>
-
-              <h3>
-                Discover businesses
-              </h3>
+              <h3>Discover businesses</h3>
 
               <p>
-                Find businesses across different industries,
-                locations and categories in one place.
+                Explore businesses across different industries,
+                locations and categories from one place.
               </p>
-
             </article>
-
 
             <article className="why-card">
+              <div className="why-icon">✓</div>
 
-              <div className="why-icon">
-                ✓
-              </div>
-
-              <h3>
-                Find verified businesses
-              </h3>
+              <h3>Verified businesses</h3>
 
               <p>
-                Verification helps customers identify businesses
-                that have gone through our verification process.
+                Businesses can go through our verification process
+                so customers can identify their verification status
+                before connecting.
               </p>
-
             </article>
-
 
             <article className="why-card">
+              <div className="why-icon">→</div>
 
-              <div className="why-icon">
-                →
-              </div>
-
-              <h3>
-                Connect directly
-              </h3>
+              <h3>Connect directly</h3>
 
               <p>
-                View business information and connect directly
-                through the contact options provided by the business.
+                Find the business information you need and connect
+                using the contact options provided by the business.
               </p>
-
             </article>
-
           </div>
-
         </div>
       </section>
 
-
-      {/* =========================================
-          VERIFIED BUSINESSES
-      ========================================= */}
-
+      {/* VERIFICATION */}
       <section className="section verified-section">
         <div className="section-container">
-
           <div className="verified-layout">
-
             <div className="verified-visual">
-
               <div className="verification-card">
-
                 <div className="verification-top">
-
                   <div className="verification-company">
-
                     <div className="verification-logo">
-                      B
+                      ✓
                     </div>
 
                     <div>
                       <strong>
-                        Business Profile
+                        Business Verification
                       </strong>
 
                       <span>
-                        Business information
+                        Verification status
                       </span>
                     </div>
-
                   </div>
 
                   <div className="verification-status">
-                    ✓ VERIFIED
+                    VERIFIED
                   </div>
-
                 </div>
 
-
                 <div className="verification-list">
-
                   <div className="verification-list-item">
-                    Business identity checked
+                    Business identity
                   </div>
 
                   <div className="verification-list-item">
-                    Business information available
+                    Business information
                   </div>
 
                   <div className="verification-list-item">
@@ -345,112 +267,81 @@ export default function Home() {
                   <div className="verification-list-item">
                     Business location
                   </div>
-
                 </div>
-
               </div>
-
             </div>
 
-
             <div className="verified-content">
-
               <span className="section-label">
                 TRUST
               </span>
 
               <h2 className="section-title">
-                Know who you are connecting with.
+                Make better decisions before you connect.
               </h2>
 
               <p className="section-description">
-                IFC BIZGROWTH is designed to help customers
-                make better decisions when discovering businesses.
-                Business profiles can show important information,
-                products, services and verification status.
+                IFC BIZGROWTH is designed to give customers useful
+                business information before they decide to connect.
+                Businesses can submit information for verification
+                and display their verification status on the platform.
               </p>
 
-
               <div className="verified-points">
-
                 <div className="verified-point">
-
                   <div className="verified-point-icon">
                     ✓
                   </div>
 
                   <div>
-                    <h4>
-                      Verification status
-                    </h4>
+                    <h4>Clear verification status</h4>
 
                     <p>
-                      Quickly see whether a business has been
-                      verified on the platform.
+                      See whether a business has completed the
+                      IFC BIZGROWTH verification process.
                     </p>
                   </div>
-
                 </div>
 
-
                 <div className="verified-point">
-
                   <div className="verified-point-icon">
                     B
                   </div>
 
                   <div>
-                    <h4>
-                      Complete business information
-                    </h4>
+                    <h4>Useful business information</h4>
 
                     <p>
-                      Learn about the business, what it offers
-                      and where it operates.
+                      View information about what a business
+                      offers, where it operates and how to reach it.
                     </p>
                   </div>
-
                 </div>
 
-
                 <div className="verified-point">
-
                   <div className="verified-point-icon">
                     →
                   </div>
 
                   <div>
-                    <h4>
-                      Easy connection
-                    </h4>
+                    <h4>Connect with businesses</h4>
 
                     <p>
-                      Contact businesses directly using the
-                      available contact options.
+                      Use the available business contact options
+                      to start a direct connection.
                     </p>
                   </div>
-
                 </div>
-
               </div>
-
             </div>
-
           </div>
-
         </div>
       </section>
 
-
-      {/* =========================================
-          HOW IT WORKS
-      ========================================= */}
-
+      {/* HOW IT WORKS */}
       <section className="section">
         <div className="section-container">
-
           <div className="section-heading">
-
             <span className="section-label">
               HOW IT WORKS
             </span>
@@ -460,111 +351,88 @@ export default function Home() {
             </h2>
 
             <p className="section-description">
-              Finding the right business doesn't need to be complicated.
+              A simple way for customers to discover businesses
+              and for businesses to build their presence.
             </p>
-
           </div>
 
-
           <div className="steps-grid">
-
             <article className="step-card">
-
               <div className="step-number">
                 01
               </div>
 
-              <h3>
-                Discover
-              </h3>
+              <h3>Discover</h3>
 
               <p>
                 Explore businesses, categories, products and
                 services available on IFC BIZGROWTH.
               </p>
-
             </article>
 
-
             <article className="step-card">
-
               <div className="step-number">
                 02
               </div>
 
-              <h3>
-                Check
-              </h3>
+              <h3>Check</h3>
 
               <p>
-                Review the business profile, information and
+                Review available business information and
                 verification status before making a decision.
               </p>
-
             </article>
 
-
             <article className="step-card">
-
               <div className="step-number">
                 03
               </div>
 
-              <h3>
-                Connect
-              </h3>
+              <h3>Connect</h3>
 
               <p>
-                Contact the business directly and start your
-                conversation.
+                Contact the business directly using the
+                available contact options.
               </p>
-
             </article>
-
           </div>
-
         </div>
       </section>
 
-
-      {/* =========================================
-          BUSINESS OWNERS
-      ========================================= */}
-
+      {/* BUSINESS OWNERS */}
       <section className="section business-owner-section">
         <div className="section-container">
-
           <div className="business-owner-layout">
-
             <div className="business-owner-content">
-
               <span className="section-label">
                 FOR BUSINESS OWNERS
               </span>
 
               <h2 className="section-title">
-                Put your business where customers can find it.
+                Give your business a place to be discovered.
               </h2>
 
               <p className="section-description">
                 Create a professional business presence on
-                IFC BIZGROWTH and give potential customers
-                a simple way to discover and connect with you.
+                IFC BIZGROWTH and make it easier for potential
+                customers to find and connect with your business.
               </p>
 
-
               <div className="owner-benefits">
-
                 <div className="owner-benefit">
                   Create your business profile
                 </div>
 
                 <div className="owner-benefit">
-                  Add your products and services
+                  Add your products
                 </div>
 
                 <div className="owner-benefit">
-                  Show your business information
+                  Add your services
+                </div>
+
+                <div className="owner-benefit">
+                  Provide business information
                 </div>
 
                 <div className="owner-benefit">
@@ -572,90 +440,102 @@ export default function Home() {
                 </div>
 
                 <div className="owner-benefit">
-                  Get professional marketing support
+                  Get marketing support
                 </div>
-
               </div>
 
-
               <div className="hero-actions">
-
                 <Link
                   href="/signup"
                   className="hero-primary-button"
                 >
                   List Your Business →
                 </Link>
-
               </div>
-
             </div>
 
-
             <div className="owner-visual">
-
               <div className="owner-dashboard-card">
-
                 <div className="owner-dashboard-header">
-
                   <strong>
-                    Business Profile
+                    Business Management
                   </strong>
 
                   <span className="owner-dashboard-status">
-                    ACTIVE
+                    YOUR BUSINESS
                   </span>
-
                 </div>
-
 
                 <div className="owner-dashboard-items">
-
                   <div className="owner-dashboard-item">
-                    <span>Business information</span>
-                    <span>Complete</span>
+                    <span>
+                      Business profile
+                    </span>
+
+                    <span>
+                      Manage
+                    </span>
                   </div>
 
                   <div className="owner-dashboard-item">
-                    <span>Products</span>
-                    <span>Added</span>
+                    <span>
+                      Products
+                    </span>
+
+                    <span>
+                      Manage
+                    </span>
                   </div>
 
                   <div className="owner-dashboard-item">
-                    <span>Services</span>
-                    <span>Added</span>
+                    <span>
+                      Services
+                    </span>
+
+                    <span>
+                      Manage
+                    </span>
                   </div>
 
                   <div className="owner-dashboard-item">
-                    <span>Verification</span>
-                    <span>Available</span>
+                    <span>
+                      Advertising
+                    </span>
+
+                    <span>
+                      Promote
+                    </span>
                   </div>
 
                   <div className="owner-dashboard-item">
-                    <span>Customer connections</span>
-                    <span>Track</span>
+                    <span>
+                      Marketing
+                    </span>
+
+                    <span>
+                      Get support
+                    </span>
                   </div>
 
+                  <div className="owner-dashboard-item">
+                    <span>
+                      Analytics
+                    </span>
+
+                    <span>
+                      View
+                    </span>
+                  </div>
                 </div>
-
               </div>
-
             </div>
-
           </div>
-
         </div>
       </section>
 
-
-      {/* =========================================
-          FINAL CTA
-      ========================================= */}
-
+      {/* FINAL CTA */}
       <section className="final-cta">
-
         <div className="final-cta-inner">
-
           <span className="section-label">
             IFC BIZGROWTH
           </span>
@@ -668,11 +548,10 @@ export default function Home() {
 
           <p>
             Explore businesses across Africa or create your
-            business presence and start reaching more customers.
+            business presence and start building your visibility.
           </p>
 
           <div className="final-cta-actions">
-
             <Link
               href="/businesses"
               className="hero-primary-button"
@@ -686,26 +565,15 @@ export default function Home() {
             >
               List Your Business
             </Link>
-
           </div>
-
         </div>
-
       </section>
 
-
-      {/* =========================================
-          FOOTER
-      ========================================= */}
-
+      {/* FOOTER */}
       <footer className="site-footer">
-
         <div className="footer-inner">
-
           <div className="footer-top">
-
             <div className="footer-brand">
-
               <Link href="/" className="site-logo">
                 IFC <span>BIZGROWTH</span>
               </Link>
@@ -715,15 +583,10 @@ export default function Home() {
                 businesses become easier to discover, connect
                 with customers and grow their presence.
               </p>
-
             </div>
 
-
             <div className="footer-column">
-
-              <h4>
-                Discover
-              </h4>
+              <h4>Discover</h4>
 
               <Link href="/businesses">
                 Businesses
@@ -736,15 +599,10 @@ export default function Home() {
               <Link href="/how-it-works">
                 How It Works
               </Link>
-
             </div>
 
-
             <div className="footer-column">
-
-              <h4>
-                Businesses
-              </h4>
+              <h4>Businesses</h4>
 
               <Link href="/signup">
                 List Your Business
@@ -757,15 +615,10 @@ export default function Home() {
               <Link href="/business/marketing">
                 Marketing Support
               </Link>
-
             </div>
 
-
             <div className="footer-column">
-
-              <h4>
-                Company
-              </h4>
+              <h4>Company</h4>
 
               <Link href="/about">
                 About IFC BIZGROWTH
@@ -782,14 +635,10 @@ export default function Home() {
               <Link href="/terms">
                 Terms
               </Link>
-
             </div>
-
           </div>
 
-
           <div className="footer-bottom">
-
             <p>
               © {new Date().getFullYear()} IFC BIZGROWTH.
               All rights reserved.
@@ -798,13 +647,9 @@ export default function Home() {
             <p>
               A product of IFC Bridge Lab
             </p>
-
           </div>
-
         </div>
-
       </footer>
-
     </main>
   );
-            }
+        }
