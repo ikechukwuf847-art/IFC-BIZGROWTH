@@ -36,14 +36,13 @@ export default function LoginForm() {
   const [error, setError] =
     useState("");
 
-  const [success, setSuccess] =
-    useState(
-      verified
-        ? "Your email has been verified. You can now log in."
-        : reset
-          ? "Your password has been reset. You can now log in."
-          : "",
-    );
+  const [success, setSuccess] = useState(
+    verified
+      ? "Your email has been verified. You can now log in."
+      : reset
+        ? "Your password has been reset. You can now log in."
+        : "",
+  );
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
@@ -69,20 +68,42 @@ export default function LoginForm() {
     try {
       setLoading(true);
 
+      /*
+       * Your login Edge Function returns:
+       *
+       * {
+       *   user: {...},
+       *   session: {
+       *     access_token,
+       *     refresh_token,
+       *     ...
+       *   }
+       * }
+       */
       const response = await login(
         cleanEmail,
         password,
       );
 
-      if (
-        !response.access_token ||
-        !response.refresh_token
-      ) {
+      const accessToken =
+        response.session?.access_token;
+
+      const refreshToken =
+        response.session?.refresh_token;
+
+      if (!accessToken || !refreshToken) {
         throw new Error(
-          "Login session could not be created.",
+          "Login succeeded, but a secure session could not be created.",
         );
       }
 
+      /*
+       * Send the Supabase tokens to our Next.js
+       * server route.
+       *
+       * The server route creates the proper
+       * Supabase authentication cookies.
+       */
       const sessionResponse =
         await fetch("/api/auth/session", {
           method: "POST",
@@ -93,16 +114,22 @@ export default function LoginForm() {
           },
 
           body: JSON.stringify({
-            access_token:
-              response.access_token,
-
-            refresh_token:
-              response.refresh_token,
+            access_token: accessToken,
+            refresh_token: refreshToken,
           }),
         });
 
-      const sessionData =
-        await sessionResponse.json();
+      let sessionData: {
+        success?: boolean;
+        error?: string;
+      } = {};
+
+      try {
+        sessionData =
+          await sessionResponse.json();
+      } catch {
+        sessionData = {};
+      }
 
       if (
         !sessionResponse.ok ||
@@ -110,10 +137,16 @@ export default function LoginForm() {
       ) {
         throw new Error(
           sessionData.error ||
-            "Unable to create your session.",
+            "Unable to create your secure session.",
         );
       }
 
+      /*
+       * The secure session now exists.
+       *
+       * Send the user to the page they originally
+       * wanted to access.
+       */
       router.replace(next);
       router.refresh();
     } catch (err) {
@@ -176,6 +209,7 @@ export default function LoginForm() {
                   placeholder="you@example.com"
                   autoComplete="email"
                   disabled={loading}
+                  required
                 />
               </div>
 
@@ -207,6 +241,7 @@ export default function LoginForm() {
                     placeholder="Enter your password"
                     autoComplete="current-password"
                     disabled={loading}
+                    required
                   />
 
                   <button
@@ -248,7 +283,9 @@ export default function LoginForm() {
             </form>
 
             <div className="auth-divider">
-              <span>New to IFC BIZGROWTH?</span>
+              <span>
+                New to IFC BIZGROWTH?
+              </span>
             </div>
 
             <Link
