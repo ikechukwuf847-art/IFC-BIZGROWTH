@@ -35,8 +35,8 @@ export async function createSupabaseServerClient() {
               },
             );
           } catch {
-            // Cookie updates can be unavailable
-            // inside some Server Components.
+            // Cookie updates may not be available
+            // in some Server Component contexts.
           }
         },
       },
