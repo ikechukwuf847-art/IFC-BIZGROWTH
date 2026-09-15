@@ -3293,3 +3293,108 @@ select:focus-visible {
     font-size: 1.4rem;
   }
 }
+
+.business-create-page {
+  min-height: 100vh;
+  background: #f7faff;
+  color: #0f172a;
+}
+
+.business-create-section {
+  padding: 70px 20px;
+}
+
+.business-create-container {
+  width: min(760px, 100%);
+  margin: 0 auto;
+}
+
+.business-create-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.business-create-eyebrow {
+  display: inline-block;
+  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #2563eb;
+}
+
+.business-create-header h1 {
+  margin: 0;
+  font-size: clamp(30px, 5vw, 46px);
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.business-create-header p {
+  margin: 14px auto 0;
+  max-width: 560px;
+  color: #64748b;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.business-create-card {
+  padding: 32px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+}
+
+.business-create-card .form-group {
+  margin-bottom: 22px;
+}
+
+.business-create-card textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 130px;
+  padding: 14px 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font: inherit;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.business-create-card textarea:focus,
+.business-create-card input:focus,
+.business-create-card select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.business-create-card input,
+.business-create-card select {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+@media (max-width: 640px) {
+  .business-create-section {
+    padding: 45px 16px;
+  }
+
+  .business-create-card {
+    padding: 22px;
+    border-radius: 16px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
