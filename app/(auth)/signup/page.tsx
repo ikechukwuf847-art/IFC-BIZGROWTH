@@ -9,18 +9,13 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setError("");
-    setSuccess("");
 
     const cleanEmail = email.trim().toLowerCase();
 
@@ -30,7 +25,7 @@ export default function SignupPage() {
     }
 
     if (password.length < 8) {
-      setError("Your password must be at least 8 characters.");
+      setError("Password must be at least 8 characters.");
       return;
     }
 
@@ -39,27 +34,20 @@ export default function SignupPage() {
       return;
     }
 
-    setLoading(true);
-
     try {
+      setLoading(true);
+
       const response = await signup(cleanEmail, password);
 
-      setSuccess(response.message);
-
-      // Give the success message a moment before moving
-      // to email verification.
       window.location.href = `/verify-otp?email=${encodeURIComponent(
         response.email,
       )}`;
     } catch (err) {
-      const error = err as Error & {
-        status?: number;
-        code?: string;
-      };
-
-      setError(
-        error.message || "Unable to create your account. Please try again.",
-      );
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Unable to create your account. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -67,158 +55,227 @@ export default function SignupPage() {
 
   return (
     <main className="auth-page">
-      <div className="auth-background" />
-
-      <section className="auth-container">
-        <div className="auth-brand">
-          <Link href="/" className="auth-logo">
+      {/* HEADER */}
+      <header className="auth-header">
+        <div className="auth-header-inner">
+          <Link href="/" className="site-logo">
             IFC <span>BIZGROWTH</span>
           </Link>
 
-          <p>Discover. Connect. Grow.</p>
+          <div className="auth-header-right">
+            <span>Already have an account?</span>
+
+            <Link href="/login" className="auth-login-link">
+              Log in
+            </Link>
+          </div>
         </div>
+      </header>
 
-        <div className="auth-card">
-          <div className="auth-header">
-            <span className="auth-badge">GET STARTED</span>
+      {/* MAIN */}
+      <section className="auth-section">
+        <div className="auth-container">
+          {/* LEFT SIDE */}
+          <div className="auth-intro">
+            <span className="auth-eyebrow">
+              IFC BIZGROWTH
+            </span>
 
-            <h1>Create your account</h1>
+            <h1>
+              Give your business
+              <br />
+              <span>a place to grow.</span>
+            </h1>
 
             <p>
-              Join IFC BIZGROWTH and start discovering businesses or building
-              your business presence.
+              Create your business account and start building
+              your presence on IFC BIZGROWTH.
             </p>
+
+            <div className="auth-benefits">
+              <div className="auth-benefit">
+                <div className="auth-benefit-icon">✓</div>
+
+                <div>
+                  <strong>Build your business presence</strong>
+
+                  <span>
+                    Create and manage your business profile.
+                  </span>
+                </div>
+              </div>
+
+              <div className="auth-benefit">
+                <div className="auth-benefit-icon">✓</div>
+
+                <div>
+                  <strong>Reach potential customers</strong>
+
+                  <span>
+                    Make your business easier to discover.
+                  </span>
+                </div>
+              </div>
+
+              <div className="auth-benefit">
+                <div className="auth-benefit-icon">✓</div>
+
+                <div>
+                  <strong>Promote and grow</strong>
+
+                  <span>
+                    Access advertising and marketing support.
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="auth-form">
-            <div className="form-group">
-              <label htmlFor="email">Email address</label>
+          {/* SIGNUP CARD */}
+          <div className="auth-card">
+            <div className="auth-card-header">
+              <h2>Create your account</h2>
 
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@example.com"
-                autoComplete="email"
-                disabled={loading}
-                required
-              />
+              <p>
+                Start your business journey with IFC BIZGROWTH.
+              </p>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="password">Password</label>
+            {error && (
+              <div className="auth-error" role="alert">
+                <span>!</span>
+                <p>{error}</p>
+              </div>
+            )}
 
-              <div className="password-wrapper">
+            <form
+              className="auth-form"
+              onSubmit={handleSubmit}
+            >
+              <div className="form-field">
+                <label htmlFor="email">
+                  Email address
+                </label>
+
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(event) =>
+                    setEmail(event.target.value)
+                  }
+                  disabled={loading}
+                  required
+                />
+              </div>
+
+              <div className="form-field">
+                <label htmlFor="password">
+                  Password
+                </label>
+
                 <input
                   id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="At least 8 characters"
+                  name="password"
+                  type="password"
                   autoComplete="new-password"
+                  placeholder="Create a password"
+                  value={password}
+                  onChange={(event) =>
+                    setPassword(event.target.value)
+                  }
                   disabled={loading}
                   required
                   minLength={8}
                 />
 
-                <button
-                  type="button"
-                  className="password-toggle"
-                  onClick={() => setShowPassword((value) => !value)}
-                  disabled={loading}
-                  aria-label={
-                    showPassword ? "Hide password" : "Show password"
-                  }
-                >
-                  {showPassword ? "Hide" : "Show"}
-                </button>
+                <small>
+                  Use at least 8 characters.
+                </small>
               </div>
-            </div>
 
-            <div className="form-group">
-              <label htmlFor="confirm-password">Confirm password</label>
+              <div className="form-field">
+                <label htmlFor="confirmPassword">
+                  Confirm password
+                </label>
 
-              <div className="password-wrapper">
                 <input
-                  id="confirm-password"
-                  type={showConfirmPassword ? "text" : "password"}
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="Enter your password again"
                   value={confirmPassword}
                   onChange={(event) =>
                     setConfirmPassword(event.target.value)
                   }
-                  placeholder="Enter your password again"
-                  autoComplete="new-password"
                   disabled={loading}
                   required
                   minLength={8}
                 />
-
-                <button
-                  type="button"
-                  className="password-toggle"
-                  onClick={() =>
-                    setShowConfirmPassword((value) => !value)
-                  }
-                  disabled={loading}
-                  aria-label={
-                    showConfirmPassword
-                      ? "Hide password"
-                      : "Show password"
-                  }
-                >
-                  {showConfirmPassword ? "Hide" : "Show"}
-                </button>
               </div>
+
+              <div className="auth-terms">
+                <p>
+                  By creating an account, you agree to our{" "}
+                  <Link href="/terms">
+                    Terms
+                  </Link>{" "}
+                  and{" "}
+                  <Link href="/privacy">
+                    Privacy Policy
+                  </Link>
+                  .
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                className="auth-submit-button"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className="auth-spinner" />
+                    Creating account...
+                  </>
+                ) : (
+                  <>
+                    Create Account
+                    <span>→</span>
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="auth-divider">
+              <span>Already registered?</span>
             </div>
 
-            {error && (
-              <div className="auth-message auth-error" role="alert">
-                {error}
-              </div>
-            )}
-
-            {success && (
-              <div className="auth-message auth-success" role="status">
-                {success}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              className="auth-submit"
-              disabled={loading}
+            <Link
+              href="/login"
+              className="auth-secondary-button"
             >
-              {loading ? (
-                <>
-                  <span className="auth-spinner" />
-                  Creating account...
-                </>
-              ) : (
-                "Create account"
-              )}
-            </button>
-          </form>
-
-          <div className="auth-divider">
-            <span>Already have an account?</span>
+              Log in to your account
+            </Link>
           </div>
-
-          <Link href="/login" className="auth-secondary-button">
-            Log in
-          </Link>
-
-          <p className="auth-terms">
-            By creating an account, you agree to our{" "}
-            <Link href="/terms">Terms</Link> and{" "}
-            <Link href="/privacy">Privacy Policy</Link>.
-          </p>
         </div>
-
-        <Link href="/" className="auth-back">
-          ← Back to IFC BIZGROWTH
-        </Link>
       </section>
+
+      {/* FOOTER */}
+      <footer className="auth-footer">
+        <p>
+          © {new Date().getFullYear()} IFC BIZGROWTH.
+          All rights reserved.
+        </p>
+
+        <p>
+          A product of IFC Bridge Lab
+        </p>
+      </footer>
     </main>
   );
-}
+  }
