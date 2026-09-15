@@ -3198,3 +3198,31 @@ select:focus-visible {
     align-items: flex-start;
   }
    }
+/* =========================================================
+   FORGOT PASSWORD
+   ========================================================= */
+
+.forgot-password-card {
+  max-width: 470px;
+}
+
+.auth-loading-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+}
+
+.auth-spinner-blue {
+  border-color: rgba(37, 99, 235, 0.2);
+  border-top-color: #2563eb;
+}
+
+.auth-submit-link {
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.auth-submit-link:hover {
+  text-decoration: none;
+}
