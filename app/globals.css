@@ -3226,3 +3226,70 @@ select:focus-visible {
 .auth-submit-link:hover {
   text-decoration: none;
 }
+
+/* =========================================================
+   RESET PASSWORD
+   ========================================================= */
+
+.reset-password-card {
+  max-width: 470px;
+}
+
+.form-help {
+  margin-top: 1px;
+  color: #94a3b8;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.reset-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px 0 8px;
+  text-align: center;
+}
+
+.reset-success-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+  margin-bottom: 20px;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.reset-success h1 {
+  margin: 0 0 10px;
+  color: #0f172a;
+  font-size: 1.55rem;
+  letter-spacing: -0.025em;
+}
+
+.reset-success p {
+  max-width: 350px;
+  margin: 0 0 22px;
+  color: #64748b;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.reset-success .auth-spinner {
+  border-color: rgba(37, 99, 235, 0.2);
+  border-top-color: #2563eb;
+}
+
+@media (max-width: 520px) {
+  .reset-password-card {
+    max-width: 100%;
+  }
+
+  .reset-success h1 {
+    font-size: 1.4rem;
+  }
+}
