@@ -3,26 +3,22 @@ import Link from "next/link";
 export default function Home() {
   return (
     <main className="landing-page">
-      {/* NAVIGATION */}
-      <header className="landing-nav">
-        <div className="landing-container nav-inner">
-          <Link href="/" className="logo">
-            <span className="logo-mark">
-              IFC
-              <span className="logo-arrow">↗</span>
-            </span>
 
-            <span className="logo-text">
-              <strong>IFC BIZGROWTH</strong>
-              <small>CONNECT · PROMOTE · GROW</small>
-            </span>
+      {/* =========================================
+          NAVBAR
+      ========================================= */}
+
+      <header className="site-navbar">
+        <div className="navbar-inner">
+
+          <Link href="/" className="site-logo">
+            IFC <span>BIZGROWTH</span>
           </Link>
 
-          <nav className="nav-links">
+          <nav className="nav-links" aria-label="Main navigation">
             <Link href="/businesses">Businesses</Link>
             <Link href="/categories">Categories</Link>
-            <Link href="#how-it-works">How It Works</Link>
-            <Link href="#for-businesses">For Businesses</Link>
+            <Link href="/how-it-works">How It Works</Link>
           </nav>
 
           <div className="nav-actions">
@@ -30,567 +26,785 @@ export default function Home() {
               Log in
             </Link>
 
-            <Link href="/signup" className="nav-cta">
+            <Link href="/signup" className="nav-primary">
               List Your Business
             </Link>
           </div>
+
         </div>
       </header>
 
-      {/* HERO */}
-      <section className="landing-hero">
-        <div className="hero-grid" />
 
-        <div className="landing-container hero-container">
-          <div className="hero-copy">
-            <div className="hero-badge">
-              <span />
-              Built for African businesses and customers
+      {/* =========================================
+          HERO
+      ========================================= */}
+
+      <section className="hero-section">
+        <div className="hero-container">
+
+          <div className="hero-content">
+
+            <div className="hero-eyebrow">
+              AFRICAN BUSINESS DISCOVERY PLATFORM
             </div>
 
-            <h1>
-              Discover businesses.
+            <h1 className="hero-title">
+              Find businesses.
               <br />
-              <em>Connect with confidence.</em>
+              <span>Connect with confidence.</span>
             </h1>
 
-            <p>
-              IFC BIZGROWTH helps people discover businesses, products and
-              services while giving businesses the opportunity to become more
-              visible, reach new customers and grow.
+            <p className="hero-description">
+              Discover businesses, products and services across Africa.
+              Explore trusted business information and connect directly
+              with the businesses you need.
             </p>
 
-            <div className="hero-buttons">
-              <Link href="/businesses" className="hero-primary">
-                Explore Businesses
-                <span>→</span>
+            <div className="hero-actions">
+              <Link
+                href="/businesses"
+                className="hero-primary-button"
+              >
+                Explore Businesses →
               </Link>
 
-              <Link href="/signup" className="hero-secondary">
+              <Link
+                href="/signup"
+                className="hero-secondary-button"
+              >
                 List Your Business
               </Link>
             </div>
 
             <div className="hero-trust">
-              <div>
-                <span className="check">✓</span>
+
+              <div className="hero-trust-item">
                 Verified businesses
               </div>
 
-              <div>
-                <span className="check">✓</span>
+              <div className="hero-trust-item">
                 Business information
               </div>
 
-              <div>
-                <span className="check">✓</span>
-                Easy connections
+              <div className="hero-trust-item">
+                Direct connections
               </div>
+
             </div>
+
           </div>
 
-          {/* HERO VISUAL */}
+
+          {/* =====================================
+              BUSINESS PREVIEW
+          ===================================== */}
+
           <div className="hero-visual">
-            <div className="visual-glow" />
 
             <div className="business-preview">
-              <div className="preview-topbar">
-                <div className="preview-brand">
-                  <span className="preview-avatar">GT</span>
 
-                  <div>
-                    <strong>Golden Touch Spa</strong>
-                    <small>Abuja, Nigeria</small>
-                  </div>
+              <div className="business-preview-header">
+
+                <div className="business-avatar">
+                  GT
                 </div>
 
-                <span className="verified-badge">
-                  ✓ Verified
-                </span>
               </div>
 
-              <div className="preview-image">
-                <div className="image-overlay">
-                  <span>Beauty & Wellness</span>
-                </div>
-              </div>
+              <div className="business-preview-body">
 
-              <div className="preview-content">
-                <h3>Golden Touch Spa</h3>
+                <h2 className="business-preview-title">
+                  Golden Touch Spa
+                </h2>
 
-                <p>
-                  Beauty, wellness and professional spa services.
+                <p className="business-preview-location">
+                  Abuja, Nigeria
                 </p>
 
-                <div className="preview-details">
-                  <span>● Open</span>
-                  <span>Abuja</span>
+                <div className="business-verified">
+                  ✓ Verified Business
                 </div>
 
-                <div className="preview-buttons">
-                  <button type="button">View Business</button>
-                  <button type="button">Contact</button>
+                <p className="business-preview-description">
+                  Beauty and wellness services for individuals,
+                  families and businesses.
+                </p>
+
+                <div className="business-preview-tags">
+                  <span className="business-preview-tag">
+                    Beauty
+                  </span>
+
+                  <span className="business-preview-tag">
+                    Wellness
+                  </span>
+
+                  <span className="business-preview-tag">
+                    Services
+                  </span>
                 </div>
+
+                <div className="business-preview-actions">
+
+                  <div className="business-preview-button primary">
+                    View Business
+                  </div>
+
+                  <div className="business-preview-button">
+                    Contact
+                  </div>
+
+                </div>
+
               </div>
+
             </div>
 
-            <div className="floating-card floating-one">
-              <span className="floating-icon">✓</span>
-
-              <div>
-                <strong>Verified Business</strong>
-                <small>Information reviewed</small>
-              </div>
-            </div>
-
-            <div className="floating-card floating-two">
-              <span className="floating-icon gold">↗</span>
-
-              <div>
-                <strong>Get discovered</strong>
-                <small>Reach more customers</small>
-              </div>
-            </div>
           </div>
+
         </div>
       </section>
 
-      {/* TRUST STRIP */}
+
+      {/* =========================================
+          TRUST STRIP
+      ========================================= */}
+
       <section className="trust-strip">
-        <div className="landing-container">
-          <p>
-            A better way to discover and connect with businesses
-          </p>
+        <div className="trust-strip-inner">
 
-          <div className="trust-items">
-            <span>BUSINESS DISCOVERY</span>
-            <i />
-            <span>VERIFIED BUSINESSES</span>
-            <i />
-            <span>PRODUCTS & SERVICES</span>
-            <i />
-            <span>DIRECT CONNECTION</span>
+          <div className="trust-item">
+            <span className="trust-icon">B</span>
+            Business Discovery
           </div>
+
+          <div className="trust-item">
+            <span className="trust-icon">✓</span>
+            Verified Businesses
+          </div>
+
+          <div className="trust-item">
+            <span className="trust-icon">P</span>
+            Products & Services
+          </div>
+
+          <div className="trust-item">
+            <span className="trust-icon">→</span>
+            Direct Connection
+          </div>
+
         </div>
       </section>
 
-      {/* WHY BIZGROWTH */}
-      <section className="landing-section why-section">
-        <div className="landing-container">
-          <div className="section-intro">
-            <span className="section-label">WHY IFC BIZGROWTH</span>
 
-            <h2>
-              Find what you need.
-              <br />
-              <span>Connect with businesses.</span>
+      {/* =========================================
+          WHY IFC BIZGROWTH
+      ========================================= */}
+
+      <section className="section">
+        <div className="section-container">
+
+          <div className="section-heading">
+
+            <span className="section-label">
+              WHY IFC BIZGROWTH
+            </span>
+
+            <h2 className="section-title">
+              A simpler way to discover businesses.
             </h2>
 
-            <p>
-              Whether you are looking for a local business or trying to grow
-              your own, IFC BIZGROWTH brings businesses and customers closer
-              together.
-            </p>
-          </div>
-
-          <div className="feature-grid">
-            <article className="feature-card dark-feature">
-              <span className="feature-number">01</span>
-
-              <div className="feature-icon">⌕</div>
-
-              <h3>Discover businesses</h3>
-
-              <p>
-                Find businesses, products and services in the categories that
-                matter to you.
-              </p>
-
-              <Link href="/businesses">
-                Explore businesses →
-              </Link>
-            </article>
-
-            <article className="feature-card">
-              <span className="feature-number">02</span>
-
-              <div className="feature-icon dark-icon">✓</div>
-
-              <h3>Verified businesses</h3>
-
-              <p>
-                Look for businesses that have completed IFC BIZGROWTH's
-                verification process.
-              </p>
-
-              <Link href="/businesses">
-                Find verified businesses →
-              </Link>
-            </article>
-
-            <article className="feature-card">
-              <span className="feature-number">03</span>
-
-              <div className="feature-icon dark-icon">↗</div>
-
-              <h3>Connect directly</h3>
-
-              <p>
-                Contact businesses through the information they provide,
-                including phone, WhatsApp, websites and locations.
-              </p>
-
-              <Link href="/businesses">
-                Start discovering →
-              </Link>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      {/* VERIFIED BUSINESSES */}
-      <section className="verified-section">
-        <div className="landing-container verified-container">
-          <div className="verified-copy">
-            <span className="section-label">BUILT AROUND TRUST</span>
-
-            <h2>
-              Discover businesses
-              <span> with confidence.</span>
-            </h2>
-
-            <p>
-              We want customers to have better information when deciding
-              which businesses to contact. Businesses can submit their
-              information for verification and display their verification
-              status on their profile once approved.
+            <p className="section-description">
+              We make it easier for people to discover businesses
+              and easier for businesses to put themselves in front
+              of potential customers.
             </p>
 
-            <div className="verified-list">
-              <div>
-                <span>✓</span>
-                Business information
-              </div>
-
-              <div>
-                <span>✓</span>
-                Verification status
-              </div>
-
-              <div>
-                <span>✓</span>
-                Products and services
-              </div>
-
-              <div>
-                <span>✓</span>
-                Contact and location details
-              </div>
-            </div>
-
-            <Link href="/businesses" className="dark-button">
-              Explore Businesses
-              <span>→</span>
-            </Link>
           </div>
 
-          <div className="verification-card">
-            <div className="verification-card-top">
-              <span>BUSINESS PROFILE</span>
 
-              <span className="verified-pill">
-                ✓ VERIFIED
-              </span>
-            </div>
+          <div className="why-grid">
 
-            <div className="verification-profile">
-              <div className="large-avatar">GT</div>
+            <article className="why-card">
 
-              <div>
-                <h3>Golden Touch Spa</h3>
-                <p>Beauty & Wellness · Abuja</p>
+              <div className="why-icon">
+                ◉
               </div>
-            </div>
-
-            <div className="verification-divider" />
-
-            <div className="verification-row">
-              <span>Business status</span>
-              <strong className="active-status">
-                ● Active
-              </strong>
-            </div>
-
-            <div className="verification-row">
-              <span>Verification</span>
-              <strong>Approved</strong>
-            </div>
-
-            <div className="verification-row">
-              <span>Services</span>
-              <strong>View services</strong>
-            </div>
-
-            <div className="verification-footer">
-              <span>Verified through IFC BIZGROWTH</span>
-              <span>✓</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* HOW IT WORKS */}
-      <section className="landing-section how-section" id="how-it-works">
-        <div className="landing-container">
-          <div className="section-intro centered">
-            <span className="section-label">HOW IT WORKS</span>
-
-            <h2>
-              Simple for customers.
-              <br />
-              <span>Powerful for businesses.</span>
-            </h2>
-
-            <p>
-              We make discovering and connecting with businesses simple.
-            </p>
-          </div>
-
-          <div className="how-grid">
-            <div className="how-card">
-              <div className="how-number">01</div>
-
-              <div className="how-icon">⌕</div>
-
-              <h3>Discover</h3>
-
-              <p>
-                Browse businesses and explore products and services that
-                match what you need.
-              </p>
-            </div>
-
-            <div className="how-connector">
-              <span>→</span>
-            </div>
-
-            <div className="how-card">
-              <div className="how-number">02</div>
-
-              <div className="how-icon">✓</div>
-
-              <h3>Check</h3>
-
-              <p>
-                Review the business profile, information and verification
-                status.
-              </p>
-            </div>
-
-            <div className="how-connector">
-              <span>→</span>
-            </div>
-
-            <div className="how-card">
-              <div className="how-number">03</div>
-
-              <div className="how-icon">↗</div>
-
-              <h3>Connect</h3>
-
-              <p>
-                Contact the business, visit its website or find its location.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FOR BUSINESSES */}
-      <section className="business-section" id="for-businesses">
-        <div className="business-background" />
-
-        <div className="landing-container business-container">
-          <div className="business-copy">
-            <span className="section-label">FOR BUSINESS OWNERS</span>
-
-            <h2>
-              Your business
-              <br />
-              <span>deserves to be discovered.</span>
-            </h2>
-
-            <p>
-              Create your business presence on IFC BIZGROWTH and give
-              potential customers a place to discover what you offer.
-            </p>
-
-            <div className="business-benefits">
-              <div>
-                <span>01</span>
-                <div>
-                  <strong>Build your business profile</strong>
-                  <p>Show customers who you are and what you offer.</p>
-                </div>
-              </div>
-
-              <div>
-                <span>02</span>
-                <div>
-                  <strong>Show your products and services</strong>
-                  <p>Give customers useful information before they contact you.</p>
-                </div>
-              </div>
-
-              <div>
-                <span>03</span>
-                <div>
-                  <strong>Promote your business</strong>
-                  <p>Advertise your business and reach more potential customers.</p>
-                </div>
-              </div>
-
-              <div>
-                <span>04</span>
-                <div>
-                  <strong>Get marketing support</strong>
-                  <p>Request help with social media, content, branding and campaigns.</p>
-                </div>
-              </div>
-            </div>
-
-            <Link href="/signup" className="gold-button">
-              List Your Business
-              <span>→</span>
-            </Link>
-          </div>
-
-          <div className="business-panel">
-            <div className="panel-header">
-              <span>IFC BIZGROWTH</span>
-              <span>BUSINESS</span>
-            </div>
-
-            <div className="panel-content">
-              <span className="panel-label">YOUR BUSINESS PRESENCE</span>
 
               <h3>
-                Connect.
-                <br />
-                Promote.
-                <br />
-                Grow.
+                Discover businesses
               </h3>
 
-              <div className="panel-line" />
+              <p>
+                Find businesses across different industries,
+                locations and categories in one place.
+              </p>
 
-              <div className="panel-stat">
-                <span>Business profile</span>
-                <strong>Ready to build</strong>
+            </article>
+
+
+            <article className="why-card">
+
+              <div className="why-icon">
+                ✓
               </div>
 
-              <div className="panel-stat">
-                <span>Customer discovery</span>
-                <strong>Available</strong>
+              <h3>
+                Find verified businesses
+              </h3>
+
+              <p>
+                Verification helps customers identify businesses
+                that have gone through our verification process.
+              </p>
+
+            </article>
+
+
+            <article className="why-card">
+
+              <div className="why-icon">
+                →
               </div>
 
-              <div className="panel-stat">
-                <span>Growth opportunities</span>
-                <strong>Start today</strong>
-              </div>
-            </div>
+              <h3>
+                Connect directly
+              </h3>
+
+              <p>
+                View business information and connect directly
+                through the contact options provided by the business.
+              </p>
+
+            </article>
+
           </div>
+
         </div>
       </section>
 
-      {/* FINAL CTA */}
-      <section className="final-section">
-        <div className="final-glow" />
 
-        <div className="landing-container final-content">
-          <span className="section-label">IFC BIZGROWTH</span>
+      {/* =========================================
+          VERIFIED BUSINESSES
+      ========================================= */}
+
+      <section className="section verified-section">
+        <div className="section-container">
+
+          <div className="verified-layout">
+
+            <div className="verified-visual">
+
+              <div className="verification-card">
+
+                <div className="verification-top">
+
+                  <div className="verification-company">
+
+                    <div className="verification-logo">
+                      B
+                    </div>
+
+                    <div>
+                      <strong>
+                        Business Profile
+                      </strong>
+
+                      <span>
+                        Business information
+                      </span>
+                    </div>
+
+                  </div>
+
+                  <div className="verification-status">
+                    ✓ VERIFIED
+                  </div>
+
+                </div>
+
+
+                <div className="verification-list">
+
+                  <div className="verification-list-item">
+                    Business identity checked
+                  </div>
+
+                  <div className="verification-list-item">
+                    Business information available
+                  </div>
+
+                  <div className="verification-list-item">
+                    Products and services
+                  </div>
+
+                  <div className="verification-list-item">
+                    Contact information
+                  </div>
+
+                  <div className="verification-list-item">
+                    Business location
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+
+            <div className="verified-content">
+
+              <span className="section-label">
+                TRUST
+              </span>
+
+              <h2 className="section-title">
+                Know who you are connecting with.
+              </h2>
+
+              <p className="section-description">
+                IFC BIZGROWTH is designed to help customers
+                make better decisions when discovering businesses.
+                Business profiles can show important information,
+                products, services and verification status.
+              </p>
+
+
+              <div className="verified-points">
+
+                <div className="verified-point">
+
+                  <div className="verified-point-icon">
+                    ✓
+                  </div>
+
+                  <div>
+                    <h4>
+                      Verification status
+                    </h4>
+
+                    <p>
+                      Quickly see whether a business has been
+                      verified on the platform.
+                    </p>
+                  </div>
+
+                </div>
+
+
+                <div className="verified-point">
+
+                  <div className="verified-point-icon">
+                    B
+                  </div>
+
+                  <div>
+                    <h4>
+                      Complete business information
+                    </h4>
+
+                    <p>
+                      Learn about the business, what it offers
+                      and where it operates.
+                    </p>
+                  </div>
+
+                </div>
+
+
+                <div className="verified-point">
+
+                  <div className="verified-point-icon">
+                    →
+                  </div>
+
+                  <div>
+                    <h4>
+                      Easy connection
+                    </h4>
+
+                    <p>
+                      Contact businesses directly using the
+                      available contact options.
+                    </p>
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+
+      {/* =========================================
+          HOW IT WORKS
+      ========================================= */}
+
+      <section className="section">
+        <div className="section-container">
+
+          <div className="section-heading">
+
+            <span className="section-label">
+              HOW IT WORKS
+            </span>
+
+            <h2 className="section-title">
+              Discover. Check. Connect.
+            </h2>
+
+            <p className="section-description">
+              Finding the right business doesn't need to be complicated.
+            </p>
+
+          </div>
+
+
+          <div className="steps-grid">
+
+            <article className="step-card">
+
+              <div className="step-number">
+                01
+              </div>
+
+              <h3>
+                Discover
+              </h3>
+
+              <p>
+                Explore businesses, categories, products and
+                services available on IFC BIZGROWTH.
+              </p>
+
+            </article>
+
+
+            <article className="step-card">
+
+              <div className="step-number">
+                02
+              </div>
+
+              <h3>
+                Check
+              </h3>
+
+              <p>
+                Review the business profile, information and
+                verification status before making a decision.
+              </p>
+
+            </article>
+
+
+            <article className="step-card">
+
+              <div className="step-number">
+                03
+              </div>
+
+              <h3>
+                Connect
+              </h3>
+
+              <p>
+                Contact the business directly and start your
+                conversation.
+              </p>
+
+            </article>
+
+          </div>
+
+        </div>
+      </section>
+
+
+      {/* =========================================
+          BUSINESS OWNERS
+      ========================================= */}
+
+      <section className="section business-owner-section">
+        <div className="section-container">
+
+          <div className="business-owner-layout">
+
+            <div className="business-owner-content">
+
+              <span className="section-label">
+                FOR BUSINESS OWNERS
+              </span>
+
+              <h2 className="section-title">
+                Put your business where customers can find it.
+              </h2>
+
+              <p className="section-description">
+                Create a professional business presence on
+                IFC BIZGROWTH and give potential customers
+                a simple way to discover and connect with you.
+              </p>
+
+
+              <div className="owner-benefits">
+
+                <div className="owner-benefit">
+                  Create your business profile
+                </div>
+
+                <div className="owner-benefit">
+                  Add your products and services
+                </div>
+
+                <div className="owner-benefit">
+                  Show your business information
+                </div>
+
+                <div className="owner-benefit">
+                  Promote your business
+                </div>
+
+                <div className="owner-benefit">
+                  Get professional marketing support
+                </div>
+
+              </div>
+
+
+              <div className="hero-actions">
+
+                <Link
+                  href="/signup"
+                  className="hero-primary-button"
+                >
+                  List Your Business →
+                </Link>
+
+              </div>
+
+            </div>
+
+
+            <div className="owner-visual">
+
+              <div className="owner-dashboard-card">
+
+                <div className="owner-dashboard-header">
+
+                  <strong>
+                    Business Profile
+                  </strong>
+
+                  <span className="owner-dashboard-status">
+                    ACTIVE
+                  </span>
+
+                </div>
+
+
+                <div className="owner-dashboard-items">
+
+                  <div className="owner-dashboard-item">
+                    <span>Business information</span>
+                    <span>Complete</span>
+                  </div>
+
+                  <div className="owner-dashboard-item">
+                    <span>Products</span>
+                    <span>Added</span>
+                  </div>
+
+                  <div className="owner-dashboard-item">
+                    <span>Services</span>
+                    <span>Added</span>
+                  </div>
+
+                  <div className="owner-dashboard-item">
+                    <span>Verification</span>
+                    <span>Available</span>
+                  </div>
+
+                  <div className="owner-dashboard-item">
+                    <span>Customer connections</span>
+                    <span>Track</span>
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+
+      {/* =========================================
+          FINAL CTA
+      ========================================= */}
+
+      <section className="final-cta">
+
+        <div className="final-cta-inner">
+
+          <span className="section-label">
+            IFC BIZGROWTH
+          </span>
 
           <h2>
-            Better discovery.
+            Discover better.
             <br />
-            <span>Better connections.</span>
+            Connect smarter.
           </h2>
 
           <p>
-            Discover businesses around you or put your own business in front
-            of more potential customers.
+            Explore businesses across Africa or create your
+            business presence and start reaching more customers.
           </p>
 
-          <div className="final-buttons">
-            <Link href="/businesses" className="hero-primary">
+          <div className="final-cta-actions">
+
+            <Link
+              href="/businesses"
+              className="hero-primary-button"
+            >
               Explore Businesses
-              <span>→</span>
             </Link>
 
-            <Link href="/signup" className="final-outline">
+            <Link
+              href="/signup"
+              className="hero-secondary-button"
+            >
               List Your Business
             </Link>
+
           </div>
+
         </div>
+
       </section>
 
-      {/* FOOTER */}
-      <footer className="landing-footer">
-        <div className="landing-container footer-main">
-          <div className="footer-brand">
-            <Link href="/" className="logo">
-              <span className="logo-mark">
-                IFC
-                <span className="logo-arrow">↗</span>
-              </span>
 
-              <span className="logo-text">
-                <strong>BIZGROWTH</strong>
-                <small>CONNECT · PROMOTE · GROW</small>
-              </span>
-            </Link>
+      {/* =========================================
+          FOOTER
+      ========================================= */}
+
+      <footer className="site-footer">
+
+        <div className="footer-inner">
+
+          <div className="footer-top">
+
+            <div className="footer-brand">
+
+              <Link href="/" className="site-logo">
+                IFC <span>BIZGROWTH</span>
+              </Link>
+
+              <p>
+                An African business-growth platform helping
+                businesses become easier to discover, connect
+                with customers and grow their presence.
+              </p>
+
+            </div>
+
+
+            <div className="footer-column">
+
+              <h4>
+                Discover
+              </h4>
+
+              <Link href="/businesses">
+                Businesses
+              </Link>
+
+              <Link href="/categories">
+                Categories
+              </Link>
+
+              <Link href="/how-it-works">
+                How It Works
+              </Link>
+
+            </div>
+
+
+            <div className="footer-column">
+
+              <h4>
+                Businesses
+              </h4>
+
+              <Link href="/signup">
+                List Your Business
+              </Link>
+
+              <Link href="/login">
+                Business Login
+              </Link>
+
+              <Link href="/business/marketing">
+                Marketing Support
+              </Link>
+
+            </div>
+
+
+            <div className="footer-column">
+
+              <h4>
+                Company
+              </h4>
+
+              <Link href="/about">
+                About IFC BIZGROWTH
+              </Link>
+
+              <Link href="/contact">
+                Contact
+              </Link>
+
+              <Link href="/privacy">
+                Privacy
+              </Link>
+
+              <Link href="/terms">
+                Terms
+              </Link>
+
+            </div>
+
+          </div>
+
+
+          <div className="footer-bottom">
 
             <p>
-              Helping businesses become more visible and helping customers
-              discover businesses across Africa.
+              © {new Date().getFullYear()} IFC BIZGROWTH.
+              All rights reserved.
             </p>
+
+            <p>
+              A product of IFC Bridge Lab
+            </p>
+
           </div>
 
-          <div className="footer-column">
-            <h4>Discover</h4>
-            <Link href="/businesses">Businesses</Link>
-            <Link href="/categories">Categories</Link>
-            <Link href="/businesses">Verified Businesses</Link>
-          </div>
-
-          <div className="footer-column">
-            <h4>For Businesses</h4>
-            <Link href="/signup">List Your Business</Link>
-            <Link href="/advertising">Advertising</Link>
-            <Link href="/marketing">Marketing Services</Link>
-            <Link href="/login">Business Login</Link>
-          </div>
-
-          <div className="footer-column">
-            <h4>Company</h4>
-            <Link href="#how-it-works">How It Works</Link>
-            <Link href="/about">About Us</Link>
-            <Link href="/contact">Contact</Link>
-            <Link href="/privacy">Privacy</Link>
-            <Link href="/terms">Terms</Link>
-          </div>
         </div>
 
-        <div className="landing-container footer-bottom">
-          <span>
-            © {new Date().getFullYear()} IFC BIZGROWTH. All rights reserved.
-          </span>
-
-          <span>
-            A product of IFC Bridge Lab
-          </span>
-        </div>
       </footer>
+
     </main>
   );
-    }
+            }
