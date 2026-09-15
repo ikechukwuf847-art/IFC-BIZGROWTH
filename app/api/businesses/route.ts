@@ -34,6 +34,49 @@ export async function POST(request: Request) {
       );
     }
 
+    // Check whether this account already owns a business.
+    const {
+      data: existingBusiness,
+      error: existingError,
+    } = await supabase
+      .from("businesses")
+      .select(
+        "id, name, slug, country_code, status, verification_status, is_public, website_url",
+      )
+      .eq("owner_id", user.id)
+      .maybeSingle();
+
+    if (existingError) {
+      console.error(
+        "Existing business check failed:",
+        existingError,
+      );
+
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Unable to check your existing business.",
+        },
+        { status: 500 },
+      );
+    }
+
+    // The account already has a business.
+    if (existingBusiness) {
+      return NextResponse.json(
+        {
+          success: true,
+          code: "BUSINESS_ALREADY_EXISTS",
+          message:
+            "You already have a business on this account.",
+          business: existingBusiness,
+          next_step: "/business/dashboard",
+        },
+        { status: 200 },
+      );
+    }
+
     const body = await request.json();
 
     const name =
@@ -160,23 +203,25 @@ export async function POST(request: Request) {
         return NextResponse.json(
           {
             success: false,
-            error: "Please provide a valid website URL.",
+            error:
+              "Please provide a valid website URL.",
           },
           { status: 400 },
         );
       }
     }
 
-    // Verify that the selected country exists,
-    // is active, and is an African country.
-    const { data: country, error: countryError } =
-      await supabase
-        .from("countries")
-        .select("code")
-        .eq("code", countryCode)
-        .eq("is_african", true)
-        .eq("is_active", true)
-        .maybeSingle();
+    // Validate the selected country against the database.
+    const {
+      data: country,
+      error: countryError,
+    } = await supabase
+      .from("countries")
+      .select("code")
+      .eq("code", countryCode)
+      .eq("is_african", true)
+      .eq("is_active", true)
+      .maybeSingle();
 
     if (countryError) {
       console.error(
@@ -205,66 +250,33 @@ export async function POST(request: Request) {
       );
     }
 
-    // Prevent accidental duplicate business creation
-    // when the same user submits repeatedly.
-    const { data: existingBusinesses, error: existingError } =
-      await supabase
-        .from("businesses")
-        .select("id, name, slug")
-        .eq("owner_id", user.id)
-        .limit(1);
-
-    if (existingError) {
-      console.error(
-        "Existing business check failed:",
-        existingError,
-      );
-
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Unable to check your existing business.",
-        },
-        { status: 500 },
-      );
-    }
-
-    if (
-      existingBusinesses &&
-      existingBusinesses.length > 0
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          code: "BUSINESS_ALREADY_EXISTS",
-          error:
-            "You already have a business on this account.",
-          business: existingBusinesses[0],
-        },
-        { status: 409 },
-      );
-    }
-
     const slug = createSlug(name);
 
-    const { data: business, error: insertError } =
-      await supabase
-        .from("businesses")
-        .insert({
-          owner_id: user.id,
-          name,
-          slug,
-          description: description || null,
-          country_code: countryCode,
-          phone: phone || null,
-          email: email || null,
-          website_url: websiteUrl || null,
-        })
-        .select(
-          "id, name, slug, country_code, verification_status, is_public",
-        )
-        .single();
+    const {
+      data: business,
+      error: insertError,
+    } = await supabase
+      .from("businesses")
+      .insert({
+        owner_id: user.id,
+        name,
+        slug,
+        description: description || null,
+        country_code: countryCode,
+        phone: phone || null,
+        email: email || null,
+        website_url: websiteUrl || null,
+
+        // Explicit business defaults.
+        status: "active",
+        verification_status: "not_submitted",
+        is_public: true,
+        is_featured: false,
+      })
+      .select(
+        "id, name, slug, country_code, status, verification_status, is_public, website_url",
+      )
+      .single();
 
     if (insertError) {
       console.error(
@@ -307,4 +319,4 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
-}
+      }
