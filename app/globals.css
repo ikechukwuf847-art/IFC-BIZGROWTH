@@ -3398,3 +3398,214 @@ select:focus-visible {
     gap: 0;
   }
 }
+
+.create-business-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: #f7faff;
+}
+
+.create-business-card {
+  width: 100%;
+  max-width: 760px;
+  background: #ffffff;
+  border: 1px solid #e5eaf2;
+  border-radius: 24px;
+  padding: 40px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+}
+
+.create-business-header {
+  margin-bottom: 30px;
+}
+
+.create-business-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.create-business-header h1 {
+  margin: 16px 0 10px;
+  color: #0f172a;
+  font-size: 34px;
+  line-height: 1.15;
+  font-weight: 800;
+}
+
+.create-business-header p {
+  margin: 0;
+  max-width: 620px;
+  color: #64748b;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.create-business-form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.create-business-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.create-business-field label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.optional-label {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.create-business-field input,
+.create-business-field textarea,
+.create-business-field select {
+  width: 100%;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #0f172a;
+  padding: 13px 14px;
+  outline: none;
+  font: inherit;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.create-business-field textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.create-business-field input::placeholder,
+.create-business-field textarea::placeholder {
+  color: #94a3b8;
+}
+
+.create-business-field input:focus,
+.create-business-field textarea:focus,
+.create-business-field select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.create-business-field input:disabled,
+.create-business-field select:disabled {
+  cursor: not-allowed;
+  background: #f8fafc;
+}
+
+.create-business-help {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.create-business-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.create-business-submit {
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+  padding: 14px 18px;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.create-business-submit:hover:not(:disabled) {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.2);
+}
+
+.create-business-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.create-business-message {
+  margin-bottom: 22px;
+  padding: 13px 15px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.create-business-error {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.create-business-success {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.create-business-footer {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #eef2f7;
+}
+
+.create-business-footer p {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+@media (max-width: 700px) {
+  .create-business-page {
+    padding: 20px 14px;
+    align-items: flex-start;
+  }
+
+  .create-business-card {
+    margin-top: 20px;
+    padding: 26px 20px;
+    border-radius: 18px;
+  }
+
+  .create-business-header h1 {
+    font-size: 28px;
+  }
+
+  .create-business-grid {
+    grid-template-columns: 1fr;
+  }
+   }
