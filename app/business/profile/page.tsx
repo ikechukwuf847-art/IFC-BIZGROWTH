@@ -49,13 +49,11 @@ export default async function BusinessProfilePage() {
     .maybeSingle();
 
   const { data: countries } = await supabase
-    .from("countries")
-    .select("code, name")
-    .eq("is_african", true)
-    .eq("is_active", true)
-    .order("name", {
-      ascending: true,
-    });
+  .from("countries")
+  .select("code, name, official_name, currency_code")
+  .eq("is_african", true)
+  .eq("is_active", true)
+  .order("name", { ascending: true });
 
   return (
     <main className="business-page">
