@@ -4155,3 +4155,403 @@ select:focus-visible {
     padding: 20px;
   }
      }
+
+.business-page {
+  min-height: 100vh;
+  background: #f7f9fc;
+  padding: 40px 20px 80px;
+}
+
+.business-page-shell {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+}
+
+.business-page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.page-eyebrow {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.business-page-header h1 {
+  margin: 0;
+  color: #111827;
+  font-size: clamp(30px, 5vw, 42px);
+  line-height: 1.1;
+}
+
+.business-page-header p {
+  margin: 10px 0 0;
+  color: #64748b;
+  font-size: 16px;
+}
+
+.back-dashboard-link {
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.profile-status-card,
+.profile-form-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, .05);
+}
+
+.profile-status-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px;
+  margin-bottom: 22px;
+}
+
+.profile-status-main {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.profile-business-icon {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border-radius: 14px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 21px;
+  font-weight: 800;
+}
+
+.profile-status-main h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 19px;
+}
+
+.profile-status-main p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.profile-status-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.status-badge {
+  border-radius: 999px;
+  padding: 7px 11px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.status-active,
+.status-verified {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.status-inactive,
+.status-pending {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.business-profile-form {
+  display: grid;
+  gap: 20px;
+}
+
+.profile-form-card {
+  padding: 26px;
+}
+
+.profile-form-heading {
+  margin-bottom: 24px;
+}
+
+.profile-form-heading h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 20px;
+}
+
+.profile-form-heading p {
+  max-width: 650px;
+  margin: 7px 0 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.profile-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-field-full {
+  grid-column: 1 / -1;
+}
+
+.profile-field label {
+  color: #334155;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.optional-label {
+  margin-left: 8px;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.profile-field input,
+.profile-field textarea,
+.profile-field select {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #dbe1ea;
+  border-radius: 11px;
+  outline: none;
+  background: #fff;
+  color: #111827;
+  font: inherit;
+  font-size: 14px;
+  padding: 12px 13px;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.profile-field textarea {
+  resize: vertical;
+  min-height: 130px;
+}
+
+.profile-field input:focus,
+.profile-field textarea:focus,
+.profile-field select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, .1);
+}
+
+.field-hint {
+  color: #94a3b8;
+  font-size: 12px;
+  text-align: right;
+}
+
+.form-alert {
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.form-alert-error {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.form-alert-success {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.visibility-control {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+}
+
+.visibility-toggle {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.visibility-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toggle-slider {
+  display: block;
+  width: 46px;
+  height: 26px;
+  border-radius: 999px;
+  background: #cbd5e1;
+  transition: .2s;
+}
+
+.toggle-slider::after {
+  content: "";
+  display: block;
+  width: 20px;
+  height: 20px;
+  margin: 3px;
+  border-radius: 50%;
+  background: #fff;
+  transition: .2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .15);
+}
+
+.visibility-toggle input:checked + .toggle-slider {
+  background: #2563eb;
+}
+
+.visibility-toggle input:checked + .toggle-slider::after {
+  transform: translateX(20px);
+}
+
+.visibility-control strong {
+  display: block;
+  color: #111827;
+  font-size: 14px;
+}
+
+.visibility-control small {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.profile-readonly-card {
+  background: #fbfdff;
+}
+
+.verification-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 0;
+  border-top: 1px solid #eef2f7;
+}
+
+.verification-info-row span {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.verification-info-row strong {
+  color: #111827;
+  font-size: 14px;
+}
+
+.verification-action {
+  display: inline-block;
+  margin-top: 12px;
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.profile-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.cancel-profile-button,
+.save-profile-button {
+  min-height: 44px;
+  border-radius: 10px;
+  padding: 0 18px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.cancel-profile-button {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #dbe1ea;
+  background: #fff;
+  color: #475569;
+}
+
+.save-profile-button {
+  border: 0;
+  background: #2563eb;
+  color: #fff;
+}
+
+.save-profile-button:hover {
+  background: #1d4ed8;
+}
+
+.save-profile-button:disabled {
+  cursor: not-allowed;
+  opacity: .65;
+}
+
+@media (max-width: 700px) {
+  .business-page {
+    padding: 25px 14px 60px;
+  }
+
+  .business-page-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .profile-status-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .profile-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-field-full {
+    grid-column: auto;
+  }
+
+  .profile-form-card {
+    padding: 20px;
+  }
+
+  .profile-form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .cancel-profile-button,
+  .save-profile-button {
+    width: 100%;
+    justify-content: center;
+  }
+   }
