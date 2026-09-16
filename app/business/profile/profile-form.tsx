@@ -1,6 +1,11 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import {
+  ChangeEvent,
+  FormEvent,
+  useRef,
+  useState,
+} from "react";
 
 type Country = {
   code: string;
@@ -17,6 +22,7 @@ type Business = {
   email: string | null;
   phone: string | null;
   website_url: string | null;
+  logo_url: string | null;
   country_code: string;
   status: string;
   verification_status: string;
@@ -33,29 +39,204 @@ export default function ProfileForm({
   business,
   countries,
 }: ProfileFormProps) {
+  const fileInputRef = useRef<HTMLInputElement | null>(
+    null,
+  );
+
   const [name, setName] = useState(business.name);
+
   const [description, setDescription] = useState(
     business.description ?? "",
   );
+
   const [countryCode, setCountryCode] = useState(
     business.country_code,
   );
+
   const [phone, setPhone] = useState(
     business.phone ?? "",
   );
+
   const [email, setEmail] = useState(
     business.email ?? "",
   );
+
   const [websiteUrl, setWebsiteUrl] = useState(
     business.website_url ?? "",
   );
+
   const [isPublic, setIsPublic] = useState(
     business.is_public,
   );
 
+  const [logoVersion, setLogoVersion] = useState(
+    Date.now(),
+  );
+
+  const [logoUploading, setLogoUploading] =
+    useState(false);
+
+  const [logoRemoving, setLogoRemoving] =
+    useState(false);
+
   const [saving, setSaving] = useState(false);
+
   const [error, setError] = useState("");
+
   const [success, setSuccess] = useState("");
+
+  async function handleLogoChange(
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      setError(
+        "Please upload a JPG, PNG, or WebP image.",
+      );
+
+      event.target.value = "";
+      return;
+    }
+
+    const maxSize = 5 * 1024 * 1024;
+
+    if (file.size > maxSize) {
+      setError(
+        "Logo image must not be larger than 5 MB.",
+      );
+
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      setLogoUploading(true);
+
+      const formData = new FormData();
+
+      formData.append("logo", file);
+
+      const response = await fetch(
+        "/api/businesses/logo",
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
+
+      let data: {
+        success?: boolean;
+        message?: string;
+        error?: string;
+      };
+
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error(
+          "The server returned an invalid response.",
+        );
+      }
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.error ||
+            "Unable to upload your business logo.",
+        );
+      }
+
+      setLogoVersion(Date.now());
+
+      setSuccess(
+        data.message ||
+          "Business logo updated successfully.",
+      );
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while uploading your logo.",
+      );
+    } finally {
+      setLogoUploading(false);
+
+      event.target.value = "";
+    }
+  }
+
+  async function handleRemoveLogo() {
+    const confirmed = window.confirm(
+      "Are you sure you want to remove your business logo?",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+
+    try {
+      setLogoRemoving(true);
+
+      const response = await fetch(
+        "/api/businesses/logo",
+        {
+          method: "DELETE",
+        },
+      );
+
+      let data: {
+        success?: boolean;
+        message?: string;
+        error?: string;
+      };
+
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error(
+          "The server returned an invalid response.",
+        );
+      }
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.error ||
+            "Unable to remove your business logo.",
+        );
+      }
+
+      setLogoVersion(Date.now());
+
+      setSuccess(
+        data.message ||
+          "Business logo removed successfully.",
+      );
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while removing your logo.",
+      );
+    } finally {
+      setLogoRemoving(false);
+    }
+  }
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
@@ -66,7 +247,8 @@ export default function ProfileForm({
     setSuccess("");
 
     const cleanName = name.trim();
-    const cleanDescription = description.trim();
+    const cleanDescription =
+      description.trim();
     const cleanPhone = phone.trim();
     const cleanEmail = email.trim();
     const cleanWebsite = websiteUrl.trim();
@@ -93,7 +275,9 @@ export default function ProfileForm({
     }
 
     if (!countryCode) {
-      setError("Please select your business country.");
+      setError(
+        "Please select your business country.",
+      );
       return;
     }
 
@@ -195,17 +379,23 @@ export default function ProfileForm({
 
       if (data.business) {
         setName(data.business.name);
+
         setDescription(
           data.business.description ?? "",
         );
+
         setCountryCode(
           data.business.country_code,
         );
+
         setPhone(data.business.phone ?? "");
+
         setEmail(data.business.email ?? "");
+
         setWebsiteUrl(
           data.business.website_url ?? "",
         );
+
         setIsPublic(data.business.is_public);
       }
 
@@ -226,30 +416,148 @@ export default function ProfileForm({
 
   function handleCancel() {
     setName(business.name);
+
     setDescription(
       business.description ?? "",
     );
+
     setCountryCode(business.country_code);
+
     setPhone(business.phone ?? "");
+
     setEmail(business.email ?? "");
+
     setWebsiteUrl(
       business.website_url ?? "",
     );
+
     setIsPublic(business.is_public);
 
     setError("");
     setSuccess("");
   }
 
+  const logoSrc = business.logo_url
+    ? `/api/businesses/logo?v=${logoVersion}`
+    : "";
+
+  const logoBusy =
+    logoUploading || logoRemoving;
+
   return (
     <form
       className="profile-form"
       onSubmit={handleSubmit}
     >
+      {/* BUSINESS LOGO */}
+
+      <div className="profile-form__section">
+        <div className="profile-form__heading">
+          <div>
+            <h2>Business logo</h2>
+
+            <p>
+              Upload your real business logo so
+              customers can easily recognize your
+              business.
+            </p>
+          </div>
+        </div>
+
+        <div className="profile-logo">
+          <div className="profile-logo__preview">
+            {business.logo_url ? (
+              <img
+                key={logoSrc}
+                src={logoSrc}
+                alt={`${business.name} logo`}
+              />
+            ) : (
+              <span>
+                {business.name
+                  .charAt(0)
+                  .toUpperCase()}
+              </span>
+            )}
+          </div>
+
+          <div className="profile-logo__content">
+            <strong>
+              {business.logo_url
+                ? "Your business logo"
+                : "Add your business logo"}
+            </strong>
+
+            <p>
+              Use a clear square logo. JPG, PNG, or
+              WebP up to 5 MB.
+            </p>
+
+            <div className="profile-logo__actions">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleLogoChange}
+                disabled={
+                  saving || logoBusy
+                }
+                hidden
+              />
+
+              <button
+                type="button"
+                className="profile-button profile-button--primary"
+                onClick={() =>
+                  fileInputRef.current?.click()
+                }
+                disabled={
+                  saving || logoBusy
+                }
+              >
+                {logoUploading ? (
+                  <>
+                    <span className="button-spinner" />
+                    Uploading...
+                  </>
+                ) : business.logo_url ? (
+                  "Change logo"
+                ) : (
+                  "Upload logo"
+                )}
+              </button>
+
+              {business.logo_url && (
+                <button
+                  type="button"
+                  className="profile-button profile-button--secondary"
+                  onClick={handleRemoveLogo}
+                  disabled={
+                    saving || logoBusy
+                  }
+                >
+                  {logoRemoving ? (
+                    <>
+                      <span className="button-spinner" />
+                      Removing...
+                    </>
+                  ) : (
+                    "Remove"
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* BUSINESS INFORMATION */}
+
       <div className="profile-form__section">
         <div className="profile-form__heading">
           <div>
             <h2>Business information</h2>
+
             <p>
               Keep your business information accurate
               so customers know who they are dealing
@@ -273,7 +581,7 @@ export default function ProfileForm({
               }
               placeholder="Enter your business name"
               maxLength={150}
-              disabled={saving}
+              disabled={saving || logoBusy}
               required
             />
 
@@ -298,7 +606,7 @@ export default function ProfileForm({
               placeholder="Tell customers what your business does..."
               maxLength={5000}
               rows={6}
-              disabled={saving}
+              disabled={saving || logoBusy}
             />
 
             <span className="profile-field__hint">
@@ -319,7 +627,7 @@ export default function ProfileForm({
                   event.target.value,
                 )
               }
-              disabled={saving}
+              disabled={saving || logoBusy}
               required
             >
               <option value="">
@@ -351,7 +659,7 @@ export default function ProfileForm({
               }
               placeholder="+234..."
               maxLength={50}
-              disabled={saving}
+              disabled={saving || logoBusy}
             />
           </div>
 
@@ -369,13 +677,14 @@ export default function ProfileForm({
               }
               placeholder="business@example.com"
               maxLength={255}
-              disabled={saving}
+              disabled={saving || logoBusy}
             />
           </div>
 
           <div className="profile-field">
             <label htmlFor="business-website">
               Website
+
               <span className="profile-field__optional">
                 Optional
               </span>
@@ -392,16 +701,19 @@ export default function ProfileForm({
               }
               placeholder="https://example.com"
               maxLength={500}
-              disabled={saving}
+              disabled={saving || logoBusy}
             />
           </div>
         </div>
       </div>
 
+      {/* VISIBILITY */}
+
       <div className="profile-form__section">
         <div className="profile-form__heading">
           <div>
             <h2>Business visibility</h2>
+
             <p>
               Control whether customers can discover
               your business publicly.
@@ -427,9 +739,11 @@ export default function ProfileForm({
               isPublic ? "toggle--active" : ""
             }`}
             onClick={() =>
-              setIsPublic((current) => !current)
+              setIsPublic(
+                (current) => !current,
+              )
             }
-            disabled={saving}
+            disabled={saving || logoBusy}
             aria-label={
               isPublic
                 ? "Hide business from public directory"
@@ -448,10 +762,13 @@ export default function ProfileForm({
         </div>
       </div>
 
+      {/* VERIFICATION */}
+
       <div className="profile-form__section">
         <div className="profile-form__heading">
           <div>
             <h2>Verification</h2>
+
             <p>
               Your verification status is controlled
               by IFC BIZGROWTH.
@@ -479,6 +796,8 @@ export default function ProfileForm({
         </div>
       </div>
 
+      {/* MESSAGES */}
+
       {error && (
         <div
           className="profile-message profile-message--error"
@@ -497,12 +816,14 @@ export default function ProfileForm({
         </div>
       )}
 
+      {/* ACTIONS */}
+
       <div className="profile-form__actions">
         <button
           type="button"
           className="profile-button profile-button--secondary"
           onClick={handleCancel}
-          disabled={saving}
+          disabled={saving || logoBusy}
         >
           Cancel
         </button>
@@ -510,7 +831,7 @@ export default function ProfileForm({
         <button
           type="submit"
           className="profile-button profile-button--primary"
-          disabled={saving}
+          disabled={saving || logoBusy}
         >
           {saving ? (
             <>
@@ -546,4 +867,4 @@ function formatVerificationStatus(
     default:
       return "Not verified";
   }
-}
+    }
