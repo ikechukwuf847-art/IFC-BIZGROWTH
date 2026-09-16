@@ -7,6 +7,8 @@ import {
   useState,
 } from "react";
 
+import { createClient } from "@/lib/supabase/browser";
+
 type Country = {
   code: string;
   name: string;
@@ -32,70 +34,121 @@ type Business = {
 
 type ProfileFormProps = {
   business: Business;
+  country: Country | null;
   countries: Country[];
+  logoSignedUrl: string | null;
 };
 
 export default function ProfileForm({
   business,
+  country,
   countries,
+  logoSignedUrl,
 }: ProfileFormProps) {
-  const fileInputRef = useRef<HTMLInputElement | null>(
-    null,
-  );
+  const supabase = createClient();
 
-  const [name, setName] = useState(business.name);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const [name, setName] = useState(business.name || "");
   const [description, setDescription] = useState(
-    business.description ?? "",
+    business.description || ""
   );
-
   const [countryCode, setCountryCode] = useState(
-    business.country_code,
+    business.country_code || country?.code || ""
   );
-
-  const [phone, setPhone] = useState(
-    business.phone ?? "",
-  );
-
-  const [email, setEmail] = useState(
-    business.email ?? "",
-  );
-
+  const [phone, setPhone] = useState(business.phone || "");
+  const [email, setEmail] = useState(business.email || "");
   const [websiteUrl, setWebsiteUrl] = useState(
-    business.website_url ?? "",
+    business.website_url || ""
   );
-
   const [isPublic, setIsPublic] = useState(
-    business.is_public,
+    Boolean(business.is_public)
   );
 
-  const [logoVersion, setLogoVersion] = useState(
-    Date.now(),
+  const [logoUrl, setLogoUrl] = useState(
+    business.logo_url || ""
   );
 
-  const [logoUploading, setLogoUploading] =
-    useState(false);
-
-  const [logoRemoving, setLogoRemoving] =
-    useState(false);
+  const [logoPreview, setLogoPreview] = useState<string | null>(
+    logoSignedUrl
+  );
 
   const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [removingLogo, setRemovingLogo] = useState(false);
 
   const [error, setError] = useState("");
-
   const [success, setSuccess] = useState("");
 
-  async function handleLogoChange(
-    event: ChangeEvent<HTMLInputElement>,
+  const [logoError, setLogoError] = useState("");
+  const [logoSuccess, setLogoSuccess] = useState("");
+
+  const [selectedFileName, setSelectedFileName] = useState("");
+
+  /*
+   * Save normal business profile information
+   */
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    setSaving(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch("/api/businesses", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          business_id: business.id,
+          name: name.trim(),
+          description: description.trim(),
+          country_code: countryCode,
+          phone: phone.trim(),
+          email: email.trim(),
+          website_url: websiteUrl.trim(),
+          is_public: isPublic,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error || "Unable to update your business profile."
+        );
+      }
+
+      setSuccess("Business profile updated successfully.");
+    } catch (err) {
+      console.error("Profile update error:", err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong while updating your business profile."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  /*
+   * Select logo file
+   */
+  function handleLogoSelection(
+    event: ChangeEvent<HTMLInputElement>
   ) {
+    setLogoError("");
+    setLogoSuccess("");
+
     const file = event.target.files?.[0];
 
     if (!file) {
       return;
     }
-
-    setError("");
-    setSuccess("");
 
     const allowedTypes = [
       "image/jpeg",
@@ -103,471 +156,329 @@ export default function ProfileForm({
       "image/webp",
     ];
 
-    if (!allowedTypes.includes(file.type)) {
-      setError(
-        "Please upload a JPG, PNG, or WebP image.",
-      );
-
-      event.target.value = "";
-      return;
-    }
-
     const maxSize = 5 * 1024 * 1024;
 
+    if (!allowedTypes.includes(file.type)) {
+      setLogoError(
+        "Please select a JPG, PNG, or WebP image."
+      );
+
+      event.target.value = "";
+      return;
+    }
+
     if (file.size > maxSize) {
-      setError(
-        "Logo image must not be larger than 5 MB.",
+      setLogoError(
+        "Logo image must be 5 MB or smaller."
       );
 
       event.target.value = "";
       return;
     }
 
-    try {
-      setLogoUploading(true);
+    setSelectedFileName(file.name);
 
-      const formData = new FormData();
+    /*
+     * Show an immediate local preview.
+     */
+    const previewUrl = URL.createObjectURL(file);
 
-      formData.append("logo", file);
-
-      const response = await fetch(
-        "/api/businesses/logo",
-        {
-          method: "POST",
-          body: formData,
-        },
-      );
-
-      let data: {
-        success?: boolean;
-        message?: string;
-        error?: string;
-      };
-
-      try {
-        data = await response.json();
-      } catch {
-        throw new Error(
-          "The server returned an invalid response.",
-        );
-      }
-
-      if (!response.ok || !data.success) {
-        throw new Error(
-          data.error ||
-            "Unable to upload your business logo.",
-        );
-      }
-
-      setLogoVersion(Date.now());
-
-      setSuccess(
-        data.message ||
-          "Business logo updated successfully.",
-      );
-    } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Something went wrong while uploading your logo.",
-      );
-    } finally {
-      setLogoUploading(false);
-
-      event.target.value = "";
-    }
+    setLogoPreview(previewUrl);
   }
 
-  async function handleRemoveLogo() {
-    const confirmed = window.confirm(
-      "Are you sure you want to remove your business logo?",
-    );
+  /*
+   * Upload logo directly to Supabase Storage.
+   */
+  async function handleLogoUpload() {
+    setLogoError("");
+    setLogoSuccess("");
 
-    if (!confirmed) {
+    const file = fileInputRef.current?.files?.[0];
+
+    if (!file) {
+      setLogoError("Please select a logo first.");
       return;
     }
 
-    setError("");
-    setSuccess("");
+    setUploadingLogo(true);
 
     try {
-      setLogoRemoving(true);
+      /*
+       * Make sure the user still has a valid session.
+       */
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      const response = await fetch(
-        "/api/businesses/logo",
-        {
-          method: "DELETE",
-        },
-      );
+      if (userError || !user) {
+        throw new Error(
+          "Your session has expired. Please log in again."
+        );
+      }
 
-      let data: {
-        success?: boolean;
-        message?: string;
-        error?: string;
+      /*
+       * Determine a safe file extension.
+       */
+      const extensionMap: Record<string, string> = {
+        "image/jpeg": "jpg",
+        "image/png": "png",
+        "image/webp": "webp",
       };
 
-      try {
-        data = await response.json();
-      } catch {
+      const extension = extensionMap[file.type];
+
+      if (!extension) {
         throw new Error(
-          "The server returned an invalid response.",
+          "Unsupported image format."
         );
       }
 
-      if (!response.ok || !data.success) {
-        throw new Error(
-          data.error ||
-            "Unable to remove your business logo.",
-        );
-      }
+      /*
+       * Keep one predictable logo path.
+       */
+      const filePath =
+        `${business.id}/logo.${extension}`;
 
-      setLogoVersion(Date.now());
+      /*
+       * Remove an old logo if its extension changed.
+       */
+      if (logoUrl) {
+        const oldPath = logoUrl;
 
-      setSuccess(
-        data.message ||
-          "Business logo removed successfully.",
-      );
-    } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Something went wrong while removing your logo.",
-      );
-    } finally {
-      setLogoRemoving(false);
-    }
-  }
+        if (oldPath !== filePath) {
+          const { error: removeOldError } =
+            await supabase.storage
+              .from("business-logos")
+              .remove([oldPath]);
 
-  async function handleSubmit(
-    event: FormEvent<HTMLFormElement>,
-  ) {
-    event.preventDefault();
-
-    setError("");
-    setSuccess("");
-
-    const cleanName = name.trim();
-    const cleanDescription =
-      description.trim();
-    const cleanPhone = phone.trim();
-    const cleanEmail = email.trim();
-    const cleanWebsite = websiteUrl.trim();
-
-    if (cleanName.length < 2) {
-      setError(
-        "Business name must contain at least 2 characters.",
-      );
-      return;
-    }
-
-    if (cleanName.length > 150) {
-      setError(
-        "Business name must not exceed 150 characters.",
-      );
-      return;
-    }
-
-    if (cleanDescription.length > 5000) {
-      setError(
-        "Description must not exceed 5000 characters.",
-      );
-      return;
-    }
-
-    if (!countryCode) {
-      setError(
-        "Please select your business country.",
-      );
-      return;
-    }
-
-    if (cleanPhone.length > 50) {
-      setError(
-        "Phone number must not exceed 50 characters.",
-      );
-      return;
-    }
-
-    if (cleanEmail.length > 255) {
-      setError(
-        "Business email must not exceed 255 characters.",
-      );
-      return;
-    }
-
-    if (cleanEmail) {
-      const emailPattern =
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-      if (!emailPattern.test(cleanEmail)) {
-        setError(
-          "Please provide a valid business email.",
-        );
-        return;
-      }
-    }
-
-    if (cleanWebsite.length > 500) {
-      setError(
-        "Website URL must not exceed 500 characters.",
-      );
-      return;
-    }
-
-    if (cleanWebsite) {
-      try {
-        const website = new URL(cleanWebsite);
-
-        if (
-          website.protocol !== "http:" &&
-          website.protocol !== "https:"
-        ) {
-          throw new Error();
+          if (removeOldError) {
+            console.warn(
+              "Could not remove previous logo:",
+              removeOldError
+            );
+          }
         }
-      } catch {
-        setError(
-          "Please provide a valid website URL starting with http:// or https://.",
-        );
-        return;
       }
-    }
 
-    try {
-      setSaving(true);
+      /*
+       * Upload the new logo.
+       *
+       * upsert allows replacing logo.png/logo.jpg/etc.
+       */
+      const { error: uploadError } =
+        await supabase.storage
+          .from("business-logos")
+          .upload(filePath, file, {
+            cacheControl: "3600",
+            upsert: true,
+            contentType: file.type,
+          });
 
-      const response = await fetch(
-        "/api/businesses",
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            business_id: business.id,
-            name: cleanName,
-            description: cleanDescription,
-            country_code: countryCode,
-            phone: cleanPhone,
-            email: cleanEmail,
-            website_url: cleanWebsite,
-            is_public: isPublic,
-          }),
-        },
+      if (uploadError) {
+        throw new Error(
+          uploadError.message ||
+            "Unable to upload your logo."
+        );
+      }
+
+      /*
+       * Save the STORAGE PATH in businesses.logo_url.
+       */
+      const { error: databaseError } =
+        await supabase
+          .from("businesses")
+          .update({
+            logo_url: filePath,
+          })
+          .eq("id", business.id)
+          .eq("owner_id", user.id);
+
+      if (databaseError) {
+        /*
+         * If database update fails, try to remove
+         * the newly uploaded file so we don't leave
+         * an orphaned logo.
+         */
+        await supabase.storage
+          .from("business-logos")
+          .remove([filePath]);
+
+        throw new Error(
+          databaseError.message ||
+            "Unable to save your logo."
+        );
+      }
+
+      /*
+       * Generate a fresh signed URL immediately.
+       */
+      const { data: signedUrlData, error: signedUrlError } =
+        await supabase.storage
+          .from("business-logos")
+          .createSignedUrl(filePath, 60 * 60);
+
+      if (signedUrlError) {
+        throw new Error(
+          signedUrlError.message ||
+            "Logo uploaded, but its preview could not be generated."
+        );
+      }
+
+      setLogoUrl(filePath);
+
+      setLogoPreview(
+        signedUrlData?.signedUrl || null
       );
 
-      let data: {
-        success?: boolean;
-        message?: string;
-        error?: string;
-        business?: Business;
-      };
+      setSelectedFileName("");
 
-      try {
-        data = await response.json();
-      } catch {
-        throw new Error(
-          "The server returned an invalid response.",
-        );
+      /*
+       * Clear the file input so selecting the same
+       * file again will trigger onChange.
+       */
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
       }
 
-      if (!response.ok || !data.success) {
-        throw new Error(
-          data.error ||
-            "Unable to update your business profile.",
-        );
-      }
-
-      if (data.business) {
-        setName(data.business.name);
-
-        setDescription(
-          data.business.description ?? "",
-        );
-
-        setCountryCode(
-          data.business.country_code,
-        );
-
-        setPhone(data.business.phone ?? "");
-
-        setEmail(data.business.email ?? "");
-
-        setWebsiteUrl(
-          data.business.website_url ?? "",
-        );
-
-        setIsPublic(data.business.is_public);
-      }
-
-      setSuccess(
-        data.message ||
-          "Business profile updated successfully.",
+      setLogoSuccess(
+        "Business logo updated successfully."
       );
-    } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Something went wrong while saving your profile.",
+    } catch (err) {
+      console.error("Logo upload error:", err);
+
+      setLogoError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong while uploading your logo."
       );
     } finally {
-      setSaving(false);
+      setUploadingLogo(false);
     }
   }
 
+  /*
+   * Remove current logo.
+   */
+  async function handleLogoRemove() {
+    setLogoError("");
+    setLogoSuccess("");
+
+    if (!logoUrl) {
+      setLogoPreview(null);
+      return;
+    }
+
+    setRemovingLogo(true);
+
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        throw new Error(
+          "Your session has expired. Please log in again."
+        );
+      }
+
+      /*
+       * Remove file from Storage.
+       */
+      const { error: removeError } =
+        await supabase.storage
+          .from("business-logos")
+          .remove([logoUrl]);
+
+      if (removeError) {
+        throw new Error(
+          removeError.message ||
+            "Unable to remove your logo."
+        );
+      }
+
+      /*
+       * Clear logo path from business record.
+       */
+      const { error: databaseError } =
+        await supabase
+          .from("businesses")
+          .update({
+            logo_url: null,
+          })
+          .eq("id", business.id)
+          .eq("owner_id", user.id);
+
+      if (databaseError) {
+        throw new Error(
+          databaseError.message ||
+            "Logo file was removed, but the business profile could not be updated."
+        );
+      }
+
+      setLogoUrl("");
+      setLogoPreview(null);
+      setSelectedFileName("");
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
+      setLogoSuccess(
+        "Business logo removed successfully."
+      );
+    } catch (err) {
+      console.error("Logo removal error:", err);
+
+      setLogoError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong while removing your logo."
+      );
+    } finally {
+      setRemovingLogo(false);
+    }
+  }
+
+  /*
+   * Reset normal form fields.
+   */
   function handleCancel() {
-    setName(business.name);
-
-    setDescription(
-      business.description ?? "",
+    setName(business.name || "");
+    setDescription(business.description || "");
+    setCountryCode(
+      business.country_code || country?.code || ""
     );
-
-    setCountryCode(business.country_code);
-
-    setPhone(business.phone ?? "");
-
-    setEmail(business.email ?? "");
-
-    setWebsiteUrl(
-      business.website_url ?? "",
-    );
-
-    setIsPublic(business.is_public);
+    setPhone(business.phone || "");
+    setEmail(business.email || "");
+    setWebsiteUrl(business.website_url || "");
+    setIsPublic(Boolean(business.is_public));
 
     setError("");
     setSuccess("");
   }
-
-  const logoSrc = business.logo_url
-    ? `/api/businesses/logo?v=${logoVersion}`
-    : "";
-
-  const logoBusy =
-    logoUploading || logoRemoving;
 
   return (
     <form
       className="profile-form"
       onSubmit={handleSubmit}
     >
-      {/* BUSINESS LOGO */}
-
-      <div className="profile-form__section">
+      {/* Business information */}
+      <section className="profile-form__section">
         <div className="profile-form__heading">
-          <div>
-            <h2>Business logo</h2>
+          <h2>Business information</h2>
 
-            <p>
-              Upload your real business logo so
-              customers can easily recognize your
-              business.
-            </p>
-          </div>
-        </div>
-
-        <div className="profile-logo">
-          <div className="profile-logo__preview">
-            {business.logo_url ? (
-              <img
-                key={logoSrc}
-                src={logoSrc}
-                alt={`${business.name} logo`}
-              />
-            ) : (
-              <span>
-                {business.name
-                  .charAt(0)
-                  .toUpperCase()}
-              </span>
-            )}
-          </div>
-
-          <div className="profile-logo__content">
-            <strong>
-              {business.logo_url
-                ? "Your business logo"
-                : "Add your business logo"}
-            </strong>
-
-            <p>
-              Use a clear square logo. JPG, PNG, or
-              WebP up to 5 MB.
-            </p>
-
-            <div className="profile-logo__actions">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={handleLogoChange}
-                disabled={
-                  saving || logoBusy
-                }
-                hidden
-              />
-
-              <button
-                type="button"
-                className="profile-button profile-button--primary"
-                onClick={() =>
-                  fileInputRef.current?.click()
-                }
-                disabled={
-                  saving || logoBusy
-                }
-              >
-                {logoUploading ? (
-                  <>
-                    <span className="button-spinner" />
-                    Uploading...
-                  </>
-                ) : business.logo_url ? (
-                  "Change logo"
-                ) : (
-                  "Upload logo"
-                )}
-              </button>
-
-              {business.logo_url && (
-                <button
-                  type="button"
-                  className="profile-button profile-button--secondary"
-                  onClick={handleRemoveLogo}
-                  disabled={
-                    saving || logoBusy
-                  }
-                >
-                  {logoRemoving ? (
-                    <>
-                      <span className="button-spinner" />
-                      Removing...
-                    </>
-                  ) : (
-                    "Remove"
-                  )}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* BUSINESS INFORMATION */}
-
-      <div className="profile-form__section">
-        <div className="profile-form__heading">
-          <div>
-            <h2>Business information</h2>
-
-            <p>
-              Keep your business information accurate
-              so customers know who they are dealing
-              with.
-            </p>
-          </div>
+          <p>
+            Keep your business information accurate so
+            customers can find and contact you.
+          </p>
         </div>
 
         <div className="profile-form__grid">
-          <div className="profile-field profile-field--full">
+
+          {/* Business name */}
+          <div className="profile-field">
             <label htmlFor="business-name">
               Business name
             </label>
@@ -579,41 +490,13 @@ export default function ProfileForm({
               onChange={(event) =>
                 setName(event.target.value)
               }
-              placeholder="Enter your business name"
-              maxLength={150}
-              disabled={saving || logoBusy}
               required
+              maxLength={150}
+              autoComplete="organization"
             />
-
-            <span className="profile-field__hint">
-              This is the name customers will see.
-            </span>
           </div>
 
-          <div className="profile-field profile-field--full">
-            <label htmlFor="business-description">
-              Description
-            </label>
-
-            <textarea
-              id="business-description"
-              value={description}
-              onChange={(event) =>
-                setDescription(
-                  event.target.value,
-                )
-              }
-              placeholder="Tell customers what your business does..."
-              maxLength={5000}
-              rows={6}
-              disabled={saving || logoBusy}
-            />
-
-            <span className="profile-field__hint">
-              {description.length}/5000 characters
-            </span>
-          </div>
-
+          {/* Country */}
           <div className="profile-field">
             <label htmlFor="business-country">
               Country
@@ -623,28 +506,48 @@ export default function ProfileForm({
               id="business-country"
               value={countryCode}
               onChange={(event) =>
-                setCountryCode(
-                  event.target.value,
-                )
+                setCountryCode(event.target.value)
               }
-              disabled={saving || logoBusy}
               required
             >
               <option value="">
                 Select country
               </option>
 
-              {countries.map((country) => (
+              {countries.map((item) => (
                 <option
-                  key={country.code}
-                  value={country.code}
+                  key={item.code}
+                  value={item.code}
                 >
-                  {country.name}
+                  {item.name}
                 </option>
               ))}
             </select>
           </div>
 
+          {/* Description */}
+          <div className="profile-field profile-field--full">
+            <label htmlFor="business-description">
+              Business description
+            </label>
+
+            <textarea
+              id="business-description"
+              value={description}
+              onChange={(event) =>
+                setDescription(event.target.value)
+              }
+              rows={6}
+              maxLength={2000}
+              placeholder="Tell customers what your business does..."
+            />
+
+            <span className="profile-field__hint">
+              {description.length}/2000 characters
+            </span>
+          </div>
+
+          {/* Phone */}
           <div className="profile-field">
             <label htmlFor="business-phone">
               Phone number
@@ -657,12 +560,12 @@ export default function ProfileForm({
               onChange={(event) =>
                 setPhone(event.target.value)
               }
-              placeholder="+234..."
-              maxLength={50}
-              disabled={saving || logoBusy}
+              maxLength={40}
+              autoComplete="tel"
             />
           </div>
 
+          {/* Email */}
           <div className="profile-field">
             <label htmlFor="business-email">
               Business email
@@ -675,16 +578,15 @@ export default function ProfileForm({
               onChange={(event) =>
                 setEmail(event.target.value)
               }
-              placeholder="business@example.com"
-              maxLength={255}
-              disabled={saving || logoBusy}
+              maxLength={254}
+              autoComplete="email"
             />
           </div>
 
-          <div className="profile-field">
+          {/* Website */}
+          <div className="profile-field profile-field--full">
             <label htmlFor="business-website">
               Website
-
               <span className="profile-field__optional">
                 Optional
               </span>
@@ -695,42 +597,166 @@ export default function ProfileForm({
               type="url"
               value={websiteUrl}
               onChange={(event) =>
-                setWebsiteUrl(
-                  event.target.value,
-                )
+                setWebsiteUrl(event.target.value)
               }
               placeholder="https://example.com"
               maxLength={500}
-              disabled={saving || logoBusy}
+              autoComplete="url"
             />
+
+            <span className="profile-field__hint">
+              Include https:// if your business has a
+              website.
+            </span>
           </div>
+
         </div>
-      </div>
+      </section>
 
-      {/* VISIBILITY */}
-
-      <div className="profile-form__section">
+      {/* Business logo */}
+      <section className="profile-form__section">
         <div className="profile-form__heading">
-          <div>
-            <h2>Business visibility</h2>
+          <h2>Business logo</h2>
+
+          <p>
+            Add a clear logo to help customers recognize
+            your business.
+          </p>
+        </div>
+
+        <div className="profile-logo">
+
+          <div className="profile-logo__preview">
+            {logoPreview ? (
+              <img
+                src={logoPreview}
+                alt={`${business.name} logo`}
+              />
+            ) : (
+              <span>
+                {name?.charAt(0)?.toUpperCase() || "B"}
+              </span>
+            )}
+          </div>
+
+          <div className="profile-logo__content">
+
+            <strong>
+              {logoUrl
+                ? "Your business logo"
+                : "Add your business logo"}
+            </strong>
 
             <p>
-              Control whether customers can discover
-              your business publicly.
+              JPG, PNG or WebP. Maximum file size: 5 MB.
             </p>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleLogoSelection}
+              hidden
+            />
+
+            {selectedFileName && (
+              <p className="profile-logo__filename">
+                Selected: {selectedFileName}
+              </p>
+            )}
+
+            <div className="profile-logo__actions">
+
+              <button
+                type="button"
+                className="profile-button profile-button--secondary"
+                onClick={() =>
+                  fileInputRef.current?.click()
+                }
+                disabled={
+                  uploadingLogo || removingLogo
+                }
+              >
+                Choose image
+              </button>
+
+              {selectedFileName && (
+                <button
+                  type="button"
+                  className="profile-button profile-button--primary"
+                  onClick={handleLogoUpload}
+                  disabled={
+                    uploadingLogo || removingLogo
+                  }
+                >
+                  {uploadingLogo ? (
+                    <>
+                      <span className="button-spinner" />
+                      Uploading...
+                    </>
+                  ) : (
+                    "Upload logo"
+                  )}
+                </button>
+              )}
+
+              {logoUrl && !selectedFileName && (
+                <button
+                  type="button"
+                  className="profile-button profile-button--danger"
+                  onClick={handleLogoRemove}
+                  disabled={
+                    uploadingLogo || removingLogo
+                  }
+                >
+                  {removingLogo
+                    ? "Removing..."
+                    : "Remove logo"}
+                </button>
+              )}
+
+            </div>
+
+            {logoError && (
+              <div className="profile-message profile-message--error">
+                {logoError}
+              </div>
+            )}
+
+            {logoSuccess && (
+              <div className="profile-message profile-message--success">
+                {logoSuccess}
+              </div>
+            )}
+
           </div>
+        </div>
+      </section>
+
+      {/* Visibility */}
+      <section className="profile-form__section">
+        <div className="profile-form__heading">
+          <h2>Business visibility</h2>
+
+          <p>
+            Control whether customers can discover your
+            business on IFC BIZGROWTH.
+          </p>
         </div>
 
         <div className="visibility-card">
           <div className="visibility-card__content">
             <strong>
-              Make my business visible
+              {isPublic
+                ? "Your business is public"
+                : "Your business is private"}
             </strong>
 
-            <span>
-              When enabled, your business can appear
-              in the IFC BIZGROWTH business directory.
-            </span>
+            <p>
+              {isPublic
+                ? "Customers can discover your business in the public directory."
+                : "Customers cannot discover your business in the public directory."}
+            </p>
           </div>
 
           <button
@@ -739,91 +765,91 @@ export default function ProfileForm({
               isPublic ? "toggle--active" : ""
             }`}
             onClick={() =>
-              setIsPublic(
-                (current) => !current,
-              )
-            }
-            disabled={saving || logoBusy}
-            aria-label={
-              isPublic
-                ? "Hide business from public directory"
-                : "Show business in public directory"
+              setIsPublic((current) => !current)
             }
             aria-pressed={isPublic}
+            aria-label="Toggle business visibility"
           >
             <span className="toggle__track">
               <span className="toggle__thumb" />
             </span>
 
             <span className="toggle__text">
-              {isPublic ? "Visible" : "Hidden"}
+              {isPublic ? "Public" : "Private"}
             </span>
           </button>
         </div>
-      </div>
+      </section>
 
-      {/* VERIFICATION */}
-
-      <div className="profile-form__section">
+      {/* Verification */}
+      <section className="profile-form__section">
         <div className="profile-form__heading">
-          <div>
-            <h2>Verification</h2>
+          <h2>Verification</h2>
 
-            <p>
-              Your verification status is controlled
-              by IFC BIZGROWTH.
-            </p>
-          </div>
+          <p>
+            Business verification helps customers know
+            that your business has been reviewed.
+          </p>
         </div>
 
         <div className="verification-status-card">
+
           <div className="verification-status-card__icon">
-            ✓
+            {business.verification_status ===
+            "approved"
+              ? "✓"
+              : "!"}
           </div>
 
           <div>
             <strong>
-              {formatVerificationStatus(
-                business.verification_status,
-              )}
+              {business.verification_status ===
+              "approved"
+                ? "Your business is verified"
+                : business.verification_status ===
+                  "pending"
+                ? "Verification is pending"
+                : business.verification_status ===
+                  "rejected"
+                ? "Verification was rejected"
+                : business.verification_status ===
+                  "needs_more_information"
+                ? "More information is required"
+                : "Your business is not verified"}
             </strong>
 
-            <span>
-              Verification status cannot be changed
-              from your profile.
-            </span>
+            <p>
+              {business.verification_status ===
+              "approved"
+                ? "Your business has an approved verification status."
+                : "Submit your verification information from the verification section of your business dashboard."}
+            </p>
           </div>
+
         </div>
-      </div>
+      </section>
 
-      {/* MESSAGES */}
-
+      {/* Messages */}
       {error && (
-        <div
-          className="profile-message profile-message--error"
-          role="alert"
-        >
+        <div className="profile-message profile-message--error">
           {error}
         </div>
       )}
 
       {success && (
-        <div
-          className="profile-message profile-message--success"
-          role="status"
-        >
+        <div className="profile-message profile-message--success">
           {success}
         </div>
       )}
 
-      {/* ACTIONS */}
-
+      {/* Actions */}
       <div className="profile-form__actions">
+
         <button
           type="button"
           className="profile-button profile-button--secondary"
           onClick={handleCancel}
-          disabled={saving || logoBusy}
+          disabled={saving}
         >
           Cancel
         </button>
@@ -831,7 +857,7 @@ export default function ProfileForm({
         <button
           type="submit"
           className="profile-button profile-button--primary"
-          disabled={saving || logoBusy}
+          disabled={saving}
         >
           {saving ? (
             <>
@@ -842,29 +868,8 @@ export default function ProfileForm({
             "Save changes"
           )}
         </button>
+
       </div>
     </form>
   );
-}
-
-function formatVerificationStatus(
-  status: string,
-) {
-  switch (status) {
-    case "approved":
-      return "Verified";
-
-    case "pending":
-      return "Verification pending";
-
-    case "needs_more_information":
-      return "More information required";
-
-    case "rejected":
-      return "Verification rejected";
-
-    case "not_submitted":
-    default:
-      return "Not verified";
   }
-    }
