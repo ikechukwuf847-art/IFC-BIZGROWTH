@@ -4156,10 +4156,15 @@ select:focus-visible {
   }
      }
 
+/* =========================================================
+   IFC BIZGROWTH — BUSINESS PROFILE
+========================================================= */
+
 .business-page {
   min-height: 100vh;
-  background: #f7f9fc;
   padding: 40px 20px 80px;
+  background: #f7f9fc;
+  color: #0f172a;
 }
 
 .business-page-shell {
@@ -4167,103 +4172,147 @@ select:focus-visible {
   margin: 0 auto;
 }
 
+/* =========================================================
+   PAGE HEADER
+========================================================= */
+
 .business-page-header {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
-  margin-bottom: 28px;
+  margin-bottom: 26px;
 }
 
 .page-eyebrow {
   display: inline-block;
   margin-bottom: 8px;
   color: #2563eb;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: .08em;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .business-page-header h1 {
   margin: 0;
-  color: #111827;
+  color: #0f172a;
   font-size: clamp(30px, 5vw, 42px);
+  font-weight: 800;
+  letter-spacing: -0.025em;
   line-height: 1.1;
 }
 
 .business-page-header p {
-  margin: 10px 0 0;
+  max-width: 650px;
+  margin: 9px 0 0;
   color: #64748b;
-  font-size: 16px;
+  font-size: 15px;
+  line-height: 1.6;
 }
 
 .back-dashboard-link {
-  color: #2563eb;
-  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 15px;
+  border: 1px solid #dbe3ef;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 13px;
   font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
 }
 
-.profile-status-card,
-.profile-form-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 18px;
-  background: #ffffff;
-  box-shadow: 0 8px 30px rgba(15, 23, 42, .05);
+.back-dashboard-link:hover {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #2563eb;
+  transform: translateY(-1px);
 }
+
+/* =========================================================
+   STATUS CARD
+========================================================= */
 
 .profile-status-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding: 22px;
-  margin-bottom: 22px;
+  gap: 24px;
+  padding: 20px 22px;
+  margin-bottom: 18px;
+  border: 1px solid #e5eaf2;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.04);
 }
 
 .profile-status-main {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 14px;
+  min-width: 0;
 }
 
 .profile-business-icon {
+  width: 50px;
+  height: 50px;
+  flex: 0 0 50px;
   display: grid;
-  width: 52px;
-  height: 52px;
   place-items: center;
-  border-radius: 14px;
+  border-radius: 13px;
   background: #eff6ff;
   color: #2563eb;
-  font-size: 21px;
+  font-size: 19px;
   font-weight: 800;
+}
+
+.profile-status-main > div:last-child {
+  min-width: 0;
 }
 
 .profile-status-main h2 {
   margin: 0;
-  color: #111827;
-  font-size: 19px;
+  overflow: hidden;
+  color: #0f172a;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .profile-status-main p {
-  margin: 5px 0 0;
+  margin: 4px 0 0;
   color: #64748b;
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .profile-status-badges {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 
 .status-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
   border-radius: 999px;
-  padding: 7px 11px;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .status-active,
@@ -4278,254 +4327,395 @@ select:focus-visible {
   color: #c2410c;
 }
 
+/* =========================================================
+   MAIN FORM
+========================================================= */
+
 .business-profile-form {
-  display: grid;
-  gap: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
-.profile-form-card {
-  padding: 26px;
+.profile-form__section {
+  padding: 25px;
+  border: 1px solid #e5eaf2;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.03);
 }
 
-.profile-form-heading {
-  margin-bottom: 24px;
+.profile-form__heading {
+  margin-bottom: 22px;
 }
 
-.profile-form-heading h2 {
+.profile-form__heading h2 {
   margin: 0;
-  color: #111827;
-  font-size: 20px;
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
-.profile-form-heading p {
+.profile-form__heading p {
   max-width: 650px;
-  margin: 7px 0 0;
+  margin: 6px 0 0;
   color: #64748b;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.6;
 }
 
-.profile-form-grid {
+/* =========================================================
+   FORM GRID
+========================================================= */
+
+.profile-form__grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
 }
 
 .profile-field {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.profile-field-full {
+.profile-field--full {
   grid-column: 1 / -1;
 }
 
 .profile-field label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   color: #334155;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 750;
 }
 
-.optional-label {
-  margin-left: 8px;
+.profile-field__optional {
   color: #94a3b8;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
 }
+
+/* =========================================================
+   INPUTS
+========================================================= */
 
 .profile-field input,
 .profile-field textarea,
 .profile-field select {
   width: 100%;
+  min-height: 45px;
   box-sizing: border-box;
-  border: 1px solid #dbe1ea;
-  border-radius: 11px;
+  padding: 11px 13px;
+  border: 1px solid #dbe3ef;
+  border-radius: 10px;
   outline: none;
-  background: #fff;
-  color: #111827;
+  background: #ffffff;
+  color: #0f172a;
   font: inherit;
-  font-size: 14px;
-  padding: 12px 13px;
-  transition: border-color .2s, box-shadow .2s;
+  font-size: 13px;
+  line-height: 1.5;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
 }
 
 .profile-field textarea {
+  min-height: 135px;
   resize: vertical;
-  min-height: 130px;
+}
+
+.profile-field input::placeholder,
+.profile-field textarea::placeholder {
+  color: #a1adbd;
+}
+
+.profile-field input:hover,
+.profile-field textarea:hover,
+.profile-field select:hover {
+  border-color: #cbd5e1;
 }
 
 .profile-field input:focus,
 .profile-field textarea:focus,
 .profile-field select:focus {
   border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, .1);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  background: #ffffff;
 }
 
-.field-hint {
+.profile-field input:disabled,
+.profile-field textarea:disabled,
+.profile-field select:disabled {
+  cursor: not-allowed;
+  background: #f8fafc;
   color: #94a3b8;
-  font-size: 12px;
-  text-align: right;
 }
 
-.form-alert {
-  border-radius: 10px;
-  padding: 12px 14px;
-  font-size: 14px;
-  line-height: 1.5;
+.profile-field__hint {
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.4;
 }
 
-.form-alert-error {
-  background: #fef2f2;
-  color: #b91c1c;
-}
+/* =========================================================
+   VISIBILITY
+========================================================= */
 
-.form-alert-success {
-  background: #ecfdf5;
-  color: #047857;
-}
-
-.visibility-control {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  cursor: pointer;
-}
-
-.visibility-toggle {
-  position: relative;
-  flex: 0 0 auto;
-}
-
-.visibility-toggle input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.toggle-slider {
-  display: block;
-  width: 46px;
-  height: 26px;
-  border-radius: 999px;
-  background: #cbd5e1;
-  transition: .2s;
-}
-
-.toggle-slider::after {
-  content: "";
-  display: block;
-  width: 20px;
-  height: 20px;
-  margin: 3px;
-  border-radius: 50%;
-  background: #fff;
-  transition: .2s;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .15);
-}
-
-.visibility-toggle input:checked + .toggle-slider {
-  background: #2563eb;
-}
-
-.visibility-toggle input:checked + .toggle-slider::after {
-  transform: translateX(20px);
-}
-
-.visibility-control strong {
-  display: block;
-  color: #111827;
-  font-size: 14px;
-}
-
-.visibility-control small {
-  display: block;
-  margin-top: 4px;
-  color: #64748b;
-  font-size: 13px;
-}
-
-.profile-readonly-card {
-  background: #fbfdff;
-}
-
-.verification-info-row {
+.visibility-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 14px 0;
-  border-top: 1px solid #eef2f7;
+  padding: 16px;
+  border: 1px solid #e8edf4;
+  border-radius: 13px;
+  background: #fbfdff;
 }
 
-.verification-info-row span {
-  color: #64748b;
-  font-size: 14px;
-}
-
-.verification-info-row strong {
-  color: #111827;
-  font-size: 14px;
-}
-
-.verification-action {
-  display: inline-block;
-  margin-top: 12px;
-  color: #2563eb;
-  font-size: 14px;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.profile-form-actions {
+.visibility-card__content {
+  min-width: 0;
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.cancel-profile-button,
-.save-profile-button {
-  min-height: 44px;
-  border-radius: 10px;
-  padding: 0 18px;
+.visibility-card__content strong {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.visibility-card__content span {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* =========================================================
+   TOGGLE
+========================================================= */
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #64748b;
   font: inherit;
-  font-size: 14px;
-  font-weight: 700;
-  text-decoration: none;
   cursor: pointer;
 }
 
-.cancel-profile-button {
+.toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.toggle__track {
+  position: relative;
+  width: 46px;
+  height: 26px;
+  flex: 0 0 46px;
+  border-radius: 999px;
+  background: #cbd5e1;
+  transition: background 0.2s ease;
+}
+
+.toggle__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.18);
+  transition: transform 0.2s ease;
+}
+
+.toggle--active .toggle__track {
+  background: #2563eb;
+}
+
+.toggle--active .toggle__thumb {
+  transform: translateX(20px);
+}
+
+.toggle__text {
+  min-width: 48px;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: left;
+}
+
+/* =========================================================
+   VERIFICATION
+========================================================= */
+
+.verification-status-card {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 15px;
+  border: 1px solid #e8edf4;
+  border-radius: 13px;
+  background: #fbfdff;
+}
+
+.verification-status-card__icon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.verification-status-card > div:last-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.verification-status-card strong {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.verification-status-card span {
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* =========================================================
+   MESSAGES
+========================================================= */
+
+.profile-message {
+  padding: 13px 15px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.profile-message--error {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.profile-message--success {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+/* =========================================================
+   ACTIONS
+========================================================= */
+
+.profile-form__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.profile-button {
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
-  border: 1px solid #dbe1ea;
-  background: #fff;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.profile-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.profile-button--secondary {
+  border: 1px solid #dbe3ef;
+  background: #ffffff;
   color: #475569;
 }
 
-.save-profile-button {
-  border: 0;
+.profile-button--secondary:hover:not(:disabled) {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  transform: translateY(-1px);
+}
+
+.profile-button--primary {
+  border: 1px solid #2563eb;
   background: #2563eb;
-  color: #fff;
+  color: #ffffff;
+  box-shadow: 0 5px 15px rgba(37, 99, 235, 0.16);
 }
 
-.save-profile-button:hover {
+.profile-button--primary:hover:not(:disabled) {
+  border-color: #1d4ed8;
   background: #1d4ed8;
+  box-shadow: 0 7px 18px rgba(37, 99, 235, 0.2);
+  transform: translateY(-1px);
 }
 
-.save-profile-button:disabled {
-  cursor: not-allowed;
-  opacity: .65;
+/* =========================================================
+   LOADING SPINNER
+========================================================= */
+
+.button-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: profile-spin 0.7s linear infinite;
 }
 
-@media (max-width: 700px) {
-  .business-page {
-    padding: 25px 14px 60px;
+@keyframes profile-spin {
+  to {
+    transform: rotate(360deg);
   }
+}
 
-  .business-page-header {
-    align-items: flex-start;
-    flex-direction: column;
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media (max-width: 950px) {
+  .business-page {
+    padding: 32px 18px 65px;
   }
 
   .profile-status-card {
@@ -4533,25 +4723,120 @@ select:focus-visible {
     flex-direction: column;
   }
 
-  .profile-form-grid {
-    grid-template-columns: 1fr;
+  .profile-status-badges {
+    justify-content: flex-start;
+  }
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 700px) {
+  .business-page {
+    padding: 24px 14px 50px;
   }
 
-  .profile-field-full {
+  .business-page-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+
+  .business-page-header h1 {
+    font-size: 29px;
+  }
+
+  .business-page-header p {
+    font-size: 13px;
+  }
+
+  .back-dashboard-link {
+    width: 100%;
+    box-sizing: border-box;
+    justify-content: center;
+  }
+
+  .profile-status-card {
+    padding: 17px;
+    border-radius: 14px;
+  }
+
+  .profile-status-main {
+    width: 100%;
+  }
+
+  .profile-status-main h2 {
+    font-size: 15px;
+  }
+
+  .profile-status-badges {
+    width: 100%;
+  }
+
+  .profile-form__section {
+    padding: 19px;
+    border-radius: 14px;
+  }
+
+  .profile-form__grid {
+    grid-template-columns: 1fr;
+    gap: 17px;
+  }
+
+  .profile-field--full {
     grid-column: auto;
   }
 
-  .profile-form-card {
-    padding: 20px;
+  .visibility-card {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
-  .profile-form-actions {
+  .toggle {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .toggle__text {
+    flex: 1;
+  }
+
+  .verification-status-card {
+    align-items: flex-start;
+  }
+
+  .profile-form__actions {
     flex-direction: column-reverse;
   }
 
-  .cancel-profile-button,
-  .save-profile-button {
+  .profile-button {
     width: 100%;
-    justify-content: center;
+  }
+}
+
+/* =========================================================
+   SMALL PHONES
+========================================================= */
+
+@media (max-width: 400px) {
+  .business-page {
+    padding-left: 11px;
+    padding-right: 11px;
+  }
+
+  .profile-form__section {
+    padding: 16px;
+  }
+
+  .profile-status-card {
+    padding: 15px;
+  }
+
+  .profile-business-icon {
+    width: 45px;
+    height: 45px;
+    flex-basis: 45px;
   }
    }
