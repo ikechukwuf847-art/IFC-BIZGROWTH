@@ -1,13 +1,12 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import ProfileForm from "./profile-form";
 
 export const dynamic = "force-dynamic";
 
 export default async function BusinessProfilePage() {
-  const supabase = await createClient();
+  const supabase = await createSupabaseServerClient();
 
-  // Check authentication
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -16,77 +15,95 @@ export default async function BusinessProfilePage() {
     redirect("/login?next=/business/profile");
   }
 
-  // Get the business owned by this user
-  const { data: business, error: businessError } = await supabase
-    .from("businesses")
-    .select(
-      `
-        id,
-        name,
-        slug,
-        description,
-        email,
-        phone,
-        website_url,
-        logo_url,
-        country_code,
-        status,
-        verification_status,
-        is_public,
-        is_featured
-      `
-    )
-    .eq("owner_id", user.id)
-    .maybeSingle();
+  const { data: business, error: businessError } =
+    await supabase
+      .from("businesses")
+      .select(
+        `
+          id,
+          name,
+          slug,
+          description,
+          email,
+          phone,
+          website_url,
+          logo_url,
+          country_code,
+          status,
+          verification_status,
+          is_public,
+          is_featured
+        `,
+      )
+      .eq("owner_id", user.id)
+      .maybeSingle();
 
   if (businessError) {
-    console.error("Business profile error:", businessError);
+    console.error(
+      "Business profile error:",
+      businessError,
+    );
   }
 
-  // User has no business yet
   if (!business) {
     redirect("/business/create");
   }
 
-  // Get country information
   const { data: country } = await supabase
     .from("countries")
-    .select("code, name, official_name, currency_code")
+    .select(
+      "code, name, official_name, currency_code",
+    )
     .eq("code", business.country_code)
     .maybeSingle();
 
-  // Get all active African countries
-  const { data: countries, error: countriesError } = await supabase
-    .from("countries")
-    .select("code, name, official_name, currency_code")
-    .eq("is_african", true)
-    .eq("is_active", true)
-    .order("name", { ascending: true });
+  const { data: countries, error: countriesError } =
+    await supabase
+      .from("countries")
+      .select(
+        "code, name, official_name, currency_code",
+      )
+      .eq("is_african", true)
+      .eq("is_active", true)
+      .order("name", { ascending: true });
 
   if (countriesError) {
-    console.error("Countries error:", countriesError);
+    console.error(
+      "Countries error:",
+      countriesError,
+    );
   }
 
   /*
-   * Generate a signed URL for the business logo.
-   *
-   * logo_url stores the STORAGE PATH, not a public URL.
+   * logo_url stores the private Storage PATH.
    *
    * Example:
-   * 00b54f90-2e90-4b3f-b34a-ceb3717556d3/logo.png
+   * business-id/logo.png
+   *
+   * Generate a signed URL on the server so the
+   * private bucket can safely display the logo.
    */
   let logoSignedUrl: string | null = null;
 
   if (business.logo_url) {
-    const { data: signedUrlData, error: signedUrlError } =
-      await supabase.storage
-        .from("business-logos")
-        .createSignedUrl(business.logo_url, 60 * 60);
+    const {
+      data: signedUrlData,
+      error: signedUrlError,
+    } = await supabase.storage
+      .from("business-logos")
+      .createSignedUrl(
+        business.logo_url,
+        60 * 60,
+      );
 
     if (signedUrlError) {
-      console.error("Logo signed URL error:", signedUrlError);
+      console.error(
+        "Business logo signed URL error:",
+        signedUrlError,
+      );
     } else {
-      logoSignedUrl = signedUrlData?.signedUrl ?? null;
+      logoSignedUrl =
+        signedUrlData?.signedUrl ?? null;
     }
   }
 
@@ -94,20 +111,21 @@ export default async function BusinessProfilePage() {
     <main className="business-page">
       <div className="business-page__container">
 
-        {/* Page header */}
         <header className="business-page__header">
           <div>
-            <p className="business-page__eyebrow">Business</p>
+            <p className="business-page__eyebrow">
+              Business
+            </p>
 
             <h1>Business Profile</h1>
 
             <p>
-              Manage your business information, visibility and verification.
+              Manage your business information,
+              visibility and verification.
             </p>
           </div>
         </header>
 
-        {/* Business status */}
         <section className="profile-status-card">
           <div className="profile-status-main">
 
@@ -119,7 +137,9 @@ export default async function BusinessProfilePage() {
                 />
               ) : (
                 <span>
-                  {business.name?.charAt(0)?.toUpperCase() || "B"}
+                  {business.name
+                    ?.charAt(0)
+                    ?.toUpperCase() || "B"}
                 </span>
               )}
             </div>
@@ -140,16 +160,19 @@ export default async function BusinessProfilePage() {
                 <span
                   className={`profile-status-badge profile-status-badge--${business.verification_status}`}
                 >
-                  {business.verification_status === "approved"
+                  {business.verification_status ===
+                  "approved"
                     ? "Verified"
-                    : business.verification_status === "pending"
-                    ? "Verification Pending"
-                    : business.verification_status === "rejected"
-                    ? "Verification Rejected"
                     : business.verification_status ===
-                      "needs_more_information"
-                    ? "More Information Needed"
-                    : "Not Verified"}
+                        "pending"
+                      ? "Verification Pending"
+                      : business.verification_status ===
+                          "rejected"
+                        ? "Verification Rejected"
+                        : business.verification_status ===
+                            "needs_more_information"
+                          ? "More Information Needed"
+                          : "Not Verified"}
                 </span>
 
                 <span
@@ -159,7 +182,9 @@ export default async function BusinessProfilePage() {
                       : "profile-status-badge--private"
                   }`}
                 >
-                  {business.is_public ? "Public" : "Private"}
+                  {business.is_public
+                    ? "Public"
+                    : "Private"}
                 </span>
 
               </div>
@@ -168,7 +193,6 @@ export default async function BusinessProfilePage() {
           </div>
         </section>
 
-        {/* Profile form */}
         <ProfileForm
           business={{
             id: business.id,
@@ -181,7 +205,8 @@ export default async function BusinessProfilePage() {
             logo_url: business.logo_url,
             country_code: business.country_code,
             status: business.status,
-            verification_status: business.verification_status,
+            verification_status:
+              business.verification_status,
             is_public: business.is_public,
             is_featured: business.is_featured,
           }}
@@ -193,4 +218,4 @@ export default async function BusinessProfilePage() {
       </div>
     </main>
   );
-    }
+}
