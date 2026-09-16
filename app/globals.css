@@ -4840,3 +4840,132 @@ select:focus-visible {
     flex-basis: 45px;
   }
    }
+
+/* =========================================
+   BUSINESS LOGO
+   ========================================= */
+
+.profile-logo {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 22px;
+  border: 1px solid #e6eaf0;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.profile-logo__preview {
+  width: 112px;
+  height: 112px;
+  min-width: 112px;
+  border-radius: 18px;
+  border: 1px solid #e1e6ee;
+  background: #f5f7fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.profile-logo__preview img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  background: #ffffff;
+}
+
+.profile-logo__preview span {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2563eb;
+  font-size: 40px;
+  font-weight: 700;
+}
+
+.profile-logo__content {
+  min-width: 0;
+  flex: 1;
+}
+
+.profile-logo__content strong {
+  display: block;
+  color: #172033;
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.profile-logo__content p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.profile-logo__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.profile-logo__actions .profile-button {
+  min-height: 42px;
+}
+
+/* Logo in the profile status header */
+
+.profile-business-icon {
+  width: 58px;
+  height: 58px;
+  min-width: 58px;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 22px;
+  font-weight: 700;
+  border: 1px solid #dbeafe;
+}
+
+.profile-business-icon img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  background: #ffffff;
+}
+
+/* Mobile */
+
+@media (max-width: 640px) {
+  .profile-logo {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 18px;
+  }
+
+  .profile-logo__preview {
+    width: 96px;
+    height: 96px;
+    min-width: 96px;
+    border-radius: 16px;
+  }
+
+  .profile-logo__actions {
+    width: 100%;
+  }
+
+  .profile-logo__actions .profile-button {
+    flex: 1;
+  }
+       }
