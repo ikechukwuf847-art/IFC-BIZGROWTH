@@ -24,6 +24,7 @@ export default async function BusinessProfilePage() {
         email,
         phone,
         website_url,
+        logo_url,
         country_code,
         status,
         verification_status,
@@ -49,11 +50,11 @@ export default async function BusinessProfilePage() {
     .maybeSingle();
 
   const { data: countries } = await supabase
-  .from("countries")
-  .select("code, name, official_name, currency_code")
-  .eq("is_african", true)
-  .eq("is_active", true)
-  .order("name", { ascending: true });
+    .from("countries")
+    .select("code, name, official_name, currency_code")
+    .eq("is_african", true)
+    .eq("is_active", true)
+    .order("name", { ascending: true });
 
   return (
     <main className="business-page">
@@ -83,9 +84,16 @@ export default async function BusinessProfilePage() {
         <section className="profile-status-card">
           <div className="profile-status-main">
             <div className="profile-business-icon">
-              {business.name
-                .charAt(0)
-                .toUpperCase()}
+              {business.logo_url ? (
+                <img
+                  src="/api/businesses/logo"
+                  alt={`${business.name} logo`}
+                />
+              ) : (
+                business.name
+                  .charAt(0)
+                  .toUpperCase()
+              )}
             </div>
 
             <div>
