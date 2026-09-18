@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import AdvertisingWorkspace from "./advertising-workspace";
-import "./globals.css";
 
 type AdPackage = {
   id: string;
