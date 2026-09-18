@@ -6429,3 +6429,919 @@ select:focus-visible {
     width: 100%;
   }
    }
+
+.advertising-page {
+  min-height: 100vh;
+  background: #f8fafc;
+  color: #0f172a;
+  padding: 32px;
+}
+
+.advertising-hero {
+  max-width: 1240px;
+  margin: 0 auto 24px;
+  padding: 38px;
+  border-radius: 26px;
+  background: linear-gradient(135deg, #0f3d91 0%, #1556c0 55%, #1976d2 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+  overflow: hidden;
+  position: relative;
+}
+
+.advertising-hero::after {
+  content: "";
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  right: -100px;
+  top: -120px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.advertising-hero > div {
+  position: relative;
+  z-index: 1;
+}
+
+.advertising-eyebrow,
+.advertising-kicker {
+  display: inline-block;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.advertising-eyebrow {
+  color: #bfdbfe;
+  margin-bottom: 14px;
+}
+
+.advertising-hero h1 {
+  max-width: 690px;
+  margin: 0;
+  font-size: clamp(30px, 4vw, 48px);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.advertising-hero p {
+  max-width: 690px;
+  margin: 17px 0 0;
+  color: #dbeafe;
+  line-height: 1.7;
+  font-size: 15px;
+}
+
+.advertising-hero-card {
+  min-width: 235px;
+  padding: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  backdrop-filter: blur(10px);
+}
+
+.advertising-hero-card span {
+  display: block;
+  color: #bfdbfe;
+  font-size: 12px;
+  margin-bottom: 7px;
+}
+
+.advertising-hero-card strong {
+  display: block;
+  font-size: 18px;
+  word-break: break-word;
+}
+
+.advertising-status-row {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 15px;
+}
+
+.advertising-status {
+  display: inline-flex !important;
+  align-items: center;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 11px !important;
+  font-weight: 700;
+  text-transform: capitalize;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff !important;
+}
+
+.advertising-status--active,
+.advertising-status--approved {
+  background: rgba(34, 197, 94, 0.2);
+  color: #dcfce7 !important;
+}
+
+.advertising-status--pending,
+.advertising-status--pending_review {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fef3c7 !important;
+}
+
+.advertising-stats {
+  max-width: 1240px;
+  margin: 0 auto 28px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.advertising-stat-card {
+  padding: 21px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.035);
+}
+
+.advertising-stat-card span,
+.advertising-stat-card small {
+  display: block;
+}
+
+.advertising-stat-card span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.advertising-stat-card strong {
+  display: block;
+  margin: 7px 0 4px;
+  font-size: 27px;
+  letter-spacing: -0.03em;
+}
+
+.advertising-stat-card small {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.advertising-workspace {
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+.advertising-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 5px;
+  width: fit-content;
+  margin-bottom: 22px;
+  background: #eaf0f8;
+  border-radius: 13px;
+}
+
+.advertising-tab {
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  padding: 10px 15px;
+  border-radius: 9px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.advertising-tab span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 7px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1556c0;
+  font-size: 10px;
+}
+
+.advertising-tab--active {
+  background: #ffffff;
+  color: #1556c0;
+  box-shadow: 0 2px 7px rgba(15, 23, 42, 0.07);
+}
+
+.advertising-message {
+  margin-bottom: 20px;
+  padding: 14px 17px;
+  border-radius: 13px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.advertising-message--success {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.advertising-message--error {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.advertising-section {
+  margin-bottom: 28px;
+  padding: 30px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 22px;
+  box-shadow: 0 5px 22px rgba(15, 23, 42, 0.035);
+}
+
+.advertising-section--light {
+  background: #f8fafc;
+}
+
+.advertising-section-heading {
+  margin-bottom: 24px;
+}
+
+.advertising-section-heading--campaigns {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.advertising-kicker {
+  color: #2563eb;
+  margin-bottom: 9px;
+}
+
+.advertising-section-heading h2 {
+  margin: 0;
+  font-size: 25px;
+  letter-spacing: -0.025em;
+}
+
+.advertising-section-heading p {
+  margin: 8px 0 0;
+  max-width: 700px;
+  color: #64748b;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.advertising-plans {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 15px;
+}
+
+.advertising-plan-card {
+  position: relative;
+  padding: 23px;
+  border: 1px solid #e2e8f0;
+  border-radius: 19px;
+  background: #ffffff;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.advertising-plan-card:hover {
+  transform: translateY(-3px);
+  border-color: #bfdbfe;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.07);
+}
+
+.advertising-plan-card--selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+.advertising-plan-card--featured {
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+
+.advertising-plan-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.advertising-plan-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.advertising-plan-label {
+  display: block;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.advertising-plan-top h3 {
+  margin: 7px 0 0;
+  color: #0f172a;
+  font-size: 27px;
+  letter-spacing: -0.04em;
+}
+
+.advertising-plan-duration {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 16px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.advertising-plan-duration small {
+  display: block;
+  margin-top: 1px;
+  color: #60a5fa;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.advertising-plan-description {
+  min-height: 65px;
+  margin: 18px 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.advertising-plan-details {
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 17px;
+}
+
+.advertising-plan-details div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 0;
+}
+
+.advertising-plan-details span {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.advertising-plan-details strong {
+  color: #334155;
+  font-size: 12px;
+}
+
+.advertising-button {
+  min-height: 42px;
+  border-radius: 11px;
+  padding: 10px 15px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    transform 150ms ease;
+}
+
+.advertising-button:active {
+  transform: translateY(1px);
+}
+
+.advertising-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.advertising-button--primary {
+  background: #1556c0;
+  color: #ffffff;
+}
+
+.advertising-button--primary:hover:not(:disabled) {
+  background: #10479f;
+}
+
+.advertising-button--secondary {
+  background: #ffffff;
+  color: #1d4ed8;
+  border-color: #cbd5e1;
+}
+
+.advertising-button--secondary:hover:not(:disabled) {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.advertising-button--small {
+  min-height: 36px;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.advertising-plan-card > .advertising-button {
+  width: 100%;
+}
+
+.advertising-placement-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.advertising-placement-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.advertising-placement-icon,
+.advertising-campaign-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.advertising-placement-card h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.advertising-placement-card span {
+  display: inline-block;
+  margin-top: 4px;
+  color: #2563eb;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.advertising-placement-card p {
+  margin: 7px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.advertising-create-section {
+  border-color: #bfdbfe;
+  background: linear-gradient(
+    180deg,
+    #f8fbff 0%,
+    #ffffff 100%
+  );
+}
+
+.advertising-close-button {
+  float: right;
+  margin-top: -35px;
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.advertising-form {
+  margin-top: 8px;
+}
+
+.advertising-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.advertising-form label {
+  display: block;
+}
+
+.advertising-form label > span {
+  display: block;
+  margin-bottom: 7px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.advertising-form input,
+.advertising-form select {
+  width: 100%;
+  min-height: 46px;
+  padding: 11px 13px;
+  border: 1px solid #cbd5e1;
+  border-radius: 11px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.advertising-form input:focus,
+.advertising-form select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.advertising-form label small {
+  display: block;
+  margin-top: 6px;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.advertising-campaign-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 22px;
+  border: 1px solid #dbeafe;
+  border-radius: 15px;
+  overflow: hidden;
+  background: #eff6ff;
+}
+
+.advertising-campaign-summary div {
+  padding: 16px;
+  border-right: 1px solid #dbeafe;
+}
+
+.advertising-campaign-summary div:last-child {
+  border-right: 0;
+}
+
+.advertising-campaign-summary span {
+  display: block;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.advertising-campaign-summary strong {
+  display: block;
+  margin-top: 5px;
+  color: #1e3a8a;
+  font-size: 14px;
+}
+
+.advertising-form-note {
+  margin-top: 17px;
+  padding: 15px 17px;
+  border-left: 3px solid #2563eb;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.advertising-form-note strong {
+  font-size: 12px;
+}
+
+.advertising-form-note p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.advertising-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.advertising-campaign-list {
+  display: grid;
+  gap: 12px;
+}
+
+.advertising-campaign-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 19px;
+  border: 1px solid #e2e8f0;
+  border-radius: 17px;
+  background: #ffffff;
+}
+
+.advertising-campaign-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+}
+
+.advertising-campaign-main > div:last-child {
+  min-width: 0;
+}
+
+.advertising-campaign-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.advertising-campaign-title-row h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.advertising-campaign-status {
+  display: inline-flex;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.advertising-campaign-status--pending_payment {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.advertising-campaign-status--pending_review {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.advertising-campaign-status--active {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.advertising-campaign-status--paused {
+  color: #475569;
+  background: #e2e8f0;
+}
+
+.advertising-campaign-status--rejected {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.advertising-campaign-status--completed {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.advertising-campaign-card p {
+  margin: 6px 0 9px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.advertising-campaign-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.advertising-campaign-meta span {
+  color: #475569;
+  font-size: 11px;
+}
+
+.advertising-campaign-meta span:not(:last-child)::after {
+  content: "•";
+  margin-left: 7px;
+  color: #cbd5e1;
+}
+
+.advertising-campaign-actions {
+  flex: 0 0 auto;
+  text-align: right;
+}
+
+.advertising-review-note,
+.advertising-active-note {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.advertising-review-note {
+  color: #2563eb;
+}
+
+.advertising-active-note {
+  color: #16a34a;
+}
+
+.advertising-empty {
+  padding: 48px 25px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 17px;
+  background: #f8fafc;
+  text-align: center;
+}
+
+.advertising-empty--small {
+  padding: 30px;
+}
+
+.advertising-empty-icon {
+  width: 46px;
+  height: 46px;
+  margin: 0 auto 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 13px;
+  background: #dbeafe;
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.advertising-empty h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.advertising-empty p {
+  max-width: 470px;
+  margin: 7px auto 18px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+@media (max-width: 1050px) {
+  .advertising-plans {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .advertising-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .advertising-placement-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .advertising-page {
+    padding: 18px;
+  }
+
+  .advertising-hero {
+    padding: 26px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .advertising-hero-card {
+    min-width: 0;
+  }
+
+  .advertising-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .advertising-section {
+    padding: 21px;
+  }
+
+  .advertising-section-heading--campaigns {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .advertising-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .advertising-campaign-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .advertising-campaign-summary div {
+    border-right: 0;
+    border-bottom: 1px solid #dbeafe;
+  }
+
+  .advertising-campaign-summary div:last-child {
+    border-bottom: 0;
+  }
+
+  .advertising-campaign-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .advertising-campaign-actions {
+    width: 100%;
+    text-align: left;
+  }
+}
+
+@media (max-width: 560px) {
+  .advertising-page {
+    padding: 12px;
+  }
+
+  .advertising-hero {
+    padding: 22px;
+    border-radius: 20px;
+  }
+
+  .advertising-hero h1 {
+    font-size: 31px;
+  }
+
+  .advertising-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .advertising-tabs {
+    width: 100%;
+  }
+
+  .advertising-tab {
+    flex: 1;
+  }
+
+  .advertising-plans,
+  .advertising-placement-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .advertising-plan-description {
+    min-height: auto;
+  }
+
+  .advertising-form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .advertising-form-actions .advertising-button {
+    width: 100%;
+  }
+
+  .advertising-campaign-main {
+    width: 100%;
+  }
+
+  .advertising-campaign-meta {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .advertising-campaign-meta span::after {
+    display: none !important;
+  }
+
+  .advertising-close-button {
+    float: none;
+    margin: 12px 0 0;
+  }
+   }
