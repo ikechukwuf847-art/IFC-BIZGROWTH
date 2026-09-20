@@ -1,124 +1,131 @@
 /* =========================================================
-   IFC BIZGROWTH — MARKETING PAGE
-   Matches the IFC BIZGROWTH blue dashboard/app visual style
-========================================================= */
+   IFC BIZGROWTH
+   MARKETING & GROWTH WORKSPACE
+   ========================================================= */
 
 .marketing-page {
   min-height: 100vh;
   background: #f4f8fd;
-  color: #0f172a;
+  color: #172b4d;
   padding: 0;
+  box-sizing: border-box;
+}
+
+.marketing-page *,
+.marketing-page *::before,
+.marketing-page *::after {
+  box-sizing: border-box;
 }
 
 /* =========================================================
    MAIN SHELL
-========================================================= */
+   ========================================================= */
 
 .marketing-shell {
-  width: min(1440px, 100%);
+  width: 100%;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 34px 36px 80px;
 }
 
 /* =========================================================
    HEADER
-========================================================= */
+   ========================================================= */
 
 .marketing-header {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 30px;
   margin-bottom: 28px;
 }
 
-.marketing-eyebrow,
-.marketing-section-label {
-  display: inline-block;
+.marketing-eyebrow {
+  margin-bottom: 8px;
   color: #1769e0;
-  font-size: 10px;
-  line-height: 1.2;
-  font-weight: 850;
-  letter-spacing: 1.35px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .marketing-header h1 {
-  margin: 8px 0 8px;
-  color: #0b1730;
-  font-size: clamp(28px, 3vw, 40px);
-  line-height: 1.08;
-  letter-spacing: -1.4px;
+  margin: 0;
+  color: #142a4a;
+  font-size: 34px;
+  line-height: 1.15;
   font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
-.marketing-header > div:first-child > p {
-  max-width: 700px;
-  margin: 0;
-  color: #64748b;
+.marketing-header p {
+  max-width: 680px;
+  margin: 10px 0 0;
+  color: #71839b;
   font-size: 14px;
-  line-height: 1.75;
+  line-height: 1.7;
 }
 
 .marketing-header-business {
-  min-width: 190px;
-  padding: 15px 18px;
-  border: 1px solid #dce8f7;
-  border-radius: 15px;
+  min-width: 210px;
+  padding: 14px 17px;
   background: #ffffff;
-  box-shadow: 0 8px 25px rgba(30, 72, 125, 0.06);
+  border: 1px solid #e3eaf3;
+  border-radius: 14px;
+  box-shadow: 0 7px 24px rgba(23, 70, 120, 0.06);
 }
 
 .marketing-header-business span {
   display: block;
-  margin-bottom: 4px;
-  color: #94a3b8;
+  margin-bottom: 5px;
+  color: #8a9ab0;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.08em;
 }
 
 .marketing-header-business strong {
   display: block;
   overflow: hidden;
-  color: #123c78;
+  color: #1b3152;
   font-size: 14px;
-  font-weight: 750;
+  font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 /* =========================================================
    OVERVIEW CARDS
-========================================================= */
+   ========================================================= */
 
 .marketing-overview {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
-  margin-bottom: 40px;
+  margin-bottom: 28px;
 }
 
 .marketing-overview-card {
-  min-height: 110px;
-  padding: 20px;
   display: flex;
   align-items: center;
-  gap: 16px;
-  border: 1px solid #e0e9f5;
-  border-radius: 18px;
+  gap: 14px;
+  min-height: 104px;
+  padding: 20px;
   background: #ffffff;
-  box-shadow: 0 8px 25px rgba(30, 72, 125, 0.055);
+  border: 1px solid #e4ebf4;
+  border-radius: 16px;
+  box-shadow: 0 8px 28px rgba(28, 72, 119, 0.055);
 }
 
 .marketing-overview-icon {
-  width: 52px;
-  height: 52px;
-  flex: 0 0 52px;
-  display: grid;
-  place-items: center;
-  border-radius: 15px;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 13px;
   background: #eaf3ff;
   color: #1769e0;
   font-size: 18px;
@@ -126,67 +133,64 @@
 
 .marketing-overview-card strong {
   display: block;
-  margin-bottom: 3px;
-  color: #102a52;
-  font-size: 25px;
-  line-height: 1;
+  color: #172d4e;
+  font-size: 23px;
+  line-height: 1.1;
   font-weight: 800;
-  letter-spacing: -0.5px;
 }
 
 .marketing-overview-card span {
   display: block;
-  color: #718096;
+  margin-top: 5px;
+  color: #7b8da5;
   font-size: 12px;
   font-weight: 600;
 }
 
 /* =========================================================
    INTRO
-========================================================= */
+   ========================================================= */
 
 .marketing-intro {
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 }
 
-.marketing-intro h2,
-.marketing-process-heading h2,
-.marketing-requests-heading h2 {
-  margin: 7px 0 7px;
-  color: #0b1730;
-  font-size: clamp(21px, 2vw, 28px);
-  line-height: 1.2;
-  letter-spacing: -0.7px;
+.marketing-intro h2 {
+  margin: 0;
+  color: #172d4e;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .marketing-intro p {
   max-width: 760px;
-  margin: 0;
-  color: #718096;
+  margin: 7px 0 0;
+  color: #75869c;
   font-size: 13px;
-  line-height: 1.7;
+  line-height: 1.65;
 }
 
 /* =========================================================
    SERVICES GRID
-========================================================= */
+   ========================================================= */
 
 .marketing-services-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
-  margin-bottom: 58px;
 }
 
 .marketing-service-card {
-  min-width: 0;
-  padding: 22px;
   display: flex;
   flex-direction: column;
-  border: 1px solid #dfe8f4;
-  border-radius: 20px;
+  min-width: 0;
+  min-height: 330px;
+  overflow: hidden;
   background: #ffffff;
-  box-shadow: 0 10px 30px rgba(30, 72, 125, 0.06);
+  border: 1px solid #e3eaf3;
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(28, 72, 119, 0.06);
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease,
@@ -195,8 +199,8 @@
 
 .marketing-service-card:hover {
   transform: translateY(-3px);
-  border-color: #c9ddf7;
-  box-shadow: 0 16px 35px rgba(30, 72, 125, 0.1);
+  border-color: #cddff7;
+  box-shadow: 0 15px 38px rgba(28, 72, 119, 0.1);
 }
 
 .marketing-service-top {
@@ -204,546 +208,527 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding: 20px 20px 0;
 }
 
 .marketing-service-icon {
-  width: 48px;
-  height: 48px;
-  display: grid;
-  place-items: center;
-  border-radius: 14px;
-  background: #eaf3ff;
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 13px;
+  background: #edf5ff;
   color: #1769e0;
-  font-size: 17px;
+  font-size: 18px;
 }
 
 .marketing-service-badge {
-  padding: 6px 9px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
   border-radius: 999px;
-  background: #eafaf1;
-  color: #15945b;
+  background: #eaf8f0;
+  color: #198754;
   font-size: 10px;
-  font-weight: 750;
-  white-space: nowrap;
+  font-weight: 800;
 }
 
 .marketing-service-body {
   flex: 1;
-  padding: 22px 0 25px;
+  padding: 20px;
 }
 
 .marketing-service-body h3 {
-  margin: 0 0 9px;
-  color: #102a52;
-  font-size: 18px;
-  line-height: 1.3;
-  font-weight: 750;
+  margin: 0;
+  color: #172d4e;
+  font-size: 17px;
+  line-height: 1.35;
+  font-weight: 800;
 }
 
 .marketing-service-body p {
-  margin: 0;
-  color: #718096;
+  margin: 9px 0 0;
+  color: #75869c;
   font-size: 13px;
   line-height: 1.7;
 }
 
 .marketing-service-bottom {
-  padding-top: 17px;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
-  gap: 15px;
-  border-top: 1px solid #edf2f8;
+  gap: 14px;
+  padding: 16px 20px 20px;
+  border-top: 1px solid #edf1f6;
+}
+
+.marketing-service-price {
+  min-width: 0;
 }
 
 .marketing-service-price span {
   display: block;
-  margin-bottom: 5px;
-  color: #94a3b8;
+  margin-bottom: 3px;
+  color: #8a9ab0;
   font-size: 10px;
-  font-weight: 650;
+  font-weight: 700;
 }
 
 .marketing-service-price strong {
   display: block;
-  color: #123c78;
-  font-size: 17px;
+  color: #172d4e;
+  font-size: 15px;
   font-weight: 800;
 }
 
 .marketing-primary-button {
-  min-height: 42px;
-  padding: 0 16px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
+  min-height: 40px;
+  padding: 0 15px;
   border: 0;
-  border-radius: 11px;
-  background: linear-gradient(135deg, #1976ed, #0758c9);
+  border-radius: 10px;
+  background: #1769e0;
   color: #ffffff;
   font-size: 12px;
-  font-weight: 750;
-  text-decoration: none;
+  font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 7px 18px rgba(23, 105, 224, 0.2);
+  white-space: nowrap;
   transition:
+    background 0.18s ease,
     transform 0.18s ease,
-    box-shadow 0.18s ease,
-    opacity 0.18s ease;
+    box-shadow 0.18s ease;
 }
 
 .marketing-primary-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 22px rgba(23, 105, 224, 0.27);
+  background: #105bc7;
+  box-shadow: 0 7px 18px rgba(23, 105, 224, 0.2);
+}
+
+.marketing-primary-button:active {
+  transform: translateY(1px);
 }
 
 .marketing-primary-button:disabled {
+  opacity: 0.6;
   cursor: not-allowed;
-  opacity: 0.65;
-  transform: none;
-}
-
-.marketing-primary-button i {
-  font-size: 10px;
+  box-shadow: none;
 }
 
 /* =========================================================
-   EMPTY SERVICES
-========================================================= */
+   EMPTY STATE
+   ========================================================= */
 
 .marketing-empty {
-  margin-bottom: 58px;
-  padding: 55px 25px;
+  padding: 52px 24px;
   text-align: center;
-  border: 1px dashed #cbd9ea;
-  border-radius: 20px;
   background: #ffffff;
+  border: 1px solid #e3eaf3;
+  border-radius: 18px;
+  box-shadow: 0 8px 28px rgba(28, 72, 119, 0.05);
 }
 
 .marketing-empty-icon {
-  width: 58px;
-  height: 58px;
+  width: 52px;
+  height: 52px;
   margin: 0 auto 15px;
-  display: grid;
-  place-items: center;
-  border-radius: 17px;
-  background: #eaf3ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 15px;
+  background: #edf5ff;
   color: #1769e0;
   font-size: 20px;
 }
 
 .marketing-empty h3 {
-  margin: 0 0 7px;
-  color: #17345f;
-  font-size: 17px;
+  margin: 0;
+  color: #172d4e;
+  font-size: 18px;
+  font-weight: 800;
 }
 
 .marketing-empty p {
   max-width: 500px;
-  margin: 0 auto;
-  color: #718096;
+  margin: 8px auto 0;
+  color: #7a8ba1;
   font-size: 13px;
-  line-height: 1.7;
+  line-height: 1.65;
 }
 
 /* =========================================================
-   PROCESS
-========================================================= */
+   PROCESS SECTION
+   ========================================================= */
 
 .marketing-process {
-  margin-bottom: 58px;
+  position: relative;
+  overflow: hidden;
+  margin-top: 30px;
   padding: 30px;
-  border-radius: 22px;
-  background: linear-gradient(
-    135deg,
-    #0758c9,
-    #176fe4
-  );
+  border-radius: 20px;
+  background: linear-gradient(135deg, #1769e0 0%, #1159bd 100%);
   color: #ffffff;
-  box-shadow: 0 15px 35px rgba(23, 105, 224, 0.17);
+  box-shadow: 0 16px 38px rgba(23, 105, 224, 0.18);
 }
 
-.marketing-process .marketing-section-label {
-  color: #bcd9ff;
+.marketing-process::after {
+  content: "";
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  right: -80px;
+  top: -90px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
 }
 
-.marketing-process-heading h2 {
-  color: #ffffff;
-  margin-bottom: 25px;
+.marketing-process h2 {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  font-size: 21px;
+  font-weight: 800;
 }
 
-.marketing-process-grid {
+.marketing-process > p {
+  position: relative;
+  z-index: 1;
+  max-width: 680px;
+  margin: 8px 0 24px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.marketing-process-steps {
+  position: relative;
+  z-index: 1;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 18px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .marketing-process-step {
-  min-width: 0;
-  padding: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 16px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 15px;
   background: rgba(255, 255, 255, 0.09);
 }
 
-.marketing-process-step > span {
-  display: block;
-  margin-bottom: 16px;
-  color: #b9d8ff;
-  font-size: 11px;
-  font-weight: 850;
-  letter-spacing: 1px;
+.marketing-process-step-number {
+  width: 31px;
+  height: 31px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 13px;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #1769e0;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .marketing-process-step h3 {
-  margin: 0 0 7px;
-  color: #ffffff;
+  margin: 0;
   font-size: 14px;
-  font-weight: 750;
+  font-weight: 800;
 }
 
 .marketing-process-step p {
-  margin: 0;
-  color: #d9e9ff;
-  font-size: 11px;
-  line-height: 1.7;
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.73);
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 /* =========================================================
    REQUESTS
-========================================================= */
+   ========================================================= */
 
 .marketing-requests {
-  margin-bottom: 30px;
+  margin-top: 30px;
 }
 
-.marketing-requests-heading {
-  margin-bottom: 18px;
+.marketing-requests-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 15px;
+}
+
+.marketing-requests-header h2 {
+  margin: 0;
+  color: #172d4e;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.marketing-requests-header p {
+  margin: 5px 0 0;
+  color: #7b8da5;
+  font-size: 12px;
 }
 
 .marketing-request-list {
   overflow: hidden;
-  border: 1px solid #dfe8f4;
-  border-radius: 19px;
   background: #ffffff;
-  box-shadow: 0 8px 25px rgba(30, 72, 125, 0.05);
+  border: 1px solid #e3eaf3;
+  border-radius: 17px;
+  box-shadow: 0 8px 28px rgba(28, 72, 119, 0.05);
 }
 
 .marketing-request-row {
-  min-height: 82px;
-  padding: 15px 20px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 170px 130px;
+  display: flex;
   align-items: center;
-  gap: 20px;
-  border-bottom: 1px solid #edf2f7;
+  gap: 15px;
+  padding: 17px 20px;
+  border-bottom: 1px solid #edf1f6;
 }
 
 .marketing-request-row:last-child {
   border-bottom: 0;
 }
 
-.marketing-request-main {
-  min-width: 0;
+.marketing-request-icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
   display: flex;
   align-items: center;
-  gap: 13px;
-}
-
-.marketing-request-icon {
-  width: 42px;
-  height: 42px;
-  flex: 0 0 42px;
-  display: grid;
-  place-items: center;
-  border-radius: 12px;
-  background: #eaf3ff;
+  justify-content: center;
+  border-radius: 11px;
+  background: #edf5ff;
   color: #1769e0;
+  font-size: 15px;
 }
 
-.marketing-request-main h3 {
+.marketing-request-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.marketing-request-main strong {
+  display: block;
   overflow: hidden;
-  margin: 0 0 3px;
-  color: #17345f;
+  color: #243955;
   font-size: 13px;
-  font-weight: 750;
+  font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.marketing-request-main p {
-  margin: 0;
-  color: #94a3b8;
-  font-size: 10px;
+.marketing-request-main span {
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  color: #8999ad;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.marketing-request-budget {
+  min-width: 100px;
+  text-align: right;
+}
+
+.marketing-request-budget strong {
+  display: block;
+  color: #263b57;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .marketing-request-budget span {
   display: block;
-  margin-bottom: 3px;
-  color: #94a3b8;
-  font-size: 9px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-}
-
-.marketing-request-budget strong {
-  color: #123c78;
-  font-size: 13px;
-  font-weight: 800;
+  margin-top: 3px;
+  color: #91a0b3;
+  font-size: 10px;
 }
 
 .marketing-request-status {
-  display: flex;
-  justify-content: flex-end;
+  min-width: 92px;
+  text-align: right;
 }
 
-.marketing-status {
-  padding: 6px 10px;
+.marketing-request-status span {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-height: 25px;
+  padding: 0 9px;
   border-radius: 999px;
-  font-size: 10px;
-  font-weight: 750;
-  white-space: nowrap;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: capitalize;
 }
 
+/* =========================================================
+   STATUS COLORS
+   ========================================================= */
+
 .marketing-status--success {
-  background: #e8f9f0;
-  color: #118451;
+  background: #eaf8f0;
+  color: #198754;
 }
 
 .marketing-status--info {
-  background: #e8f2ff;
-  color: #1769e0;
-}
-
-.marketing-status--warning {
-  background: #fff5dc;
-  color: #a86a00;
-}
-
-.marketing-status--revision {
-  background: #f0ebff;
-  color: #6e43b8;
-}
-
-.marketing-status--danger {
-  background: #fff0f0;
-  color: #d13b3b;
-}
-
-.marketing-status--neutral {
-  background: #f0f3f7;
-  color: #64748b;
-}
-
-.marketing-request-empty {
-  min-height: 150px;
-  padding: 25px;
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  border: 1px solid #dfe8f4;
-  border-radius: 19px;
-  background: #ffffff;
-}
-
-.marketing-request-empty > i {
-  width: 48px;
-  height: 48px;
-  display: grid;
-  place-items: center;
-  border-radius: 14px;
   background: #eaf3ff;
   color: #1769e0;
 }
 
-.marketing-request-empty strong {
-  display: block;
-  margin-bottom: 4px;
-  color: #17345f;
-  font-size: 14px;
+.marketing-status--warning {
+  background: #fff6df;
+  color: #a56a00;
 }
 
-.marketing-request-empty p {
-  margin: 0;
-  color: #718096;
-  font-size: 12px;
+.marketing-status--revision {
+  background: #f2edff;
+  color: #6941c6;
+}
+
+.marketing-status--danger {
+  background: #fff0f0;
+  color: #d63939;
+}
+
+.marketing-status--neutral {
+  background: #eef1f5;
+  color: #65758a;
 }
 
 /* =========================================================
-   MODAL
-========================================================= */
+   MODAL BACKDROP
+   ========================================================= */
 
 .marketing-modal-backdrop {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  padding: 25px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(7, 23, 48, 0.58);
-  backdrop-filter: blur(7px);
-  overflow-y: auto;
+  padding: 24px;
+  background: rgba(13, 31, 55, 0.52);
+  backdrop-filter: blur(5px);
 }
+
+/* =========================================================
+   MODAL
+   ========================================================= */
 
 .marketing-modal {
   width: min(680px, 100%);
-  max-height: calc(100vh - 50px);
+  max-height: min(850px, calc(100vh - 48px));
   overflow-y: auto;
-  border: 1px solid #dce7f4;
-  border-radius: 22px;
   background: #ffffff;
-  box-shadow: 0 30px 80px rgba(7, 35, 75, 0.25);
+  border-radius: 20px;
+  box-shadow: 0 28px 80px rgba(10, 36, 70, 0.24);
 }
 
 .marketing-modal-header {
-  padding: 25px 27px 21px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
-  border-bottom: 1px solid #edf2f7;
+  padding: 22px 24px;
+  border-bottom: 1px solid #e9eef4;
 }
 
 .marketing-modal-header h2 {
-  margin: 7px 0 6px;
-  color: #102a52;
-  font-size: 23px;
-  line-height: 1.2;
-  letter-spacing: -0.5px;
+  margin: 0;
+  color: #172d4e;
+  font-size: 20px;
+  font-weight: 800;
 }
 
 .marketing-modal-header p {
-  max-width: 500px;
-  margin: 0;
-  color: #718096;
+  margin: 5px 0 0;
+  color: #7b8da5;
   font-size: 12px;
-  line-height: 1.65;
+  line-height: 1.55;
 }
 
 .marketing-modal-close {
-  width: 38px;
-  height: 38px;
-  flex: 0 0 38px;
-  display: grid;
-  place-items: center;
-  border: 1px solid #dce5f1;
-  border-radius: 11px;
-  background: #f6f9fd;
-  color: #64748b;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 9px;
+  background: #f2f5f8;
+  color: #63758c;
+  font-size: 18px;
   cursor: pointer;
 }
 
 .marketing-modal-close:hover {
-  background: #eaf3ff;
-  color: #1769e0;
-}
-
-.marketing-request-form {
-  padding: 25px 27px 27px;
-}
-
-/* =========================================================
-   ALERTS
-========================================================= */
-
-.marketing-alert {
-  margin-bottom: 18px;
-  padding: 12px 14px;
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  border-radius: 11px;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.marketing-alert--error {
-  border: 1px solid #ffd5d5;
-  background: #fff3f3;
-  color: #c53939;
-}
-
-.marketing-alert--success {
-  border: 1px solid #ccefdc;
-  background: #effbf4;
-  color: #16834e;
+  background: #e9eef4;
+  color: #263b57;
 }
 
 /* =========================================================
    FORM
-========================================================= */
+   ========================================================= */
+
+.marketing-request-form {
+  padding: 24px;
+}
 
 .marketing-form-group {
-  margin-bottom: 18px;
+  margin-bottom: 17px;
+}
+
+.marketing-form-group:last-child {
+  margin-bottom: 0;
 }
 
 .marketing-form-group label {
   display: block;
   margin-bottom: 7px;
-  color: #243b5c;
+  color: #334963;
   font-size: 11px;
-  font-weight: 750;
+  font-weight: 800;
 }
 
 .marketing-form-group input,
-.marketing-form-group textarea {
+.marketing-form-group textarea,
+.marketing-form-group select {
   width: 100%;
-  box-sizing: border-box;
-  border: 1px solid #d9e3ef;
-  border-radius: 11px;
+  min-height: 43px;
+  padding: 10px 12px;
+  border: 1px solid #dce5ef;
+  border-radius: 10px;
   outline: none;
-  background: #fbfdff;
-  color: #102a52;
+  background: #ffffff;
+  color: #243955;
   font-family: inherit;
   font-size: 13px;
   transition:
     border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    background 0.18s ease;
-}
-
-.marketing-form-group input {
-  height: 45px;
-  padding: 0 13px;
+    box-shadow 0.18s ease;
 }
 
 .marketing-form-group textarea {
-  min-height: 130px;
-  padding: 12px 13px;
+  min-height: 110px;
   resize: vertical;
   line-height: 1.6;
 }
 
 .marketing-form-group input:focus,
-.marketing-form-group textarea:focus {
-  border-color: #4b91ed;
-  background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.09);
-}
-
-.marketing-form-group input:disabled,
-.marketing-form-group textarea:disabled {
-  cursor: not-allowed;
-  opacity: 0.65;
-}
-
-.marketing-form-group small {
-  display: block;
-  margin-top: 6px;
-  color: #94a3b8;
-  font-size: 10px;
-  line-height: 1.5;
+.marketing-form-group textarea:focus,
+.marketing-form-group select:focus {
+  border-color: #1769e0;
+  box-shadow: 0 0 0 3px rgba(23, 105, 224, 0.1);
 }
 
 .marketing-form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 15px;
 }
 
@@ -751,246 +736,357 @@
   position: relative;
 }
 
-.marketing-input-prefix > span {
+.marketing-input-prefix span {
   position: absolute;
+  left: 12px;
   top: 50%;
-  left: 13px;
   z-index: 1;
   transform: translateY(-50%);
-  color: #64748b;
-  font-size: 11px;
-  font-weight: 750;
+  color: #7f90a6;
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
 }
 
 .marketing-input-prefix input {
-  padding-left: 55px;
+  padding-left: 38px;
 }
 
+/* =========================================================
+   ALERTS
+   ========================================================= */
+
+.marketing-alert {
+  margin: 0 24px 18px;
+  padding: 11px 13px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.marketing-alert--error {
+  background: #fff0f0;
+  border: 1px solid #ffd4d4;
+  color: #c92d2d;
+}
+
+.marketing-alert--success {
+  background: #eaf8f0;
+  border: 1px solid #ccebd9;
+  color: #198754;
+}
+
+/* =========================================================
+   MODAL FOOTER
+   ========================================================= */
+
 .marketing-modal-footer {
-  margin-top: 24px;
-  padding-top: 20px;
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: 10px;
-  border-top: 1px solid #edf2f7;
+  padding: 17px 24px 22px;
+  border-top: 1px solid #e9eef4;
 }
 
 .marketing-secondary-button {
-  min-height: 42px;
-  padding: 0 17px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #d6e1ee;
-  border-radius: 11px;
+  min-height: 40px;
+  padding: 0 15px;
+  border: 1px solid #dbe4ee;
+  border-radius: 10px;
   background: #ffffff;
-  color: #51657f;
+  color: #53667d;
   font-size: 12px;
-  font-weight: 700;
-  text-decoration: none;
+  font-weight: 800;
   cursor: pointer;
 }
 
 .marketing-secondary-button:hover {
-  border-color: #b8cde7;
-  background: #f5f9ff;
-  color: #1769e0;
-}
-
-.marketing-secondary-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
+  background: #f5f8fb;
 }
 
 /* =========================================================
-   RESPONSIVE — TABLET
-========================================================= */
+   MOBILE BOTTOM NAV
+   SAME NAVIGATION SYSTEM AS DASHBOARD
+   ========================================================= */
 
-@media (max-width: 1100px) {
+.dashboard-mobile-nav {
+  display: none;
+}
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 1050px) {
   .marketing-shell {
-    padding: 28px 25px 65px;
+    padding: 28px 24px 70px;
   }
 
   .marketing-services-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .marketing-process-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .marketing-process-steps {
+    grid-template-columns: 1fr;
   }
 }
 
 /* =========================================================
-   RESPONSIVE — MOBILE
-========================================================= */
+   MOBILE
+   ========================================================= */
 
 @media (max-width: 700px) {
-  .marketing-shell {
-    padding: 20px 15px 45px;
+  .marketing-page {
+    min-height: 100vh;
+    padding-bottom: 76px;
   }
+
+  .marketing-shell {
+    padding: 22px 14px 28px;
+  }
+
+  /* Header */
 
   .marketing-header {
     display: block;
-    margin-bottom: 22px;
+    margin-bottom: 20px;
+  }
+
+  .marketing-eyebrow {
+    margin-bottom: 6px;
+    font-size: 9px;
   }
 
   .marketing-header h1 {
-    margin-top: 7px;
-    font-size: 27px;
+    font-size: 26px;
+    line-height: 1.2;
   }
 
-  .marketing-header > div:first-child > p {
+  .marketing-header p {
+    margin-top: 8px;
     font-size: 12px;
-    line-height: 1.65;
+    line-height: 1.6;
   }
 
   .marketing-header-business {
-    width: 100%;
     min-width: 0;
-    margin-top: 17px;
-    padding: 13px 15px;
-    box-sizing: border-box;
+    margin-top: 15px;
+    padding: 12px 14px;
+    border-radius: 12px;
   }
+
+  /* Overview */
 
   .marketing-overview {
     grid-template-columns: 1fr;
-    gap: 11px;
-    margin-bottom: 32px;
+    gap: 10px;
+    margin-bottom: 22px;
   }
 
   .marketing-overview-card {
-    min-height: 82px;
+    min-height: 76px;
     padding: 14px;
-    border-radius: 15px;
+    border-radius: 13px;
   }
 
   .marketing-overview-icon {
-    width: 44px;
-    height: 44px;
-    flex-basis: 44px;
-    border-radius: 13px;
-    font-size: 15px;
-  }
-
-  .marketing-overview-card strong {
-    font-size: 21px;
-  }
-
-  .marketing-overview-card span {
-    font-size: 11px;
-  }
-
-  .marketing-intro h2,
-  .marketing-process-heading h2,
-  .marketing-requests-heading h2 {
-    font-size: 21px;
-  }
-
-  .marketing-intro p {
-    font-size: 12px;
-  }
-
-  .marketing-services-grid {
-    grid-template-columns: 1fr;
-    gap: 13px;
-    margin-bottom: 40px;
-  }
-
-  .marketing-service-card {
-    padding: 17px;
-    border-radius: 17px;
-  }
-
-  .marketing-service-body {
-    padding: 18px 0 20px;
-  }
-
-  .marketing-service-body h3 {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+    border-radius: 11px;
     font-size: 16px;
   }
 
-  .marketing-service-body p {
-    font-size: 12px;
+  .marketing-overview-card strong {
+    font-size: 19px;
   }
 
-  .marketing-service-bottom {
-    align-items: center;
+  .marketing-overview-card span {
+    margin-top: 3px;
+    font-size: 10px;
   }
 
-  .marketing-service-price strong {
-    font-size: 15px;
+  /* Intro */
+
+  .marketing-intro {
+    margin-bottom: 16px;
   }
 
-  .marketing-primary-button {
-    min-height: 40px;
-    padding: 0 12px;
+  .marketing-intro h2 {
+    font-size: 17px;
+  }
+
+  .marketing-intro p {
     font-size: 11px;
   }
 
-  .marketing-process {
-    margin-bottom: 40px;
-    padding: 20px 16px;
-    border-radius: 18px;
-  }
+  /* Services */
 
-  .marketing-process-grid {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  .marketing-process-step {
-    padding: 15px;
-  }
-
-  .marketing-process-step > span {
-    margin-bottom: 10px;
-  }
-
-  .marketing-request-list {
-    border-radius: 16px;
-  }
-
-  .marketing-request-row {
-    padding: 15px;
+  .marketing-services-grid {
     grid-template-columns: 1fr;
     gap: 12px;
   }
 
+  .marketing-service-card {
+    min-height: 0;
+    border-radius: 15px;
+  }
+
+  .marketing-service-top {
+    padding: 16px 16px 0;
+  }
+
+  .marketing-service-icon {
+    width: 41px;
+    height: 41px;
+    border-radius: 11px;
+  }
+
+  .marketing-service-body {
+    padding: 15px 16px;
+  }
+
+  .marketing-service-body h3 {
+    font-size: 15px;
+  }
+
+  .marketing-service-body p {
+    font-size: 11px;
+    line-height: 1.6;
+  }
+
+  .marketing-service-bottom {
+    padding: 13px 16px 16px;
+  }
+
+  .marketing-service-price strong {
+    font-size: 13px;
+  }
+
+  .marketing-primary-button {
+    min-height: 38px;
+    padding: 0 12px;
+    font-size: 10px;
+  }
+
+  /* Process */
+
+  .marketing-process {
+    margin-top: 20px;
+    padding: 20px;
+    border-radius: 16px;
+  }
+
+  .marketing-process h2 {
+    font-size: 17px;
+  }
+
+  .marketing-process > p {
+    font-size: 11px;
+    margin-bottom: 17px;
+  }
+
+  .marketing-process-steps {
+    gap: 9px;
+  }
+
+  .marketing-process-step {
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  .marketing-process-step h3 {
+    font-size: 12px;
+  }
+
+  .marketing-process-step p {
+    font-size: 10px;
+  }
+
+  /* Requests */
+
+  .marketing-requests {
+    margin-top: 22px;
+  }
+
+  .marketing-requests-header {
+    display: block;
+    margin-bottom: 12px;
+  }
+
+  .marketing-requests-header h2 {
+    font-size: 17px;
+  }
+
+  .marketing-requests-header p {
+    font-size: 10px;
+  }
+
+  .marketing-request-list {
+    border-radius: 14px;
+  }
+
+  .marketing-request-row {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .marketing-request-icon {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+  }
+
+  .marketing-request-main strong {
+    font-size: 11px;
+  }
+
+  .marketing-request-main span {
+    font-size: 9px;
+  }
+
   .marketing-request-budget {
-    padding-left: 55px;
+    grid-column: 2;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .marketing-request-budget strong {
+    font-size: 11px;
   }
 
   .marketing-request-status {
-    justify-content: flex-start;
-    padding-left: 55px;
+    grid-column: 2;
+    min-width: 0;
+    text-align: left;
   }
 
-  .marketing-request-empty {
-    min-height: 120px;
-    padding: 18px;
-  }
+  /* Modal */
 
   .marketing-modal-backdrop {
-    padding: 10px;
     align-items: flex-end;
+    padding: 0;
   }
 
   .marketing-modal {
     width: 100%;
-    max-height: calc(100vh - 20px);
-    border-radius: 21px 21px 12px 12px;
+    max-height: calc(100vh - 18px);
+    border-radius: 20px 20px 0 0;
   }
 
   .marketing-modal-header {
-    padding: 20px 18px 17px;
+    padding: 18px;
   }
 
   .marketing-modal-header h2 {
-    font-size: 20px;
+    font-size: 17px;
   }
 
   .marketing-request-form {
-    padding: 19px 18px 20px;
+    padding: 18px;
   }
 
   .marketing-form-grid {
@@ -999,49 +1095,111 @@
   }
 
   .marketing-modal-footer {
-    flex-direction: column-reverse;
+    padding: 14px 18px 18px;
   }
 
-  .marketing-modal-footer button {
+  /* =======================================================
+     SHARED MOBILE BOTTOM NAV
+     ======================================================= */
+
+  .dashboard-mobile-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 900;
     width: 100%;
+    height: 68px;
+    padding: 7px 8px calc(7px + env(safe-area-inset-bottom));
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    align-items: center;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.97);
+    border-top: 1px solid #e3eaf3;
+    box-shadow: 0 -8px 25px rgba(15, 50, 90, 0.08);
+    backdrop-filter: blur(14px);
+  }
+
+  .dashboard-mobile-nav__item {
+    min-width: 0;
+    height: 54px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border-radius: 12px;
+    color: #7b8da5;
+    text-decoration: none;
+    transition:
+      color 0.18s ease,
+      background 0.18s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .dashboard-mobile-nav__item span {
+    display: block;
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .dashboard-mobile-nav__item small {
+    display: block;
+    font-size: 9px;
+    line-height: 1;
+    font-weight: 700;
+  }
+
+  .dashboard-mobile-nav__item:hover,
+  .dashboard-mobile-nav__item.active {
+    color: #1769e0;
+    background: #eaf3ff;
+  }
+
+  .dashboard-mobile-nav__item:active {
+    transform: scale(0.96);
   }
 }
 
 /* =========================================================
    SMALL PHONES
-========================================================= */
+   ========================================================= */
 
-@media (max-width: 400px) {
+@media (max-width: 380px) {
   .marketing-shell {
-    padding-left: 12px;
-    padding-right: 12px;
-  }
-
-  .marketing-service-bottom {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .marketing-primary-button {
-    width: 100%;
-  }
-
-  .marketing-service-price strong {
-    font-size: 16px;
+    padding-left: 11px;
+    padding-right: 11px;
   }
 
   .marketing-header h1 {
-    font-size: 25px;
+    font-size: 23px;
   }
-}
 
-/* =========================================================
-   REDUCED MOTION
-========================================================= */
+  .marketing-service-bottom {
+    gap: 8px;
+  }
 
-@media (prefers-reduced-motion: reduce) {
-  .marketing-service-card,
   .marketing-primary-button {
-    transition: none;
+    padding: 0 10px;
+    font-size: 9px;
   }
-}
+
+  .dashboard-mobile-nav {
+    padding-left: 5px;
+    padding-right: 5px;
+  }
+
+  .dashboard-mobile-nav__item {
+    height: 53px;
+    border-radius: 10px;
+  }
+
+  .dashboard-mobile-nav__item span {
+    font-size: 16px;
+  }
+
+  .dashboard-mobile-nav__item small {
+    font-size: 8px;
+  }
+   }
