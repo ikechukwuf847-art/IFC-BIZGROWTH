@@ -5,6 +5,18 @@ import "./marketing.css";
 
 export const dynamic = "force-dynamic";
 
+type Business = {
+  id: string;
+  name: string;
+  country_code: string;
+  status: string;
+};
+
+type Country = {
+  name: string;
+  currency_code: string;
+};
+
 export default async function MarketingPage() {
   const supabase = await createSupabaseServerClient();
 
@@ -13,47 +25,33 @@ export default async function MarketingPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect("/login?next=/business/marketing");
   }
 
   /*
-   * Resolve the business through business_members.
-   * This is more reliable than depending only on businesses.owner_id.
+   * Use the same business lookup that already works
+   * on the business dashboard.
    */
-  const { data: membership, error: membershipError } = await supabase
-    .from("business_members")
-    .select("business_id")
-    .eq("user_id", user.id)
-    .eq("role", "owner")
-    .limit(1)
-    .maybeSingle();
-
-  if (membershipError) {
-    console.error("Marketing membership lookup error:", membershipError);
-  }
-
-  if (!membership?.business_id) {
-    redirect("/business/create");
-  }
-
-  /*
-   * Load the actual business after resolving membership.
-   */
-  const { data: business, error: businessError } = await supabase
-    .from("businesses")
-    .select(
-      `
-        id,
-        name,
-        status,
-        currency_code
-      `,
-    )
-    .eq("id", membership.business_id)
-    .maybeSingle();
+  const { data: business, error: businessError } =
+    await supabase
+      .from("businesses")
+      .select(
+        `
+          id,
+          name,
+          country_code,
+          status
+        `,
+      )
+      .eq("owner_id", user.id)
+      .limit(1)
+      .maybeSingle<Business>();
 
   if (businessError) {
-    console.error("Marketing business lookup error:", businessError);
+    console.error(
+      "Marketing business query failed:",
+      businessError,
+    );
   }
 
   if (!business) {
@@ -68,7 +66,36 @@ export default async function MarketingPage() {
   }
 
   /*
-   * Load marketing services and this business's requests.
+   * Currency belongs to the country's record,
+   * not directly to businesses.
+   */
+  const { data: country, error: countryError } =
+    await supabase
+      .from("countries")
+      .select("name, currency_code")
+      .eq("code", business.country_code)
+      .maybeSingle<Country>();
+
+  if (countryError) {
+    console.error(
+      "Marketing country lookup failed:",
+      countryError,
+    );
+  }
+
+  /*
+   * Keep the object passed to the existing
+   * MarketingWorkspace compatible with the
+   * expected business shape.
+   */
+  const businessForWorkspace = {
+    ...business,
+    currency_code: country?.currency_code ?? null,
+  };
+
+  /*
+   * Load marketing services and this business's
+   * existing marketing requests.
    */
   const [
     { data: services, error: servicesError },
@@ -78,26 +105,36 @@ export default async function MarketingPage() {
       .from("marketing_services")
       .select("*")
       .eq("is_active", true)
-      .order("created_at", { ascending: true }),
+      .order("created_at", {
+        ascending: true,
+      }),
 
     supabase
       .from("marketing_service_requests")
       .select("*")
       .eq("business_id", business.id)
-      .order("created_at", { ascending: false }),
+      .order("created_at", {
+        ascending: false,
+      }),
   ]);
 
   if (servicesError) {
-    console.error("Marketing services lookup error:", servicesError);
+    console.error(
+      "Marketing services query failed:",
+      servicesError,
+    );
   }
 
   if (requestsError) {
-    console.error("Marketing requests lookup error:", requestsError);
+    console.error(
+      "Marketing requests query failed:",
+      requestsError,
+    );
   }
 
   return (
     <MarketingWorkspace
-      business={business}
+      business={businessForWorkspace}
       services={services ?? []}
       requests={requests ?? []}
     />
