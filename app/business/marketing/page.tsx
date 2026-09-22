@@ -17,6 +17,38 @@ type Country = {
   currency_code: string;
 };
 
+type MarketingPlan = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  duration_days: number;
+  daily_price: number;
+  total_price: number;
+  currency_code: string;
+  features: string[] | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+type MarketingRequest = {
+  id: string;
+  business_id: string;
+  plan_id: string | null;
+  title: string;
+  description: string | null;
+  budget: number;
+  currency_code: string;
+  starts_at: string | null;
+  ends_at: string | null;
+  duration_days: number | null;
+  daily_rate: number | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export default async function MarketingPage() {
   const supabase = await createSupabaseServerClient();
 
@@ -28,10 +60,6 @@ export default async function MarketingPage() {
     redirect("/login?next=/business/marketing");
   }
 
-  /*
-   * Use the same business lookup that already works
-   * on the business dashboard.
-   */
   const { data: business, error: businessError } =
     await supabase
       .from("businesses")
@@ -49,7 +77,7 @@ export default async function MarketingPage() {
 
   if (businessError) {
     console.error(
-      "Marketing business query failed:",
+      "Marketing business lookup failed:",
       businessError,
     );
   }
@@ -58,54 +86,26 @@ export default async function MarketingPage() {
     redirect("/business/create");
   }
 
-  /*
-   * Only active businesses can use marketing.
-   */
   if (business.status !== "active") {
     redirect("/business/dashboard");
   }
 
-  /*
-   * Currency belongs to the country's record,
-   * not directly to businesses.
-   */
-  const { data: country, error: countryError } =
-    await supabase
-      .from("countries")
-      .select("name, currency_code")
-      .eq("code", business.country_code)
-      .maybeSingle<Country>();
-
-  if (countryError) {
-    console.error(
-      "Marketing country lookup failed:",
-      countryError,
-    );
-  }
-
-  /*
-   * Keep the object passed to the existing
-   * MarketingWorkspace compatible with the
-   * expected business shape.
-   */
-  const businessForWorkspace = {
-    ...business,
-    currency_code: country?.currency_code ?? null,
-  };
-
-  /*
-   * Load marketing services and this business's
-   * existing marketing requests.
-   */
   const [
-    { data: services, error: servicesError },
+    { data: country, error: countryError },
+    { data: plans, error: plansError },
     { data: requests, error: requestsError },
   ] = await Promise.all([
     supabase
-      .from("marketing_services")
+      .from("countries")
+      .select("name, currency_code")
+      .eq("code", business.country_code)
+      .maybeSingle<Country>(),
+
+    supabase
+      .from("marketing_campaign_plans")
       .select("*")
       .eq("is_active", true)
-      .order("created_at", {
+      .order("duration_days", {
         ascending: true,
       }),
 
@@ -118,25 +118,41 @@ export default async function MarketingPage() {
       }),
   ]);
 
-  if (servicesError) {
+  if (countryError) {
     console.error(
-      "Marketing services query failed:",
-      servicesError,
+      "Marketing country lookup failed:",
+      countryError,
+    );
+  }
+
+  if (plansError) {
+    console.error(
+      "Marketing campaign plans lookup failed:",
+      plansError,
     );
   }
 
   if (requestsError) {
     console.error(
-      "Marketing requests query failed:",
+      "Marketing requests lookup failed:",
       requestsError,
     );
   }
 
+  const currencyCode =
+    country?.currency_code ??
+    "NGN";
+
+  const businessForWorkspace = {
+    ...business,
+    currency_code: currencyCode,
+  };
+
   return (
     <MarketingWorkspace
       business={businessForWorkspace}
-      services={services ?? []}
-      requests={requests ?? []}
+      plans={(plans ?? []) as MarketingPlan[]}
+      requests={(requests ?? []) as MarketingRequest[]}
     />
   );
-}
+  }
