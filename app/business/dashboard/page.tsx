@@ -799,7 +799,7 @@ export default async function BusinessDashboardPage() {
             </Link>
 
             <Link
-              href="/business/advertising"
+              href: "/business/campaign"
               className="dashboard-nav-link"
             >
               <span>◈</span>
