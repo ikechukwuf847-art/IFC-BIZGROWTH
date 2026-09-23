@@ -349,28 +349,28 @@ export default function MarketingWorkspace({
         },
       );
 
-      const result =
-        await response.json();
+      const result = await response.json();
 
-      if (!response.ok) {
-        throw new Error(
-          result?.error ??
-            "Unable to initialize payment.",
-        );
-      }
+if (!response.ok) {
+  throw new Error(
+    result?.error ||
+      result?.message ||
+      "Unable to initialize payment."
+  );
+}
 
-      const authorizationUrl =
-        result?.authorization_url ??
-        result?.data?.authorization_url;
+const authorizationUrl =
+  result?.payment?.authorization_url ||
+  result?.data?.payment?.authorization_url ||
+  result?.authorization_url ||
+  result?.data?.authorization_url;
 
-      if (!authorizationUrl) {
-        throw new Error(
-          "Payment authorization URL was not returned.",
-        );
-      }
+if (!authorizationUrl) {
+  console.error("create-payment response:", result);
+  throw new Error("Payment authorization URL was not returned.");
+}
 
-      window.location.href =
-        authorizationUrl;
+window.location.href = authorizationUrl;
     } catch (err) {
       setError(
         err instanceof Error
