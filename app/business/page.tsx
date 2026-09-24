@@ -5,6 +5,10 @@ import "./business.css";
 
 export const dynamic = "force-dynamic";
 
+/* =========================================================
+   TYPES
+========================================================= */
+
 type Business = {
   id: string;
   name: string;
@@ -48,63 +52,83 @@ type Category = {
   image_url?: string | null;
 };
 
-const categoryIcons: Record<string, string> = {
-  furniture: "🛋️",
-  restaurants: "🍴",
-  restaurant: "🍴",
-  hotels: "🛏️",
-  hotel: "🛏️",
-  "fashion-beauty": "👗",
-  fashion: "👗",
-  beauty: "💇",
-  salons: "✂️",
-  salon: "✂️",
-  healthcare: "⚕️",
-  health: "⚕️",
-  logistics: "🚚",
-  automotive: "🚗",
-  education: "🎓",
-  construction: "🏗️",
-  technology: "💻",
-  real-estate: "🏠",
-  default: "▦",
-};
+/* =========================================================
+   HELPERS
+========================================================= */
 
-function getCategoryIcon(category: Category) {
-  const slug = category.slug?.toLowerCase();
+/**
+ * Gets the location that belongs to a business.
+ */
+function getBusinessLocation(
+  businessId: string,
+  locations: Location[]
+): Location | undefined {
+  const businessLocations = locations.filter(
+    (location) => location.business_id === businessId
+  );
 
-  if (slug && categoryIcons[slug]) {
-    return categoryIcons[slug];
+  if (!businessLocations.length) {
+    return undefined;
   }
 
-  const name = category.name?.toLowerCase();
-
-  if (name) {
-    const found = Object.keys(categoryIcons).find((key) =>
-      name.includes(key.replace("-", " "))
-    );
-
-    if (found) return categoryIcons[found];
-  }
-
-  return categoryIcons.default;
+  return (
+    businessLocations.find(
+      (location) => location.is_primary === true
+    ) || businessLocations[0]
+  );
 }
 
+/**
+ * Converts the backend location fields into readable text.
+ */
 function getLocationText(location?: Location) {
-  if (!location) return "Location not available";
+  if (!location) {
+    return "Location not available";
+  }
 
   const city = location.city_name || location.city;
   const state = location.state_name || location.state;
+  const country =
+    location.country_name || location.country;
 
-  if (city && state) return `${city}, ${state}`;
-  if (city) return city;
-  if (state) return state;
+  if (city && state) {
+    return `${city}, ${state}`;
+  }
 
-  return location.country_name || location.country || "Location not available";
+  if (city && country) {
+    return `${city}, ${country}`;
+  }
+
+  if (state && country) {
+    return `${state}, ${country}`;
+  }
+
+  if (city) {
+    return city;
+  }
+
+  if (state) {
+    return state;
+  }
+
+  if (country) {
+    return country;
+  }
+
+  if (location.address) {
+    return location.address;
+  }
+
+  return "Location not available";
 }
 
+/**
+ * Gets a usable image URL from the backend media record.
+ */
 function getMediaUrl(media?: Media) {
-  if (!media) return null;
+  if (!media) {
+    return null;
+  }
 
   return (
     media.url ||
@@ -115,36 +139,14 @@ function getMediaUrl(media?: Media) {
   );
 }
 
-function BusinessImage({
-  media,
-  name,
-}: {
-  media?: Media;
-  name: string;
-}) {
-  const url = getMediaUrl(media);
-
-  if (!url) {
-    return (
-      <div className="business-card-image business-card-image-fallback">
-        <span className="fallback-building">⌂</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="business-card-image">
-      <Image
-        src={url}
-        alt={`${name} logo`}
-        fill
-        sizes="(max-width: 700px) 45vw, 240px"
-        className="business-card-logo"
-      />
-    </div>
-  );
-}
-
+/**
+ * Gets the best media record for a business.
+ *
+ * Priority:
+ * 1. Primary media
+ * 2. Logo media
+ * 3. First media by sort order
+ */
 function getBusinessMedia(
   businessId: string,
   media: Media[]
@@ -153,45 +155,113 @@ function getBusinessMedia(
     (item) => item.business_id === businessId
   );
 
-  if (!businessMedia.length) return undefined;
+  if (!businessMedia.length) {
+    return undefined;
+  }
+
+  const primaryMedia = businessMedia.find(
+    (item) => item.is_primary === true
+  );
+
+  if (primaryMedia) {
+    return primaryMedia;
+  }
+
+  const logoMedia = businessMedia
+    .filter(
+      (item) =>
+        item.media_type?.toLowerCase() === "logo" ||
+        item.type?.toLowerCase() === "logo"
+    )
+    .sort(
+      (a, b) =>
+        (a.sort_order ?? 0) - (b.sort_order ?? 0)
+    );
+
+  if (logoMedia.length) {
+    return logoMedia[0];
+  }
+
+  return [...businessMedia].sort(
+    (a, b) =>
+      (a.sort_order ?? 0) - (b.sort_order ?? 0)
+  )[0];
+}
+
+/**
+ * Finds a category from backend category data.
+ *
+ * This function does NOT contain a hardcoded category list.
+ */
+function getCategoryByBusiness(
+  business: Business,
+  categories: Category[]
+): Category | undefined {
+  /*
+   * Your current businesses select does not expose a category_id.
+   *
+   * Therefore we don't pretend that a category relationship exists.
+   * The page can still display all backend categories.
+   *
+   * When your businesses table has a confirmed category relationship,
+   * this function can be connected directly to it.
+   */
+
+  void business;
+  void categories;
+
+  return undefined;
+}
+
+/* =========================================================
+   BUSINESS IMAGE
+========================================================= */
+
+function BusinessImage({
+  media,
+  name,
+}: {
+  media?: Media;
+  name: string;
+}) {
+  const imageUrl = getMediaUrl(media);
+
+  if (!imageUrl) {
+    return (
+      <div className="business-card-image business-card-image-fallback">
+        <span aria-hidden="true">⌂</span>
+      </div>
+    );
+  }
 
   return (
-    businessMedia.find((item) => item.is_primary === true) ||
-    businessMedia
-      .filter(
-        (item) =>
-          item.media_type === "logo" ||
-          item.type === "logo"
-      )
-      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))[0] ||
-    businessMedia.sort(
-      (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
-    )[0]
+    <div className="business-card-image">
+      <Image
+        src={imageUrl}
+        alt={`${name} logo`}
+        fill
+        unoptimized
+        sizes="(max-width: 700px) 45vw, 240px"
+        className="business-card-logo"
+      />
+    </div>
   );
 }
 
-function getBusinessLocation(
-  businessId: string,
-  locations: Location[]
-): Location | undefined {
-  const businessLocations = locations.filter(
-    (item) => item.business_id === businessId
-  );
-
-  return (
-    businessLocations.find((item) => item.is_primary === true) ||
-    businessLocations[0]
-  );
-}
+/* =========================================================
+   BUSINESS CARD
+========================================================= */
 
 function BusinessCard({
   business,
   media,
   location,
+  category,
 }: {
   business: Business;
   media?: Media;
   location?: Location;
+  category?: Category;
 }) {
   const verified =
     business.verification_status === "verified" ||
@@ -200,7 +270,10 @@ function BusinessCard({
   return (
     <article className="business-card">
       <div className="business-card-top">
-        <BusinessImage media={media} name={business.name} />
+        <BusinessImage
+          media={media}
+          name={business.name}
+        />
 
         {verified && (
           <span className="verified-badge">
@@ -212,14 +285,22 @@ function BusinessCard({
       <div className="business-card-body">
         <h3>{business.name}</h3>
 
-        <p className="business-category">
-          Business
-        </p>
+        {category?.name && (
+          <p className="business-category">
+            {category.name}
+          </p>
+        )}
 
         <p className="business-location">
-          <span>⌖</span>
+          <span aria-hidden="true">⌖</span>
           {getLocationText(location)}
         </p>
+
+        {business.description && (
+          <p className="business-description">
+            {business.description}
+          </p>
+        )}
 
         <div className="business-card-actions">
           <Link
@@ -228,27 +309,15 @@ function BusinessCard({
           >
             View Business
           </Link>
-
-          <button
-            type="button"
-            className="icon-action"
-            aria-label={`Call ${business.name}`}
-          >
-            ☎
-          </button>
-
-          <button
-            type="button"
-            className="icon-action whatsapp"
-            aria-label={`WhatsApp ${business.name}`}
-          >
-            ◉
-          </button>
         </div>
       </div>
     </article>
   );
 }
+
+/* =========================================================
+   PAGE
+========================================================= */
 
 export default async function BusinessDiscoveryPage({
   searchParams,
@@ -259,16 +328,18 @@ export default async function BusinessDiscoveryPage({
   }>;
 }) {
   const params = await searchParams;
+
   const query = params.q?.trim() || "";
-  const selectedLocation = params.location?.trim() || "";
+  const selectedLocation =
+    params.location?.trim() || "";
 
-  const supabase = await createSupabaseServerClient();
+  const supabase =
+    await createSupabaseServerClient();
 
-  /*
-   * PUBLIC BUSINESSES
-   *
-   * Only businesses that are explicitly public are displayed.
-   */
+  /* =======================================================
+     BUSINESSES
+  ======================================================= */
+
   let businessQuery = supabase
     .from("businesses")
     .select(
@@ -283,102 +354,197 @@ export default async function BusinessDiscoveryPage({
       `
     )
     .eq("is_public", true)
-    .order("name", { ascending: true })
+    .order("name", {
+      ascending: true,
+    })
     .limit(100);
 
   if (query) {
-    businessQuery = businessQuery.ilike("name", `%${query}%`);
+    businessQuery = businessQuery.ilike(
+      "name",
+      `%${query}%`
+    );
   }
 
+  /* =======================================================
+     FETCH ALL PUBLIC DATA
+  ======================================================= */
+
   const [
-    { data: businesses, error: businessesError },
-    { data: categories, error: categoriesError },
-    { data: media, error: mediaError },
-    { data: locations, error: locationsError },
+    businessResult,
+    categoryResult,
+    mediaResult,
+    locationResult,
   ] = await Promise.all([
     businessQuery,
 
     supabase
       .from("business_categories")
-      .select("*")
-      .order("name", { ascending: true })
-      .limit(20),
+      .select(
+        `
+          id,
+          name,
+          slug,
+          description,
+          icon,
+          image_url
+        `
+      )
+      .order("name", {
+        ascending: true,
+      })
+      .limit(100),
 
     supabase
       .from("business_media")
-      .select("*")
-      .limit(500),
+      .select(
+        `
+          business_id,
+          url,
+          image_url,
+          storage_path,
+          path,
+          media_type,
+          type,
+          is_primary,
+          sort_order
+        `
+      )
+      .order("sort_order", {
+        ascending: true,
+      })
+      .limit(1000),
 
     supabase
       .from("business_locations")
-      .select("*")
-      .limit(500),
+      .select(
+        `
+          business_id,
+          country,
+          country_name,
+          state,
+          state_name,
+          city,
+          city_name,
+          address,
+          is_primary
+        `
+      )
+      .limit(1000),
   ]);
 
-  if (businessesError) {
-    console.error("Business discovery error:", businessesError);
+  /* =======================================================
+     ERROR HANDLING
+  ======================================================= */
+
+  if (businessResult.error) {
+    console.error(
+      "Business discovery error:",
+      businessResult.error
+    );
   }
 
-  if (categoriesError) {
-    console.error("Categories error:", categoriesError);
+  if (categoryResult.error) {
+    console.error(
+      "Categories error:",
+      categoryResult.error
+    );
   }
 
-  if (mediaError) {
-    console.error("Business media error:", mediaError);
+  if (mediaResult.error) {
+    console.error(
+      "Business media error:",
+      mediaResult.error
+    );
   }
 
-  if (locationsError) {
-    console.error("Business locations error:", locationsError);
+  if (locationResult.error) {
+    console.error(
+      "Business locations error:",
+      locationResult.error
+    );
   }
 
-  const publicBusinesses = (businesses || []) as Business[];
-  const publicCategories = (categories || []) as Category[];
-  const businessMedia = (media || []) as Media[];
-  const businessLocations = (locations || []) as Location[];
+  /* =======================================================
+     BACKEND DATA
+  ======================================================= */
 
-  /*
-   * Optional location filtering.
-   *
-   * This deliberately happens after fetching because the exact location
-   * column structure can differ depending on the location record.
-   */
-  const filteredBusinesses = selectedLocation
-    ? publicBusinesses.filter((business) => {
-        const location = getBusinessLocation(
-          business.id,
-          businessLocations
-        );
+  const publicBusinesses =
+    (businessResult.data || []) as Business[];
 
-        const locationText = getLocationText(location).toLowerCase();
+  const publicCategories =
+    (categoryResult.data || []) as Category[];
 
-        return locationText.includes(selectedLocation.toLowerCase());
-      })
-    : publicBusinesses;
+  const businessMedia =
+    (mediaResult.data || []) as Media[];
 
-  const featuredBusinesses = filteredBusinesses.slice(0, 8);
-  const nearbyBusinesses = filteredBusinesses.slice(0, 8);
+  const businessLocations =
+    (locationResult.data || []) as Location[];
+
+  /* =======================================================
+     LOCATION FILTER
+  ======================================================= */
+
+  const filteredBusinesses =
+    selectedLocation
+      ? publicBusinesses.filter((business) => {
+          const location =
+            getBusinessLocation(
+              business.id,
+              businessLocations
+            );
+
+          const locationText =
+            getLocationText(location).toLowerCase();
+
+          return locationText.includes(
+            selectedLocation.toLowerCase()
+          );
+        })
+      : publicBusinesses;
+
+  /* =======================================================
+     DISPLAY DATA
+  ======================================================= */
+
+  const featuredBusinesses =
+    filteredBusinesses.slice(0, 8);
+
+  const nearbyBusinesses =
+    filteredBusinesses.slice(0, 8);
 
   return (
     <main className="business-page">
 
-      {/* HEADER */}
+      {/* ===================================================
+          HEADER
+      =================================================== */}
+
       <header className="business-header">
         <div className="business-header-inner">
 
-          <Link href="/" className="business-brand">
+          <Link
+            href="/"
+            className="business-brand"
+          >
             <div className="brand-mark">
               <span>↗</span>
             </div>
 
             <div>
-              <strong>IFC BIZGROWTH</strong>
+              <strong>
+                IFC BIZGROWTH
+              </strong>
+
               <small>
-                Business Advertising & Discovery Platform
+                Business Advertising &
+                Discovery Platform
               </small>
             </div>
           </Link>
 
           <div className="business-header-actions">
+
             <Link
               href="/business/search"
               className="header-search-icon"
@@ -392,8 +558,13 @@ export default async function BusinessDiscoveryPage({
               className="header-location"
             >
               <span>⌖</span>
-              {selectedLocation || "Africa"}
-              <span className="chevron">⌄</span>
+
+              {selectedLocation ||
+                "Africa"}
+
+              <span className="chevron">
+                ⌄
+              </span>
             </Link>
 
             <Link
@@ -403,12 +574,16 @@ export default async function BusinessDiscoveryPage({
             >
               ●
             </Link>
+
           </div>
 
         </div>
       </header>
 
-      {/* HERO */}
+      {/* ===================================================
+          HERO
+      =================================================== */}
+
       <section className="business-hero">
         <div className="hero-content">
 
@@ -426,21 +601,34 @@ export default async function BusinessDiscoveryPage({
           </div>
 
           <div className="hero-slogan">
-            <span>More Visibility.</span>
-            <span>More Customers.</span>
-            <span>More Growth.</span>
+            <span>
+              More Visibility.
+            </span>
+
+            <span>
+              More Customers.
+            </span>
+
+            <span>
+              More Growth.
+            </span>
           </div>
 
         </div>
       </section>
 
-      {/* SEARCH */}
+      {/* ===================================================
+          SEARCH
+      =================================================== */}
+
       <section className="discovery-search-section">
+
         <form
           action="/business/search"
           method="GET"
           className="discovery-search"
         >
+
           <div className="search-input-wrapper">
             <span>⌕</span>
 
@@ -457,25 +645,39 @@ export default async function BusinessDiscoveryPage({
             className="search-location"
           >
             <span>⌖</span>
-            {selectedLocation || "Africa"}
+
+            {selectedLocation ||
+              "Africa"}
+
             <span>⌄</span>
           </Link>
 
           <button type="submit">
             Search
           </button>
+
         </form>
+
       </section>
 
-      {/* CATEGORIES */}
+      {/* ===================================================
+          CATEGORIES
+      =================================================== */}
+
       <section className="discovery-section categories-section">
 
         <div className="section-heading">
-          <h2>Explore Categories</h2>
 
-          <Link href="/business/categories">
+          <h2>
+            Explore Categories
+          </h2>
+
+          <Link
+            href="/business/categories"
+          >
             See All →
           </Link>
+
         </div>
 
         <div className="category-scroll">
@@ -484,71 +686,153 @@ export default async function BusinessDiscoveryPage({
             href="/business/categories"
             className="category-card"
           >
-            <div className="category-icon">▦</div>
-            <span>All</span>
-            <small>Categories</small>
+            <div className="category-icon">
+              ▦
+            </div>
+
+            <span>
+              All
+            </span>
+
+            <small>
+              Categories
+            </small>
           </Link>
 
-          {publicCategories.slice(0, 7).map((category) => (
-            <Link
-              key={category.id}
-              href={
-                category.slug
-                  ? `/business/category/${category.slug}`
-                  : "/business/categories"
-              }
-              className="category-card"
-            >
-              <div className="category-icon">
-                {getCategoryIcon(category)}
-              </div>
+          {publicCategories
+            .slice(0, 7)
+            .map((category) => {
 
-              <span>
-                {category.name || "Category"}
-              </span>
-            </Link>
-          ))}
+              const categoryIcon =
+                category.icon ||
+                null;
+
+              return (
+                <Link
+                  key={category.id}
+                  href={
+                    category.slug
+                      ? `/business/category/${category.slug}`
+                      : "/business/categories"
+                  }
+                  className="category-card"
+                >
+
+                  <div className="category-icon">
+
+                    {category.image_url ? (
+                      <Image
+                        src={
+                          category.image_url
+                        }
+                        alt={
+                          category.name ||
+                          "Category"
+                        }
+                        width={48}
+                        height={48}
+                        unoptimized
+                      />
+                    ) : categoryIcon ? (
+                      <span>
+                        {categoryIcon}
+                      </span>
+                    ) : (
+                      <span>
+                        ▦
+                      </span>
+                    )}
+
+                  </div>
+
+                  <span>
+                    {category.name ||
+                      "Category"}
+                  </span>
+
+                </Link>
+              );
+            })}
 
         </div>
       </section>
 
-      {/* FEATURED BUSINESSES */}
+      {/* ===================================================
+          FEATURED BUSINESSES
+      =================================================== */}
+
       <section className="discovery-section">
 
         <div className="section-heading">
+
           <h2>
-            <span className="section-star">☆</span>
+            <span className="section-star">
+              ☆
+            </span>
+
             Featured Businesses
           </h2>
 
-          <Link href="/business/search">
+          <Link
+            href="/business/search"
+          >
             See All →
           </Link>
+
         </div>
 
         {featuredBusinesses.length > 0 ? (
+
           <div className="business-grid">
-            {featuredBusinesses.map((business) => (
-              <BusinessCard
-                key={business.id}
-                business={business}
-                media={getBusinessMedia(
-                  business.id,
-                  businessMedia
-                )}
-                location={getBusinessLocation(
-                  business.id,
-                  businessLocations
-                )}
-              />
-            ))}
+
+            {featuredBusinesses.map(
+              (business) => {
+
+                const media =
+                  getBusinessMedia(
+                    business.id,
+                    businessMedia
+                  );
+
+                const location =
+                  getBusinessLocation(
+                    business.id,
+                    businessLocations
+                  );
+
+                const category =
+                  getCategoryByBusiness(
+                    business,
+                    publicCategories
+                  );
+
+                return (
+                  <BusinessCard
+                    key={business.id}
+                    business={business}
+                    media={media}
+                    location={location}
+                    category={category}
+                  />
+                );
+              }
+            )}
+
           </div>
+
         ) : (
+
           <div className="empty-discovery">
+
             <span>⌂</span>
-            <h3>No businesses found</h3>
+
+            <h3>
+              No businesses found
+            </h3>
+
             <p>
-              There are currently no public businesses matching
+              There are currently no
+              public businesses matching
               your search.
             </p>
 
@@ -557,106 +841,193 @@ export default async function BusinessDiscoveryPage({
                 Browse all businesses
               </Link>
             )}
+
           </div>
         )}
 
       </section>
 
-      {/* POPULAR CATEGORIES */}
+      {/* ===================================================
+          POPULAR CATEGORIES
+      =================================================== */}
+
       <section className="discovery-section">
 
         <div className="section-heading">
+
           <h2>
-            <span className="grid-icon">▦</span>
+            <span className="grid-icon">
+              ▦
+            </span>
+
             Popular Categories
           </h2>
 
-          <Link href="/business/categories">
+          <Link
+            href="/business/categories"
+          >
             View All →
           </Link>
+
         </div>
 
         <div className="popular-categories">
 
-          {publicCategories.slice(0, 6).map((category) => (
-            <Link
-              key={category.id}
-              href={
-                category.slug
-                  ? `/business/category/${category.slug}`
-                  : "/business/categories"
-              }
-              className="popular-category"
-            >
-              <div className="popular-category-icon">
-                {getCategoryIcon(category)}
-              </div>
+          {publicCategories
+            .slice(0, 6)
+            .map((category) => (
 
-              <span>
-                {category.name || "Category"}
-              </span>
-            </Link>
-          ))}
+              <Link
+                key={category.id}
+                href={
+                  category.slug
+                    ? `/business/category/${category.slug}`
+                    : "/business/categories"
+                }
+                className="popular-category"
+              >
+
+                <div className="popular-category-icon">
+
+                  {category.image_url ? (
+
+                    <Image
+                      src={
+                        category.image_url
+                      }
+                      alt={
+                        category.name ||
+                        "Category"
+                      }
+                      width={48}
+                      height={48}
+                      unoptimized
+                    />
+
+                  ) : (
+
+                    <span>
+                      {category.icon ||
+                        "▦"}
+                    </span>
+
+                  )}
+
+                </div>
+
+                <span>
+                  {category.name ||
+                    "Category"}
+                </span>
+
+              </Link>
+            ))}
 
           <Link
             href="/business/categories"
             className="popular-category more-category"
           >
+
             <div className="popular-category-icon">
               •••
             </div>
 
-            <span>More</span>
+            <span>
+              More
+            </span>
+
           </Link>
 
         </div>
       </section>
 
-      {/* NEARBY */}
+      {/* ===================================================
+          NEARBY BUSINESSES
+      =================================================== */}
+
       <section className="discovery-section">
 
         <div className="section-heading">
+
           <h2>
-            <span className="location-heading-icon">⌖</span>
+            <span className="location-heading-icon">
+              ⌖
+            </span>
+
             Businesses Near You
           </h2>
 
-          <Link href="/business/locations">
+          <Link
+            href="/business/locations"
+          >
             See All →
           </Link>
+
         </div>
 
         {nearbyBusinesses.length > 0 ? (
+
           <div className="business-grid">
-            {nearbyBusinesses.map((business) => (
-              <BusinessCard
-                key={`nearby-${business.id}`}
-                business={business}
-                media={getBusinessMedia(
-                  business.id,
-                  businessMedia
-                )}
-                location={getBusinessLocation(
-                  business.id,
-                  businessLocations
-                )}
-              />
-            ))}
+
+            {nearbyBusinesses.map(
+              (business) => {
+
+                const media =
+                  getBusinessMedia(
+                    business.id,
+                    businessMedia
+                  );
+
+                const location =
+                  getBusinessLocation(
+                    business.id,
+                    businessLocations
+                  );
+
+                const category =
+                  getCategoryByBusiness(
+                    business,
+                    publicCategories
+                  );
+
+                return (
+                  <BusinessCard
+                    key={`nearby-${business.id}`}
+                    business={business}
+                    media={media}
+                    location={location}
+                    category={category}
+                  />
+                );
+              }
+            )}
+
           </div>
+
         ) : (
+
           <div className="empty-discovery">
+
             <span>⌖</span>
-            <h3>No businesses available here yet</h3>
+
+            <h3>
+              No businesses available here yet
+            </h3>
+
             <p>
-              Businesses will appear here as they become
-              publicly listed.
+              Businesses will appear here
+              as they become publicly listed.
             </p>
+
           </div>
         )}
 
       </section>
 
-      {/* BUSINESS CTA */}
+      {/* ===================================================
+          BUSINESS CTA
+      =================================================== */}
+
       <section className="business-owner-cta">
 
         <div className="owner-icon">
@@ -665,11 +1036,13 @@ export default async function BusinessDiscoveryPage({
 
         <div>
           <strong>
-            Own a Business? Get Discovered Today.
+            Own a Business?
+            Get Discovered Today.
           </strong>
 
           <p>
-            List your business on IFC BIZGROWTH and reach
+            List your business on
+            IFC BIZGROWTH and reach
             more customers across Africa.
           </p>
         </div>
@@ -680,7 +1053,10 @@ export default async function BusinessDiscoveryPage({
 
       </section>
 
-      {/* MOBILE NAV */}
+      {/* ===================================================
+          MOBILE NAV
+      =================================================== */}
+
       <nav className="mobile-business-nav">
 
         <Link
