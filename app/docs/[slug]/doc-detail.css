@@ -1,0 +1,177 @@
+.doc-detail-page {
+  min-height: 100vh;
+  background: #fff;
+  color: #101828;
+}
+
+.doc-detail-container {
+  width: min(900px, calc(100% - 40px));
+  margin: 0 auto;
+}
+
+/* HERO */
+
+.doc-detail-hero {
+  padding: 55px 0 75px;
+  background:
+    radial-gradient(
+      circle at 90% 10%,
+      rgba(37, 99, 235, 0.12),
+      transparent 30%
+    ),
+    #f7f9fc;
+}
+
+.doc-back-link {
+  display: inline-flex;
+  margin-bottom: 45px;
+  color: #475467;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.doc-back-link:hover {
+  color: #175cd3;
+}
+
+.doc-detail-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.doc-detail-meta span {
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #175cd3;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.doc-detail-meta time {
+  color: #667085;
+  font-size: 13px;
+}
+
+.doc-detail-hero h1 {
+  max-width: 850px;
+  margin: 0;
+  font-size: clamp(38px, 6vw, 62px);
+  line-height: 1.08;
+  letter-spacing: -0.045em;
+}
+
+.doc-detail-excerpt {
+  max-width: 750px;
+  margin: 25px 0 0;
+  color: #667085;
+  font-size: 18px;
+  line-height: 1.75;
+}
+
+/* CONTENT */
+
+.doc-detail-content-section {
+  padding: 70px 0 100px;
+}
+
+.doc-detail-cover {
+  overflow: hidden;
+  margin-bottom: 55px;
+  border-radius: 22px;
+  background: #eef4ff;
+}
+
+.doc-detail-cover img {
+  display: block;
+  width: 100%;
+  max-height: 480px;
+  object-fit: cover;
+}
+
+/*
+  The documentation content currently comes directly
+  from the trusted admin-created database record.
+*/
+
+.doc-content {
+  color: #344054;
+  font-size: 17px;
+  line-height: 1.9;
+  white-space: pre-wrap;
+}
+
+.doc-content h2,
+.doc-content h3,
+.doc-content h4 {
+  color: #101828;
+  line-height: 1.25;
+}
+
+.doc-content h2 {
+  margin-top: 48px;
+  font-size: 30px;
+}
+
+.doc-content h3 {
+  margin-top: 38px;
+  font-size: 24px;
+}
+
+.doc-content h4 {
+  margin-top: 30px;
+  font-size: 20px;
+}
+
+.doc-content strong {
+  color: #101828;
+}
+
+.doc-content a {
+  color: #175cd3;
+  font-weight: 700;
+}
+
+.doc-last-updated {
+  margin-top: 55px;
+  padding-top: 22px;
+  border-top: 1px solid #eaecf0;
+  color: #98a2b3;
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .doc-detail-container {
+    width: min(100% - 28px, 900px);
+  }
+
+  .doc-detail-hero {
+    padding: 40px 0 55px;
+  }
+
+  .doc-back-link {
+    margin-bottom: 35px;
+  }
+
+  .doc-detail-hero h1 {
+    font-size: 38px;
+  }
+
+  .doc-detail-excerpt {
+    font-size: 16px;
+  }
+
+  .doc-detail-content-section {
+    padding: 50px 0 70px;
+  }
+
+  .doc-content {
+    font-size: 16px;
+  }
+  }
