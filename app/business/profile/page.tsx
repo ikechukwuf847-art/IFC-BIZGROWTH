@@ -73,9 +73,13 @@ export default async function BusinessProfilePage() {
   let logoUrl: string | null = null;
 
   if (business.logo_url) {
-    const { data } = await supabase.storage
+    const { data, error: logoError } = await supabase.storage
       .from("business-logos")
       .createSignedUrl(business.logo_url, 60 * 60);
+
+    if (logoError) {
+      console.error("Business logo error:", logoError);
+    }
 
     logoUrl = data?.signedUrl ?? null;
   }
@@ -158,6 +162,76 @@ export default async function BusinessProfilePage() {
       .maybeSingle(),
   ]);
 
+  if (locationResult.error) {
+    console.error(
+      "Business location error:",
+      locationResult.error
+    );
+  }
+
+  if (socialResult.error) {
+    console.error(
+      "Business social links error:",
+      socialResult.error
+    );
+  }
+
+  if (hoursResult.error) {
+    console.error(
+      "Business hours error:",
+      hoursResult.error
+    );
+  }
+
+  if (mediaResult.error) {
+    console.error(
+      "Business media error:",
+      mediaResult.error
+    );
+  }
+
+  if (productsResult.error) {
+    console.error(
+      "Business products error:",
+      productsResult.error
+    );
+  }
+
+  if (servicesResult.error) {
+    console.error(
+      "Business services error:",
+      servicesResult.error
+    );
+  }
+
+  if (promotionsResult.error) {
+    console.error(
+      "Business promotions error:",
+      promotionsResult.error
+    );
+  }
+
+  if (reviewsResult.error) {
+    console.error(
+      "Business reviews error:",
+      reviewsResult.error
+    );
+  }
+
+  if (ratingResult.error) {
+    console.error(
+      "Business rating error:",
+      ratingResult.error
+    );
+  }
+
+  if (countryResult.error) {
+    console.error(
+      "Business country error:",
+      countryResult.error
+    );
+  }
+
   const location = locationResult.data ?? null;
   const socialLinks = socialResult.data ?? [];
   const businessHours = hoursResult.data ?? [];
@@ -187,4 +261,4 @@ export default async function BusinessProfilePage() {
       country={country}
     />
   );
-    }
+}
