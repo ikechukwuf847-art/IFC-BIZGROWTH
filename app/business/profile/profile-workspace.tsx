@@ -821,43 +821,47 @@ export default function ProfileWorkspace({
     setError("");
 
     try {
-      const rows = hours.map((item) => ({
-        business_id: business.id,
-        day_of_week: item.day,
-        is_open: !item.isClosed,
-        opens_at: item.isClosed
-          ? null
-          : item.open || null,
-        closes_at: item.isClosed
-          ? null
-          : item.close || null,
-        updated_at:
-          new Date().toISOString(),
-      }));
+  const rows = hours.map((item) => ({
+    business_id: business.id,
+    day_of_week: item.day,
+    is_open: !item.isClosed,
+    opens_at: item.isClosed
+      ? null
+      : item.open || null,
+    closes_at: item.isClosed
+      ? null
+      : item.close || null,
+    updated_at: new Date().toISOString(),
+  }));
 
-      for (const item of rows) {
-        if (
-          item.is_open &&
-          (!item.opens_at ||
-            !item.closes_at)
-        ) {
-          throw new Error(
-            `${DAYS[item.day].label} must have both opening and closing times.`
-          );
-        }
+  for (const item of rows) {
+    const day = item.day_of_week;
+    const dayLabel =
+      DAYS.find((d) => d.value === day)?.label ??
+      `Day ${day}`;
 
-        if (
-          item.is_open &&
-          item.opens_at &&
-          item.closes_at &&
-          item.opens_at >=
-            item.closes_at
-        ) {
-          throw new Error(
-            `${DAYS[item.day].label} closing time must be later than opening time.`
-          );
-        }
-      }
+    if (
+      item.is_open &&
+      (!item.opens_at || !item.closes_at)
+    ) {
+      throw new Error(
+        `${dayLabel} must have both opening and closing times.`
+      );
+    }
+
+    if (
+      item.is_open &&
+      item.opens_at &&
+      item.closes_at &&
+      item.opens_at >= item.closes_at
+    ) {
+      throw new Error(
+        `${dayLabel} closing time must be later than opening time.`
+      );
+    }
+  }
+
+  // Keep your existing update/insert code below this point.
 
       const { error: upsertError } =
         await supabase
