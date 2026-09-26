@@ -98,14 +98,19 @@ function getInitials(name: string) {
   const words = name.trim().split(/\s+/).filter(Boolean);
 
   if (!words.length) return "B";
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  if (words.length === 1) {
+    return words[0].slice(0, 2).toUpperCase();
+  }
 
   return `${words[0][0]}${words[1][0]}`.toUpperCase();
 }
 
 function firstValue(row: any, keys: string[]) {
   for (const key of keys) {
-    if (row?.[key] !== undefined && row?.[key] !== null) {
+    if (
+      row?.[key] !== undefined &&
+      row?.[key] !== null
+    ) {
       return row[key];
     }
   }
@@ -116,12 +121,17 @@ function firstValue(row: any, keys: string[]) {
 function formatRating(value: any) {
   const number = Number(value);
 
-  if (!Number.isFinite(number)) return "0.0";
+  if (!Number.isFinite(number)) {
+    return "0.0";
+  }
 
   return number.toFixed(1);
 }
 
-function getReviewCount(rating: any, reviews: any[]) {
+function getReviewCount(
+  rating: any,
+  reviews: any[]
+) {
   const count = Number(
     firstValue(rating, [
       "review_count",
@@ -130,7 +140,9 @@ function getReviewCount(rating: any, reviews: any[]) {
     ])
   );
 
-  if (Number.isFinite(count)) return count;
+  if (Number.isFinite(count)) {
+    return count;
+  }
 
   return reviews.length;
 }
@@ -139,8 +151,6 @@ function normalizeSocialLinks(rows: any[]) {
   const result: Record<string, string> = {};
 
   for (const row of rows) {
-    if (row?.is_public === false) continue;
-
     const platform = firstValue(row, [
       "platform",
       "name",
@@ -156,7 +166,13 @@ function normalizeSocialLinks(rows: any[]) {
     ]);
 
     if (platform && url) {
-      result[String(platform).toLowerCase()] = String(url);
+      const normalizedPlatform = String(
+        platform
+      )
+        .toLowerCase()
+        .trim();
+
+      result[normalizedPlatform] = String(url);
     }
   }
 
@@ -180,11 +196,9 @@ function normalizeHours(rows: any[]) {
       label: day.label,
       id: row?.id ?? null,
 
-      // The database uses is_open.
-      // No row means no saved business hours,
-      // therefore the day is shown as closed rather than
-      // inventing default hours.
-      isClosed: row ? row.is_open === false : true,
+      isClosed: row
+        ? row.is_open === false
+        : true,
 
       open: row?.opens_at
         ? String(row.opens_at).slice(0, 5)
@@ -197,7 +211,10 @@ function normalizeHours(rows: any[]) {
   });
 }
 
-function validateSocialUrl(platform: string, value: string) {
+function validateSocialUrl(
+  platform: string,
+  value: string
+) {
   if (!value) return null;
 
   let parsed: URL;
@@ -208,7 +225,11 @@ function validateSocialUrl(platform: string, value: string) {
     return `${platform} must be a valid URL.`;
   }
 
-  if (!["http:", "https:"].includes(parsed.protocol)) {
+  if (
+    !["http:", "https:"].includes(
+      parsed.protocol
+    )
+  ) {
     return `${platform} must use HTTP or HTTPS.`;
   }
 
@@ -231,27 +252,36 @@ export default function ProfileWorkspace({
   rating,
   country,
 }: Props) {
-  const supabase = createSupabaseBrowserClient();
+  const supabase =
+    createSupabaseBrowserClient();
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef =
+    useRef<HTMLInputElement | null>(null);
 
-  const [name, setName] = useState(business.name);
-  const [description, setDescription] = useState(
-    business.description ?? ""
+  const [name, setName] = useState(
+    business.name
   );
-  const [phone, setPhone] = useState(business.phone ?? "");
-  const [email, setEmail] = useState(business.email ?? "");
+
+  const [description, setDescription] =
+    useState(business.description ?? "");
+
+  const [phone, setPhone] = useState(
+    business.phone ?? ""
+  );
+
+  const [email, setEmail] = useState(
+    business.email ?? ""
+  );
+
   const [website, setWebsite] = useState(
     business.website_url ?? ""
   );
 
-  const [isPublic, setIsPublic] = useState(
-    Boolean(business.is_public)
-  );
+  const [isPublic, setIsPublic] =
+    useState(Boolean(business.is_public));
 
-  const [logoPreview, setLogoPreview] = useState<string | null>(
-    logoUrl
-  );
+  const [logoPreview, setLogoPreview] =
+    useState<string | null>(logoUrl);
 
   const [logoPath, setLogoPath] = useState(
     business.logo_url ?? ""
@@ -263,43 +293,36 @@ export default function ProfileWorkspace({
   const [uploadingLogo, setUploadingLogo] =
     useState(false);
 
-  const [address1, setAddress1] = useState(
-    location?.address_line_1 ?? ""
-  );
+  const [address1, setAddress1] =
+    useState(
+      location?.address_line_1 ??
+        location?.address ??
+        ""
+    );
 
-  const [address2, setAddress2] = useState(
-    location?.address_line_2 ?? ""
-  );
+  const [address2, setAddress2] =
+    useState(
+      location?.address_line_2 ?? ""
+    );
 
   const [city, setCity] = useState(
     location?.city ?? ""
   );
 
-  const [stateRegion, setStateRegion] = useState(
-    location?.state_region ?? ""
-  );
+  const [stateRegion, setStateRegion] =
+    useState(
+      location?.state_region ?? ""
+    );
 
-  const [postalCode, setPostalCode] = useState(
-    location?.postal_code ?? ""
-  );
+  const [postalCode, setPostalCode] =
+    useState(
+      location?.postal_code ?? ""
+    );
 
-  const [latitude, setLatitude] = useState(
-    location?.latitude !== null &&
-    location?.latitude !== undefined
-      ? String(location.latitude)
-      : ""
-  );
-
-  const [longitude, setLongitude] = useState(
-    location?.longitude !== null &&
-    location?.longitude !== undefined
-      ? String(location.longitude)
-      : ""
-  );
-
-  const [socials, setSocials] = useState<
-    Record<string, string>
-  >(normalizeSocialLinks(socialLinks));
+  const [socials, setSocials] =
+    useState<Record<string, string>>(
+      normalizeSocialLinks(socialLinks)
+    );
 
   const [hours, setHours] = useState(
     normalizeHours(businessHours)
@@ -317,12 +340,19 @@ export default function ProfileWorkspace({
   const [savingHours, setSavingHours] =
     useState(false);
 
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [message, setMessage] =
+    useState("");
+
+  const [error, setError] =
+    useState("");
+
+  const verificationStatus = String(
+    business.verification_status ?? ""
+  ).toLowerCase();
 
   const verified =
-    business.verification_status === "approved" ||
-    business.verification_status === "verified";
+    verificationStatus === "approved" ||
+    verificationStatus === "verified";
 
   const reviewCount = getReviewCount(
     rating,
@@ -336,7 +366,9 @@ export default function ProfileWorkspace({
     ])
   );
 
-  async function saveBusiness(event: FormEvent) {
+  async function saveBusiness(
+    event: FormEvent
+  ) {
     event.preventDefault();
 
     setSavingBusiness(true);
@@ -344,24 +376,32 @@ export default function ProfileWorkspace({
     setError("");
 
     try {
-      const response = await fetch("/api/businesses", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          business_id: business.id,
-          name: name.trim(),
-          description: description.trim(),
-          country_code: business.country_code,
-          phone: phone.trim(),
-          email: email.trim(),
-          website_url: website.trim(),
-          is_public: isPublic,
-        }),
-      });
+      const response = await fetch(
+        "/api/businesses",
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            business_id: business.id,
+            name: name.trim(),
+            description:
+              description.trim(),
+            country_code:
+              business.country_code,
+            phone: phone.trim(),
+            email: email.trim(),
+            website_url:
+              website.trim(),
+            is_public: isPublic,
+          }),
+        }
+      );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       if (!response.ok) {
         throw new Error(
@@ -370,7 +410,9 @@ export default function ProfileWorkspace({
         );
       }
 
-      setMessage("Business information saved.");
+      setMessage(
+        "Business information saved."
+      );
     } catch (err) {
       setError(
         err instanceof Error
@@ -388,7 +430,8 @@ export default function ProfileWorkspace({
     setMessage("");
     setError("");
 
-    const file = event.target.files?.[0];
+    const file =
+      event.target.files?.[0];
 
     if (!file) return;
 
@@ -417,6 +460,7 @@ export default function ProfileWorkspace({
     }
 
     setSelectedLogo(file);
+
     setLogoPreview(
       URL.createObjectURL(file)
     );
@@ -431,27 +475,31 @@ export default function ProfileWorkspace({
 
     try {
       const extension =
-        selectedLogo.type === "image/jpeg"
+        selectedLogo.type ===
+        "image/jpeg"
           ? "jpg"
-          : selectedLogo.type === "image/png"
+          : selectedLogo.type ===
+              "image/png"
             ? "png"
             : "webp";
 
       const newPath =
         `${business.id}/logo.${extension}`;
 
-      const { error: uploadError } =
-        await supabase.storage
-          .from("business-logos")
-          .upload(
-            newPath,
-            selectedLogo,
-            {
-              upsert: true,
-              cacheControl: "3600",
-              contentType: selectedLogo.type,
-            }
-          );
+      const {
+        error: uploadError,
+      } = await supabase.storage
+        .from("business-logos")
+        .upload(
+          newPath,
+          selectedLogo,
+          {
+            upsert: true,
+            cacheControl: "3600",
+            contentType:
+              selectedLogo.type,
+          }
+        );
 
       if (uploadError) {
         throw new Error(
@@ -459,19 +507,20 @@ export default function ProfileWorkspace({
         );
       }
 
-      const { error: databaseError } =
-        await supabase
-          .from("businesses")
-          .update({
-            logo_url: newPath,
-            updated_at:
-              new Date().toISOString(),
-          })
-          .eq("id", business.id)
-          .eq(
-            "owner_id",
-            business.owner_id
-          );
+      const {
+        error: databaseError,
+      } = await supabase
+        .from("businesses")
+        .update({
+          logo_url: newPath,
+          updated_at:
+            new Date().toISOString(),
+        })
+        .eq("id", business.id)
+        .eq(
+          "owner_id",
+          business.owner_id
+        );
 
       if (databaseError) {
         await supabase.storage
@@ -501,9 +550,11 @@ export default function ProfileWorkspace({
       }
 
       setLogoPath(newPath);
+
       setLogoPreview(
         signed?.signedUrl ?? null
       );
+
       setSelectedLogo(null);
 
       if (fileInputRef.current) {
@@ -532,10 +583,11 @@ export default function ProfileWorkspace({
     setError("");
 
     try {
-      const { error: storageError } =
-        await supabase.storage
-          .from("business-logos")
-          .remove([logoPath]);
+      const {
+        error: storageError,
+      } = await supabase.storage
+        .from("business-logos")
+        .remove([logoPath]);
 
       if (storageError) {
         throw new Error(
@@ -543,19 +595,20 @@ export default function ProfileWorkspace({
         );
       }
 
-      const { error: databaseError } =
-        await supabase
-          .from("businesses")
-          .update({
-            logo_url: null,
-            updated_at:
-              new Date().toISOString(),
-          })
-          .eq("id", business.id)
-          .eq(
-            "owner_id",
-            business.owner_id
-          );
+      const {
+        error: databaseError,
+      } = await supabase
+        .from("businesses")
+        .update({
+          logo_url: null,
+          updated_at:
+            new Date().toISOString(),
+        })
+        .eq("id", business.id)
+        .eq(
+          "owner_id",
+          business.owner_id
+        );
 
       if (databaseError) {
         throw new Error(
@@ -565,6 +618,7 @@ export default function ProfileWorkspace({
 
       setLogoPath("");
       setLogoPreview(null);
+
       setMessage(
         "Business logo removed."
       );
@@ -579,7 +633,78 @@ export default function ProfileWorkspace({
     }
   }
 
-  async function saveLocation(event: FormEvent) {
+  async function getDeviceCoordinates() {
+    if (
+      typeof navigator === "undefined" ||
+      !("geolocation" in navigator)
+    ) {
+      return {
+        latitude: null,
+        longitude: null,
+      };
+    }
+
+    try {
+      const position =
+        await new Promise<GeolocationPosition>(
+          (resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(
+              resolve,
+              reject,
+              {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0,
+              }
+            );
+          }
+        );
+
+      const latitude = Number(
+        position.coords.latitude.toFixed(7)
+      );
+
+      const longitude = Number(
+        position.coords.longitude.toFixed(7)
+      );
+
+      if (
+        !Number.isFinite(latitude) ||
+        latitude < -90 ||
+        latitude > 90
+      ) {
+        return {
+          latitude: null,
+          longitude: null,
+        };
+      }
+
+      if (
+        !Number.isFinite(longitude) ||
+        longitude < -180 ||
+        longitude > 180
+      ) {
+        return {
+          latitude: null,
+          longitude: null,
+        };
+      }
+
+      return {
+        latitude,
+        longitude,
+      };
+    } catch {
+      return {
+        latitude: null,
+        longitude: null,
+      };
+    }
+  }
+
+  async function saveLocation(
+    event: FormEvent
+  ) {
     event.preventDefault();
 
     setSavingLocation(true);
@@ -587,70 +712,124 @@ export default function ProfileWorkspace({
     setError("");
 
     try {
-      const parsedLatitude =
-        latitude.trim() === ""
-          ? null
-          : Number(latitude);
-
-      const parsedLongitude =
-        longitude.trim() === ""
-          ? null
-          : Number(longitude);
-
-      if (
-        parsedLatitude !== null &&
-        (
-          !Number.isFinite(parsedLatitude) ||
-          parsedLatitude < -90 ||
-          parsedLatitude > 90
-        )
-      ) {
+      if (!business.country_code) {
         throw new Error(
-          "Latitude must be between -90 and 90."
+          "Business country is not configured."
         );
       }
 
-      if (
-        parsedLongitude !== null &&
-        (
-          !Number.isFinite(parsedLongitude) ||
-          parsedLongitude < -180 ||
-          parsedLongitude > 180
-        )
-      ) {
+      if (!address1.trim()) {
         throw new Error(
-          "Longitude must be between -180 and 180."
+          "Please enter the business address."
         );
       }
+
+      if (!city.trim()) {
+        throw new Error(
+          "Please enter the city."
+        );
+      }
+
+      if (!stateRegion.trim()) {
+        throw new Error(
+          "Please enter the state or region."
+        );
+      }
+
+      /*
+       * Resolve country_id from the real
+       * countries table.
+       */
+      const {
+        data: countryRecord,
+        error: countryError,
+      } = await supabase
+        .from("countries")
+        .select(
+          "id, code, name"
+        )
+        .eq(
+          "code",
+          business.country_code
+        )
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (countryError) {
+        throw new Error(
+          countryError.message
+        );
+      }
+
+      if (!countryRecord) {
+        throw new Error(
+          "The business country could not be found."
+        );
+      }
+
+      /*
+       * Coordinates are obtained from
+       * the device automatically.
+       * There are NO latitude/longitude
+       * input fields for businesses.
+       */
+      const coordinates =
+        await getDeviceCoordinates();
 
       const payload = {
         business_id: business.id,
-        address_line_1: address1.trim(),
-        address_line_2:
-          address2.trim() || null,
+
+        country_id:
+          countryRecord.id,
+
+        country_code:
+          countryRecord.code,
+
         city: city.trim(),
+
         state_region:
           stateRegion.trim(),
+
+        address:
+          address1.trim() || null,
+
+        address_line_1:
+          address1.trim() || null,
+
+        address_line_2:
+          address2.trim() || null,
+
         postal_code:
           postalCode.trim() || null,
-        country_code:
-          business.country_code,
-        latitude: parsedLatitude,
-        longitude: parsedLongitude,
+
+        latitude:
+          coordinates.latitude,
+
+        longitude:
+          coordinates.longitude,
+
         is_primary: true,
+        is_active: true,
         is_public: true,
+
+        updated_at:
+          new Date().toISOString(),
       };
 
       if (location?.id) {
-        const { error: updateError } =
-          await supabase
-            .from("business_locations")
-            .update(payload)
-            .eq("id", location.id)
-            .eq(
-              "business_id",
-              business.id
-            );
+        const {
+          error: updateError,
+        } = await supabase
+          .from("business_locations")
+          .update(payload)
+          .eq(
+            "id",
+            location.id
+          )
+          .eq(
+            "business_id",
+            business.id
+          );
 
         if (updateError) {
           throw new Error(
@@ -658,10 +837,11 @@ export default function ProfileWorkspace({
           );
         }
       } else {
-        const { error: insertError } =
-          await supabase
-            .from("business_locations")
-            .insert(payload);
+        const {
+          error: insertError,
+        } = await supabase
+          .from("business_locations")
+          .insert(payload);
 
         if (insertError) {
           throw new Error(
@@ -671,7 +851,10 @@ export default function ProfileWorkspace({
       }
 
       setMessage(
-        "Business location saved."
+        coordinates.latitude !== null &&
+          coordinates.longitude !== null
+          ? "Business location saved and location coordinates recorded."
+          : "Business location saved. Allow location access to enable Businesses Near Me."
       );
     } catch (err) {
       setError(
@@ -684,7 +867,9 @@ export default function ProfileWorkspace({
     }
   }
 
-  async function saveSocials(event: FormEvent) {
+  async function saveSocials(
+    event: FormEvent
+  ) {
     event.preventDefault();
 
     setSavingSocials(true);
@@ -692,10 +877,38 @@ export default function ProfileWorkspace({
     setError("");
 
     try {
+      /*
+       * Read the current database rows instead
+       * of relying on the original server props.
+       * This prevents duplicate inserts after
+       * the first save.
+       */
+      const {
+        data: currentLinks,
+        error: fetchError,
+      } = await supabase
+        .from("business_social_links")
+        .select(
+          "id, business_id, platform, url"
+        )
+        .eq(
+          "business_id",
+          business.id
+        );
+
+      if (fetchError) {
+        throw new Error(
+          fetchError.message
+        );
+      }
+
       for (const item of SOCIAL_PLATFORMS) {
-        const platform = item.key;
+        const platform =
+          item.key;
+
         const url =
-          socials[platform]?.trim() ?? "";
+          socials[platform]
+            ?.trim() ?? "";
 
         const validationError =
           validateSocialUrl(
@@ -710,45 +923,38 @@ export default function ProfileWorkspace({
         }
 
         const existing =
-          socialLinks.find((row) => {
-            const rowPlatform =
-              firstValue(row, [
-                "platform",
-                "name",
-                "type",
-                "social_platform",
-              ]);
-
-            return (
+          (currentLinks ?? []).find(
+            (row) =>
               String(
-                rowPlatform ?? ""
-              ).toLowerCase() ===
+                row.platform ?? ""
+              )
+                .toLowerCase()
+                .trim() ===
               platform
-            );
-          });
+          );
 
         if (existing?.id) {
           if (url) {
-            const { error: updateError } =
-              await supabase
-                .from(
-                  "business_social_links"
-                )
-                .update({
-                  platform,
-                  url,
-                  is_public: true,
-                  updated_at:
-                    new Date().toISOString(),
-                })
-                .eq(
-                  "id",
-                  existing.id
-                )
-                .eq(
-                  "business_id",
-                  business.id
-                );
+            const {
+              error: updateError,
+            } = await supabase
+              .from(
+                "business_social_links"
+              )
+              .update({
+                platform,
+                url,
+                updated_at:
+                  new Date().toISOString(),
+              })
+              .eq(
+                "id",
+                existing.id
+              )
+              .eq(
+                "business_id",
+                business.id
+              );
 
             if (updateError) {
               throw new Error(
@@ -756,20 +962,21 @@ export default function ProfileWorkspace({
               );
             }
           } else {
-            const { error: deleteError } =
-              await supabase
-                .from(
-                  "business_social_links"
-                )
-                .delete()
-                .eq(
-                  "id",
-                  existing.id
-                )
-                .eq(
-                  "business_id",
-                  business.id
-                );
+            const {
+              error: deleteError,
+            } = await supabase
+              .from(
+                "business_social_links"
+              )
+              .delete()
+              .eq(
+                "id",
+                existing.id
+              )
+              .eq(
+                "business_id",
+                business.id
+              );
 
             if (deleteError) {
               throw new Error(
@@ -778,18 +985,18 @@ export default function ProfileWorkspace({
             }
           }
         } else if (url) {
-          const { error: insertError } =
-            await supabase
-              .from(
-                "business_social_links"
-              )
-              .insert({
-                business_id:
-                  business.id,
-                platform,
-                url,
-                is_public: true,
-              });
+          const {
+            error: insertError,
+          } = await supabase
+            .from(
+              "business_social_links"
+            )
+            .insert({
+              business_id:
+                business.id,
+              platform,
+              url,
+            });
 
           if (insertError) {
             throw new Error(
@@ -813,7 +1020,9 @@ export default function ProfileWorkspace({
     }
   }
 
-  async function saveHours(event: FormEvent) {
+  async function saveHours(
+    event: FormEvent
+  ) {
     event.preventDefault();
 
     setSavingHours(true);
@@ -821,60 +1030,133 @@ export default function ProfileWorkspace({
     setError("");
 
     try {
-  const rows = hours.map((item) => ({
-    business_id: business.id,
-    day_of_week: item.day,
-    is_open: !item.isClosed,
-    opens_at: item.isClosed
-      ? null
-      : item.open || null,
-    closes_at: item.isClosed
-      ? null
-      : item.close || null,
-    updated_at: new Date().toISOString(),
-  }));
+      /*
+       * Validate everything before writing
+       * anything to the database.
+       */
+      for (const item of hours) {
+        const dayLabel =
+          DAYS.find(
+            (day) =>
+              day.value === item.day
+          )?.label ??
+          `Day ${item.day}`;
 
-  for (const item of rows) {
-    const day = item.day_of_week;
-    const dayLabel =
-      DAYS.find((d) => d.value === day)?.label ??
-      `Day ${day}`;
+        if (
+          !item.isClosed &&
+          (!item.open ||
+            !item.close)
+        ) {
+          throw new Error(
+            `${dayLabel} must have both opening and closing times.`
+          );
+        }
 
-    if (
-      item.is_open &&
-      (!item.opens_at || !item.closes_at)
-    ) {
-      throw new Error(
-        `${dayLabel} must have both opening and closing times.`
-      );
-    }
+        if (
+          !item.isClosed &&
+          item.open &&
+          item.close &&
+          item.open >= item.close
+        ) {
+          throw new Error(
+            `${dayLabel} closing time must be later than opening time.`
+          );
+        }
+      }
 
-    if (
-      item.is_open &&
-      item.opens_at &&
-      item.closes_at &&
-      item.opens_at >= item.closes_at
-    ) {
-      throw new Error(
-        `${dayLabel} closing time must be later than opening time.`
-      );
-    }
-  }
-
-  // Keep your existing update/insert code below this point.
-
-      const { error: upsertError } =
-        await supabase
-          .from("business_hours")
-          .upsert(rows, {
-            onConflict:
-              "business_id,day_of_week",
-          });
-
-      if (upsertError) {
-        throw new Error(
-          upsertError.message
+      /*
+       * Read the current rows first.
+       *
+       * We deliberately do not use upsert with
+       * onConflict because the current schema
+       * has not been confirmed to have a unique
+       * (business_id, day_of_week) constraint.
+       */
+      const {
+        data: currentHours,
+        error: fetchError,
+      } = await supabase
+        .from("business_hours")
+        .select(
+          "id, business_id, day_of_week"
+        )
+        .eq(
+          "business_id",
+          business.id
         );
+
+      if (fetchError) {
+        throw new Error(
+          fetchError.message
+        );
+      }
+
+      for (const item of hours) {
+        const existing =
+          (currentHours ?? []).find(
+            (row) =>
+              Number(
+                row.day_of_week
+              ) === item.day
+          );
+
+        const values = {
+          business_id:
+            business.id,
+
+          day_of_week:
+            item.day,
+
+          is_open:
+            !item.isClosed,
+
+          opens_at:
+            item.isClosed
+              ? null
+              : item.open,
+
+          closes_at:
+            item.isClosed
+              ? null
+              : item.close,
+
+          updated_at:
+            new Date().toISOString(),
+        };
+
+        if (existing?.id) {
+          const {
+            error: updateError,
+          } = await supabase
+            .from("business_hours")
+            .update(values)
+            .eq(
+              "id",
+              existing.id
+            )
+            .eq(
+              "business_id",
+              business.id
+            );
+
+          if (updateError) {
+            throw new Error(
+              updateError.message
+            );
+          }
+        } else {
+          const {
+            error: insertError,
+          } = await supabase
+            .from("business_hours")
+            .insert(values);
+
+          if (insertError) {
+            throw new Error(
+              insertError.message
+            );
+          }
+        }
       }
 
       setMessage(
@@ -915,11 +1197,14 @@ export default function ProfileWorkspace({
   const addressParts = [
     firstValue(location, [
       "address_line_1",
+      "address",
     ]),
     firstValue(location, [
       "address_line_2",
     ]),
-    firstValue(location, ["city"]),
+    firstValue(location, [
+      "city",
+    ]),
     firstValue(location, [
       "state_region",
     ]),
@@ -991,17 +1276,40 @@ export default function ProfileWorkspace({
                   className="verification-check"
                   title="Verified business"
                   aria-label="Verified business"
+                  style={{
+                    display:
+                      "inline-flex",
+                    width: 20,
+                    height: 20,
+                    flexShrink: 0,
+                    alignItems:
+                      "center",
+                    justifyContent:
+                      "center",
+                    background:
+                      "transparent",
+                    border: "none",
+                    padding: 0,
+                  }}
                 >
                   <svg
                     viewBox="0 0 24 24"
+                    width="20"
+                    height="20"
                     aria-hidden="true"
                   >
                     <path
                       d="M12 2.5l2.1 1.35 2.48-.08 1.06 2.25 2.05 1.39-.47 2.43.47 2.43-2.05 1.39-1.06 2.25-2.48-.08L12 21.5l-2.1-1.35-2.48.08-1.06-2.25-2.05-1.39.47-2.43-.47-2.43 2.05-1.39 1.06-2.25 2.48.08L12 2.5z"
+                      fill="#1877F2"
                     />
+
                     <path
-                      className="verification-check-mark"
                       d="M8.3 12.2l2.25 2.25 5.15-5.15"
+                      fill="none"
+                      stroke="#FFFFFF"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                     />
                   </svg>
                 </span>
@@ -1115,7 +1423,9 @@ export default function ProfileWorkspace({
                   <input
                     value={name}
                     onChange={(e) =>
-                      setName(e.target.value)
+                      setName(
+                        e.target.value
+                      )
                     }
                     maxLength={150}
                     required
@@ -1129,7 +1439,9 @@ export default function ProfileWorkspace({
                     type="email"
                     value={email}
                     onChange={(e) =>
-                      setEmail(e.target.value)
+                      setEmail(
+                        e.target.value
+                      )
                     }
                     maxLength={254}
                   />
@@ -1142,7 +1454,9 @@ export default function ProfileWorkspace({
                     type="tel"
                     value={phone}
                     onChange={(e) =>
-                      setPhone(e.target.value)
+                      setPhone(
+                        e.target.value
+                      )
                     }
                     maxLength={40}
                   />
@@ -1155,7 +1469,9 @@ export default function ProfileWorkspace({
                     type="url"
                     value={website}
                     onChange={(e) =>
-                      setWebsite(e.target.value)
+                      setWebsite(
+                        e.target.value
+                      )
                     }
                     placeholder="https://example.com"
                   />
@@ -1240,7 +1556,9 @@ export default function ProfileWorkspace({
               <div className="social-grid">
                 {SOCIAL_PLATFORMS.map(
                   (platform) => (
-                    <label key={platform.key}>
+                    <label
+                      key={platform.key}
+                    >
                       {platform.label}
 
                       <input
@@ -1333,7 +1651,9 @@ export default function ProfileWorkspace({
                   <input
                     value={city}
                     onChange={(e) =>
-                      setCity(e.target.value)
+                      setCity(
+                        e.target.value
+                      )
                     }
                     required
                   />
@@ -1377,42 +1697,6 @@ export default function ProfileWorkspace({
                     disabled
                   />
                 </label>
-
-                <label>
-                  Latitude
-
-                  <input
-                    type="number"
-                    step="any"
-                    min="-90"
-                    max="90"
-                    value={latitude}
-                    onChange={(e) =>
-                      setLatitude(
-                        e.target.value
-                      )
-                    }
-                    placeholder="9.0765"
-                  />
-                </label>
-
-                <label>
-                  Longitude
-
-                  <input
-                    type="number"
-                    step="any"
-                    min="-180"
-                    max="180"
-                    value={longitude}
-                    onChange={(e) =>
-                      setLongitude(
-                        e.target.value
-                      )
-                    }
-                    placeholder="7.3986"
-                  />
-                </label>
               </div>
 
               <div className="location-preview">
@@ -1423,7 +1707,9 @@ export default function ProfileWorkspace({
                 <div>
                   <strong>
                     {addressParts.length
-                      ? addressParts.join(", ")
+                      ? addressParts.join(
+                          ", "
+                        )
                       : "Location not completed"}
                   </strong>
 
