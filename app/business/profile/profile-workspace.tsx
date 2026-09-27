@@ -4,10 +4,11 @@ import Link from "next/link";
 import {
   ChangeEvent,
   FormEvent,
+  useMemo,
   useRef,
   useState,
 } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import "./profile.css";
 
 type Business = {
@@ -20,14 +21,39 @@ type Business = {
   phone: string | null;
   website_url: string | null;
   logo_url: string | null;
-  country_code: string;
+  country_code: string | null;
   status: string;
   verification_status: string;
   is_public: boolean;
   is_featured: boolean;
 };
 
-type Props = {
+type Category = {
+  id: string;
+  name: string;
+  slug: string;
+  is_active: boolean;
+  sort_order: number;
+};
+
+type Subcategory = {
+  id: string;
+  category_id: string;
+  name: string;
+  slug: string;
+  is_active: boolean;
+  sort_order: number;
+};
+
+type CategoryAssignment = {
+  category_id: string;
+} | null;
+
+type SubcategoryAssignment = {
+  subcategory_id: string;
+} | null;
+
+type ProfileWorkspaceProps = {
   business: Business;
   accountEmail: string;
   logoUrl: string | null;
@@ -42,83 +68,46 @@ type Props = {
   reviews: any[];
   rating: any;
   country: any;
+  categories: Category[];
+  subcategories: Subcategory[];
+  categoryAssignment: CategoryAssignment;
+  subcategoryAssignment: SubcategoryAssignment;
 };
 
 const SOCIAL_PLATFORMS = [
-  {
-    key: "whatsapp",
-    label: "WhatsApp",
-    placeholder: "https://wa.me/234...",
-  },
-  {
-    key: "facebook",
-    label: "Facebook",
-    placeholder: "https://facebook.com/...",
-  },
-  {
-    key: "instagram",
-    label: "Instagram",
-    placeholder: "https://instagram.com/...",
-  },
-  {
-    key: "tiktok",
-    label: "TikTok",
-    placeholder: "https://tiktok.com/@...",
-  },
-  {
-    key: "youtube",
-    label: "YouTube",
-    placeholder: "https://youtube.com/@...",
-  },
-  {
-    key: "linkedin",
-    label: "LinkedIn",
-    placeholder: "https://linkedin.com/...",
-  },
-  {
-    key: "twitter",
-    label: "X / Twitter",
-    placeholder: "https://x.com/...",
-  },
+  "Facebook",
+  "Instagram",
+  "TikTok",
+  "X",
+  "LinkedIn",
+  "YouTube",
+  "WhatsApp",
 ];
 
 const DAYS = [
-  { value: 0, label: "Sunday" },
-  { value: 1, label: "Monday" },
-  { value: 2, label: "Tuesday" },
-  { value: 3, label: "Wednesday" },
-  { value: 4, label: "Thursday" },
-  { value: 5, label: "Friday" },
-  { value: 6, label: "Saturday" },
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
 ];
 
-const MAX_LOGO_SIZE = 5 * 1024 * 1024;
-
-function getInitials(name: string) {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-
-  if (!words.length) return "B";
-  if (words.length === 1) {
-    return words[0].slice(0, 2).toUpperCase();
-  }
-
-  return `${words[0][0]}${words[1][0]}`.toUpperCase();
+function firstValue(...values: any[]) {
+  return values.find(
+    (value) => value !== null && value !== undefined && value !== ""
+  );
 }
 
-function firstValue(row: any, keys: string[]) {
-  for (const key of keys) {
-    if (
-      row?.[key] !== undefined &&
-      row?.[key] !== null
-    ) {
-      return row[key];
-    }
-  }
+function formatRating(rating: any) {
+  const value = firstValue(
+    rating?.average_rating,
+    rating?.avg_rating,
+    rating?.rating,
+    rating
+  );
 
-  return null;
-}
-
-function formatRating(value: any) {
   const number = Number(value);
 
   if (!Number.isFinite(number)) {
@@ -128,112 +117,86 @@ function formatRating(value: any) {
   return number.toFixed(1);
 }
 
-function getReviewCount(
-  rating: any,
-  reviews: any[]
-) {
-  const count = Number(
-    firstValue(rating, [
-      "review_count",
-      "reviewCount",
-      "count",
-    ])
+function getReviewCount(rating: any, reviews: any[]) {
+  const value = firstValue(
+    rating?.review_count,
+    rating?.total_reviews,
+    rating?.count
   );
 
-  if (Number.isFinite(count)) {
-    return count;
+  const number = Number(value);
+
+  if (Number.isFinite(number)) {
+    return number;
   }
 
   return reviews.length;
 }
 
 function normalizeSocialLinks(rows: any[]) {
-  const result: Record<string, string> = {};
-
-  for (const row of rows) {
-    const platform = firstValue(row, [
-      "platform",
-      "name",
-      "type",
-      "social_platform",
-    ]);
-
-    const url = firstValue(row, [
-      "url",
-      "link",
-      "profile_url",
-      "social_url",
-    ]);
-
-    if (platform && url) {
-      const normalizedPlatform = String(
-        platform
-      )
-        .toLowerCase()
-        .trim();
-
-      result[normalizedPlatform] = String(url);
-    }
-  }
-
-  return result;
-}
-
-function normalizeHours(rows: any[]) {
-  return DAYS.map((day) => {
-    const row = rows.find((item) => {
-      const value = firstValue(item, [
-        "day_of_week",
-        "day",
-        "weekday",
-      ]);
-
-      return Number(value) === day.value;
-    });
+  return SOCIAL_PLATFORMS.map((platform) => {
+    const row = rows.find(
+      (item) =>
+        String(
+          firstValue(item.platform, item.name, item.type)
+        ).toLowerCase() === platform.toLowerCase()
+    );
 
     return {
-      day: day.value,
-      label: day.label,
+      platform,
+      url: row
+        ? String(firstValue(row.url, row.link, row.value) ?? "")
+        : "",
       id: row?.id ?? null,
-
-      isClosed: row
-        ? row.is_open === false
-        : true,
-
-      open: row?.opens_at
-        ? String(row.opens_at).slice(0, 5)
-        : "",
-
-      close: row?.closes_at
-        ? String(row.closes_at).slice(0, 5)
-        : "",
     };
   });
 }
 
-function validateSocialUrl(
-  platform: string,
-  value: string
-) {
-  if (!value) return null;
+function normalizeHours(rows: any[]) {
+  return DAYS.map((day, index) => {
+    const row = rows.find((item) => {
+      const dayValue = firstValue(
+        item.day_of_week,
+        item.day,
+        item.day_name
+      );
 
-  let parsed: URL;
+      if (typeof dayValue === "number") {
+        return dayValue === index;
+      }
+
+      return (
+        String(dayValue ?? "").toLowerCase() === day.toLowerCase()
+      );
+    });
+
+    return {
+      day,
+      dayOfWeek: index,
+      isOpen: row ? Boolean(firstValue(row.is_open, row.open)) : false,
+      openTime: String(
+        firstValue(row?.open_time, row?.opening_time) ?? "09:00"
+      ),
+      closeTime: String(
+        firstValue(row?.close_time, row?.closing_time) ?? "17:00"
+      ),
+      id: row?.id ?? null,
+    };
+  });
+}
+
+function validateSocialUrl(url: string) {
+  if (!url.trim()) {
+    return true;
+  }
 
   try {
-    parsed = new URL(value);
+    const parsed = new URL(url.trim());
+
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
   } catch {
-    return `${platform} must be a valid URL.`;
+    return false;
   }
-
-  if (
-    !["http:", "https:"].includes(
-      parsed.protocol
-    )
-  ) {
-    return `${platform} must use HTTP or HTTPS.`;
-  }
-
-  return null;
 }
 
 export default function ProfileWorkspace({
@@ -251,1772 +214,1364 @@ export default function ProfileWorkspace({
   reviews,
   rating,
   country,
-}: Props) {
-  const supabase =
-    createSupabaseBrowserClient();
+  categories,
+  subcategories,
+  categoryAssignment,
+  subcategoryAssignment,
+}: ProfileWorkspaceProps) {
+  const supabase = createSupabaseBrowserClient();
 
-  const fileInputRef =
-    useRef<HTMLInputElement | null>(null);
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [name, setName] = useState(
-    business.name
+  const [businessName, setBusinessName] = useState(business.name ?? "");
+  const [description, setDescription] = useState(
+    business.description ?? ""
   );
-
-  const [description, setDescription] =
-    useState(business.description ?? "");
-
-  const [phone, setPhone] = useState(
-    business.phone ?? ""
-  );
-
-  const [email, setEmail] = useState(
-    business.email ?? ""
-  );
-
-  const [website, setWebsite] = useState(
+  const [email, setEmail] = useState(business.email ?? accountEmail);
+  const [phone, setPhone] = useState(business.phone ?? "");
+  const [websiteUrl, setWebsiteUrl] = useState(
     business.website_url ?? ""
   );
-
-  const [isPublic, setIsPublic] =
-    useState(Boolean(business.is_public));
-
-  const [logoPreview, setLogoPreview] =
-    useState<string | null>(logoUrl);
-
-  const [logoPath, setLogoPath] = useState(
-    business.logo_url ?? ""
+  const [countryCode, setCountryCode] = useState(
+    business.country_code ?? ""
+  );
+  const [isPublic, setIsPublic] = useState(
+    Boolean(business.is_public)
   );
 
-  const [selectedLogo, setSelectedLogo] =
-    useState<File | null>(null);
+  const [currentLogoUrl, setCurrentLogoUrl] = useState(logoUrl);
 
-  const [uploadingLogo, setUploadingLogo] =
-    useState(false);
-
-  const [address1, setAddress1] =
-    useState(
-      location?.address_line_1 ??
-        location?.address ??
-        ""
-    );
-
-  const [address2, setAddress2] =
-    useState(
-      location?.address_line_2 ?? ""
-    );
-
-  const [city, setCity] = useState(
-    location?.city ?? ""
+  const [city, setCity] = useState(location?.city ?? "");
+  const [stateRegion, setStateRegion] = useState(
+    location?.state_region ?? ""
+  );
+  const [address, setAddress] = useState(
+    location?.address ?? location?.address_line_1 ?? ""
+  );
+  const [addressLine2, setAddressLine2] = useState(
+    location?.address_line_2 ?? ""
+  );
+  const [postalCode, setPostalCode] = useState(
+    location?.postal_code ?? ""
   );
 
-  const [stateRegion, setStateRegion] =
-    useState(
-      location?.state_region ?? ""
-    );
-
-  const [postalCode, setPostalCode] =
-    useState(
-      location?.postal_code ?? ""
-    );
-
-  const [socials, setSocials] =
-    useState<Record<string, string>>(
-      normalizeSocialLinks(socialLinks)
-    );
+  const [socials, setSocials] = useState(
+    normalizeSocialLinks(socialLinks)
+  );
 
   const [hours, setHours] = useState(
     normalizeHours(businessHours)
   );
 
-  const [savingBusiness, setSavingBusiness] =
-    useState(false);
-
-  const [savingLocation, setSavingLocation] =
-    useState(false);
-
-  const [savingSocials, setSavingSocials] =
-    useState(false);
-
-  const [savingHours, setSavingHours] =
-    useState(false);
-
-  const [message, setMessage] =
-    useState("");
-
-  const [error, setError] =
-    useState("");
-
-  const verificationStatus = String(
-    business.verification_status ?? ""
-  ).toLowerCase();
-
-  const verified =
-    verificationStatus === "approved" ||
-    verificationStatus === "verified";
-
-  const reviewCount = getReviewCount(
-    rating,
-    reviews
+  const [selectedCategoryId, setSelectedCategoryId] = useState(
+    categoryAssignment?.category_id ?? ""
   );
 
-  const averageRating = formatRating(
-    firstValue(rating, [
-      "average_rating",
-      "avg_rating",
-    ])
-  );
+  const [selectedSubcategoryId, setSelectedSubcategoryId] =
+    useState(subcategoryAssignment?.subcategory_id ?? "");
 
-  async function saveBusiness(
-    event: FormEvent
-  ) {
-    event.preventDefault();
+  const [savingBusiness, setSavingBusiness] = useState(false);
+  const [savingCategory, setSavingCategory] = useState(false);
+  const [savingLocation, setSavingLocation] = useState(false);
+  const [savingSocials, setSavingSocials] = useState(false);
+  const [savingHours, setSavingHours] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [removingLogo, setRemovingLogo] = useState(false);
 
-    setSavingBusiness(true);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  const availableSubcategories = useMemo(() => {
+    return subcategories
+      .filter(
+        (subcategory) =>
+          subcategory.category_id === selectedCategoryId
+      )
+      .sort((a, b) => a.sort_order - b.sort_order);
+  }, [subcategories, selectedCategoryId]);
+
+  function clearStatus() {
     setMessage("");
     setError("");
+  }
+
+  async function saveBusiness(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    clearStatus();
+
+    if (!businessName.trim()) {
+      setError("Business name is required.");
+      return;
+    }
+
+    setSavingBusiness(true);
 
     try {
-      const response = await fetch(
-        "/api/businesses",
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            business_id: business.id,
-            name: name.trim(),
-            description:
-              description.trim(),
-            country_code:
-              business.country_code,
-            phone: phone.trim(),
-            email: email.trim(),
-            website_url:
-              website.trim(),
-            is_public: isPublic,
-          }),
-        }
-      );
+      const response = await fetch("/api/businesses", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          business_id: business.id,
+          name: businessName.trim(),
+          description: description.trim() || null,
+          country_code: countryCode || null,
+          phone: phone.trim() || null,
+          email: email.trim() || null,
+          website_url: websiteUrl.trim() || null,
+          is_public: isPublic,
+        }),
+      });
 
-      const data =
-        await response.json();
+      const data = await response.json().catch(() => null);
 
       if (!response.ok) {
         throw new Error(
-          data?.error ||
-            "Unable to update business information."
+          data?.error || "Failed to update business information."
         );
       }
 
-      setMessage(
-        "Business information saved."
-      );
-    } catch (err) {
+      setMessage("Business information saved successfully.");
+    } catch (saveError: any) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to save business information."
+        saveError?.message ||
+          "Failed to update business information."
       );
     } finally {
       setSavingBusiness(false);
     }
   }
 
-  function chooseLogo(
-    event: ChangeEvent<HTMLInputElement>
-  ) {
-    setMessage("");
-    setError("");
+  async function saveCategory() {
+    clearStatus();
 
-    const file =
-      event.target.files?.[0];
-
-    if (!file) return;
+    if (!selectedCategoryId) {
+      setError("Please select a business category.");
+      return;
+    }
 
     if (
-      ![
-        "image/jpeg",
-        "image/png",
-        "image/webp",
-      ].includes(file.type)
+      selectedSubcategoryId &&
+      !availableSubcategories.some(
+        (subcategory) =>
+          subcategory.id === selectedSubcategoryId
+      )
     ) {
       setError(
-        "Logo must be JPG, PNG, or WebP."
+        "The selected subcategory does not belong to this category."
       );
-
-      event.target.value = "";
       return;
     }
 
-    if (file.size > MAX_LOGO_SIZE) {
+    setSavingCategory(true);
+
+    try {
+      const { error: rpcError } = await supabase.rpc(
+        "save_business_category",
+        {
+          p_business_id: business.id,
+          p_category_id: selectedCategoryId,
+          p_subcategory_id: selectedSubcategoryId || null,
+        }
+      );
+
+      if (rpcError) {
+        throw rpcError;
+      }
+
+      setMessage("Business category saved successfully.");
+    } catch (saveError: any) {
       setError(
-        "Logo must be 5 MB or smaller."
+        saveError?.message ||
+          "Failed to save business category."
       );
-
-      event.target.value = "";
-      return;
+    } finally {
+      setSavingCategory(false);
     }
-
-    setSelectedLogo(file);
-
-    setLogoPreview(
-      URL.createObjectURL(file)
-    );
   }
 
-  async function uploadLogo() {
-    if (!selectedLogo) return;
+  async function handleLogoChange(
+    event: ChangeEvent<HTMLInputElement>
+  ) {
+    clearStatus();
+
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setError("Please select a valid image file.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Logo must not be larger than 5MB.");
+      return;
+    }
 
     setUploadingLogo(true);
-    setMessage("");
-    setError("");
 
     try {
       const extension =
-        selectedLogo.type ===
-        "image/jpeg"
-          ? "jpg"
-          : selectedLogo.type ===
-              "image/png"
-            ? "png"
-            : "webp";
+        file.name.split(".").pop()?.toLowerCase() || "jpg";
 
-      const newPath =
-        `${business.id}/logo.${extension}`;
+      const filePath = `${business.id}/logo-${Date.now()}.${extension}`;
 
-      const {
-        error: uploadError,
-      } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("business-logos")
-        .upload(
-          newPath,
-          selectedLogo,
-          {
-            upsert: true,
-            cacheControl: "3600",
-            contentType:
-              selectedLogo.type,
-          }
-        );
+        .upload(filePath, file, {
+          upsert: false,
+          contentType: file.type,
+        });
 
       if (uploadError) {
-        throw new Error(
-          uploadError.message
-        );
+        throw uploadError;
       }
 
-      const {
-        error: databaseError,
-      } = await supabase
+      const { error: updateError } = await supabase
         .from("businesses")
         .update({
-          logo_url: newPath,
-          updated_at:
-            new Date().toISOString(),
+          logo_url: filePath,
+          updated_at: new Date().toISOString(),
         })
         .eq("id", business.id)
-        .eq(
-          "owner_id",
-          business.owner_id
-        );
+        .eq("owner_id", business.owner_id);
 
-      if (databaseError) {
+      if (updateError) {
         await supabase.storage
           .from("business-logos")
-          .remove([newPath]);
+          .remove([filePath]);
 
-        throw new Error(
-          databaseError.message
-        );
+        throw updateError;
       }
 
-      const { data: signed } =
-        await supabase.storage
-          .from("business-logos")
-          .createSignedUrl(
-            newPath,
-            60 * 60
-          );
+      const { data: signedLogo } = await supabase.storage
+        .from("business-logos")
+        .createSignedUrl(filePath, 60 * 60);
 
-      if (
-        logoPath &&
-        logoPath !== newPath
-      ) {
-        await supabase.storage
-          .from("business-logos")
-          .remove([logoPath]);
-      }
+      setCurrentLogoUrl(signedLogo?.signedUrl ?? null);
 
-      setLogoPath(newPath);
-
-      setLogoPreview(
-        signed?.signedUrl ?? null
-      );
-
-      setSelectedLogo(null);
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-
-      setMessage(
-        "Business logo updated."
-      );
-    } catch (err) {
+      setMessage("Business logo updated successfully.");
+    } catch (uploadError: any) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to upload business logo."
+        uploadError?.message ||
+          "Failed to upload business logo."
       );
     } finally {
       setUploadingLogo(false);
+
+      if (logoInputRef.current) {
+        logoInputRef.current.value = "";
+      }
     }
   }
 
   async function removeLogo() {
-    if (!logoPath) return;
+    clearStatus();
 
-    setUploadingLogo(true);
-    setMessage("");
-    setError("");
+    if (!business.logo_url) {
+      return;
+    }
+
+    setRemovingLogo(true);
 
     try {
-      const {
-        error: storageError,
-      } = await supabase.storage
-        .from("business-logos")
-        .remove([logoPath]);
-
-      if (storageError) {
-        throw new Error(
-          storageError.message
-        );
-      }
-
-      const {
-        error: databaseError,
-      } = await supabase
+      const { error: updateError } = await supabase
         .from("businesses")
         .update({
           logo_url: null,
-          updated_at:
-            new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         })
         .eq("id", business.id)
-        .eq(
-          "owner_id",
-          business.owner_id
-        );
+        .eq("owner_id", business.owner_id);
 
-      if (databaseError) {
-        throw new Error(
-          databaseError.message
-        );
+      if (updateError) {
+        throw updateError;
       }
 
-      setLogoPath("");
-      setLogoPreview(null);
+      await supabase.storage
+        .from("business-logos")
+        .remove([business.logo_url]);
 
-      setMessage(
-        "Business logo removed."
-      );
-    } catch (err) {
+      setCurrentLogoUrl(null);
+
+      setMessage("Business logo removed successfully.");
+    } catch (removeError: any) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to remove business logo."
+        removeError?.message ||
+          "Failed to remove business logo."
       );
     } finally {
-      setUploadingLogo(false);
+      setRemovingLogo(false);
     }
   }
 
-  async function getDeviceCoordinates() {
-    if (
-      typeof navigator === "undefined" ||
-      !("geolocation" in navigator)
-    ) {
-      return {
-        latitude: null,
-        longitude: null,
-      };
-    }
-
-    try {
-      const position =
-        await new Promise<GeolocationPosition>(
-          (resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(
-              resolve,
-              reject,
-              {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0,
-              }
-            );
-          }
-        );
-
-      const latitude = Number(
-        position.coords.latitude.toFixed(7)
-      );
-
-      const longitude = Number(
-        position.coords.longitude.toFixed(7)
-      );
-
-      if (
-        !Number.isFinite(latitude) ||
-        latitude < -90 ||
-        latitude > 90
-      ) {
-        return {
-          latitude: null,
-          longitude: null,
-        };
+  function getDeviceCoordinates(): Promise<{
+    latitude: number;
+    longitude: number;
+  } | null> {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        resolve(null);
+        return;
       }
 
-      if (
-        !Number.isFinite(longitude) ||
-        longitude < -180 ||
-        longitude > 180
-      ) {
-        return {
-          latitude: null,
-          longitude: null,
-        };
-      }
-
-      return {
-        latitude,
-        longitude,
-      };
-    } catch {
-      return {
-        latitude: null,
-        longitude: null,
-      };
-    }
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          resolve({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        () => {
+          resolve(null);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000,
+        }
+      );
+    });
   }
 
-  async function saveLocation(
-    event: FormEvent
-  ) {
+  async function saveLocation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    clearStatus();
+
+    if (!address.trim()) {
+      setError("Business address is required.");
+      return;
+    }
+
+    if (!city.trim()) {
+      setError("City is required.");
+      return;
+    }
+
+    if (!stateRegion.trim()) {
+      setError("State or region is required.");
+      return;
+    }
+
     setSavingLocation(true);
-    setMessage("");
-    setError("");
 
     try {
-      if (!business.country_code) {
-        throw new Error(
-          "Business country is not configured."
-        );
+      let resolvedCountryCode = countryCode;
+
+      if (!resolvedCountryCode) {
+        setError("Please select a country first.");
+        return;
       }
 
-      if (!address1.trim()) {
-        throw new Error(
-          "Please enter the business address."
-        );
-      }
-
-      if (!city.trim()) {
-        throw new Error(
-          "Please enter the city."
-        );
-      }
-
-      if (!stateRegion.trim()) {
-        throw new Error(
-          "Please enter the state or region."
-        );
-      }
-
-      /*
-       * Resolve country_id from the real
-       * countries table.
-       */
-      const {
-        data: countryRecord,
-        error: countryError,
-      } = await supabase
-        .from("countries")
-        .select(
-          "id, code, name"
-        )
-        .eq(
-          "code",
-          business.country_code
-        )
-        .eq("is_active", true)
-        .maybeSingle();
+      const { data: countryRow, error: countryError } =
+        await supabase
+          .from("countries")
+          .select("id, code")
+          .eq("code", resolvedCountryCode)
+          .maybeSingle();
 
       if (countryError) {
-        throw new Error(
-          countryError.message
-        );
+        throw countryError;
       }
 
-      if (!countryRecord) {
-        throw new Error(
-          "The business country could not be found."
-        );
+      if (!countryRow) {
+        throw new Error("Selected country could not be found.");
       }
 
-      /*
-       * Coordinates are obtained from
-       * the device automatically.
-       * There are NO latitude/longitude
-       * input fields for businesses.
-       */
-      const coordinates =
-        await getDeviceCoordinates();
+      const coordinates = await getDeviceCoordinates();
 
-      const payload = {
+      const locationPayload = {
         business_id: business.id,
-
-        country_id:
-          countryRecord.id,
-
-        country_code:
-          countryRecord.code,
-
+        country_id: countryRow.id,
+        country_code: resolvedCountryCode,
         city: city.trim(),
-
-        state_region:
-          stateRegion.trim(),
-
-        address:
-          address1.trim() || null,
-
-        address_line_1:
-          address1.trim() || null,
-
-        address_line_2:
-          address2.trim() || null,
-
-        postal_code:
-          postalCode.trim() || null,
-
-        latitude:
-          coordinates.latitude,
-
+        state_region: stateRegion.trim(),
+        address: address.trim(),
+        address_line_1: address.trim(),
+        address_line_2: addressLine2.trim() || null,
+        postal_code: postalCode.trim() || null,
+        latitude: coordinates?.latitude ?? location?.latitude ?? null,
         longitude:
-          coordinates.longitude,
-
+          coordinates?.longitude ?? location?.longitude ?? null,
         is_primary: true,
         is_active: true,
         is_public: true,
-
-        updated_at:
-          new Date().toISOString(),
       };
 
       if (location?.id) {
-        const {
-          error: updateError,
-        } = await supabase
+        const { error: updateError } = await supabase
           .from("business_locations")
-          .update(payload)
-          .eq(
-            "id",
-            location.id
-          )
-          .eq(
-            "business_id",
-            business.id
-          );
+          .update({
+            ...locationPayload,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", location.id)
+          .eq("business_id", business.id);
 
         if (updateError) {
-          throw new Error(
-            updateError.message
-          );
+          throw updateError;
         }
       } else {
-        const {
-          error: insertError,
-        } = await supabase
+        const { error: insertError } = await supabase
           .from("business_locations")
-          .insert(payload);
+          .insert(locationPayload);
 
         if (insertError) {
-          throw new Error(
-            insertError.message
-          );
+          throw insertError;
         }
       }
 
-      setMessage(
-        coordinates.latitude !== null &&
-          coordinates.longitude !== null
-          ? "Business location saved and location coordinates recorded."
-          : "Business location saved. Allow location access to enable Businesses Near Me."
-      );
-    } catch (err) {
+      setMessage("Business location saved successfully.");
+    } catch (locationError: any) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to save business location."
+        locationError?.message ||
+          "Failed to save business location."
       );
     } finally {
       setSavingLocation(false);
     }
   }
 
-  async function saveSocials(
-    event: FormEvent
-  ) {
-    event.preventDefault();
+  async function saveSocials() {
+    clearStatus();
+
+    for (const social of socials) {
+      if (!validateSocialUrl(social.url)) {
+        setError(
+          `${social.platform} contains an invalid URL.`
+        );
+        return;
+      }
+    }
 
     setSavingSocials(true);
-    setMessage("");
-    setError("");
 
     try {
-      /*
-       * Read the current database rows instead
-       * of relying on the original server props.
-       * This prevents duplicate inserts after
-       * the first save.
-       */
-      const {
-        data: currentLinks,
-        error: fetchError,
-      } = await supabase
-        .from("business_social_links")
-        .select(
-          "id, business_id, platform, url"
-        )
-        .eq(
-          "business_id",
-          business.id
-        );
+      const { data: existingRows, error: existingError } =
+        await supabase
+          .from("business_social_links")
+          .select("*")
+          .eq("business_id", business.id);
 
-      if (fetchError) {
-        throw new Error(
-          fetchError.message
-        );
+      if (existingError) {
+        throw existingError;
       }
 
-      for (const item of SOCIAL_PLATFORMS) {
-        const platform =
-          item.key;
+      for (const social of socials) {
+        const existing = (existingRows ?? []).find(
+          (row: any) =>
+            String(
+              firstValue(row.platform, row.name, row.type)
+            ).toLowerCase() === social.platform.toLowerCase()
+        );
 
-        const url =
-          socials[platform]
-            ?.trim() ?? "";
+        if (social.url.trim()) {
+          const payload = {
+            business_id: business.id,
+            platform: social.platform,
+            url: social.url.trim(),
+          };
 
-        const validationError =
-          validateSocialUrl(
-            item.label,
-            url
-          );
+          if (existing?.id) {
+            const { error } = await supabase
+              .from("business_social_links")
+              .update(payload)
+              .eq("id", existing.id)
+              .eq("business_id", business.id);
 
-        if (validationError) {
-          throw new Error(
-            validationError
-          );
-        }
-
-        const existing =
-          (currentLinks ?? []).find(
-            (row) =>
-              String(
-                row.platform ?? ""
-              )
-                .toLowerCase()
-                .trim() ===
-              platform
-          );
-
-        if (existing?.id) {
-          if (url) {
-            const {
-              error: updateError,
-            } = await supabase
-              .from(
-                "business_social_links"
-              )
-              .update({
-                platform,
-                url,
-                updated_at:
-                  new Date().toISOString(),
-              })
-              .eq(
-                "id",
-                existing.id
-              )
-              .eq(
-                "business_id",
-                business.id
-              );
-
-            if (updateError) {
-              throw new Error(
-                updateError.message
-              );
+            if (error) {
+              throw error;
             }
           } else {
-            const {
-              error: deleteError,
-            } = await supabase
-              .from(
-                "business_social_links"
-              )
-              .delete()
-              .eq(
-                "id",
-                existing.id
-              )
-              .eq(
-                "business_id",
-                business.id
-              );
+            const { error } = await supabase
+              .from("business_social_links")
+              .insert(payload);
 
-            if (deleteError) {
-              throw new Error(
-                deleteError.message
-              );
+            if (error) {
+              throw error;
             }
           }
-        } else if (url) {
-          const {
-            error: insertError,
-          } = await supabase
-            .from(
-              "business_social_links"
-            )
-            .insert({
-              business_id:
-                business.id,
-              platform,
-              url,
-            });
+        } else if (existing?.id) {
+          const { error } = await supabase
+            .from("business_social_links")
+            .delete()
+            .eq("id", existing.id)
+            .eq("business_id", business.id);
 
-          if (insertError) {
-            throw new Error(
-              insertError.message
-            );
+          if (error) {
+            throw error;
           }
         }
       }
 
-      setMessage(
-        "Contact and social links saved."
-      );
-    } catch (err) {
+      setMessage("Social media links saved successfully.");
+    } catch (socialError: any) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to save social links."
+        socialError?.message ||
+          "Failed to save social media links."
       );
     } finally {
       setSavingSocials(false);
     }
   }
 
-  async function saveHours(
-    event: FormEvent
-  ) {
-    event.preventDefault();
+  async function saveHours() {
+    clearStatus();
 
     setSavingHours(true);
-    setMessage("");
-    setError("");
 
     try {
-      /*
-       * Validate everything before writing
-       * anything to the database.
-       */
-      for (const item of hours) {
-        const dayLabel =
-          DAYS.find(
-            (day) =>
-              day.value === item.day
-          )?.label ??
-          `Day ${item.day}`;
+      const { data: existingRows, error: existingError } =
+        await supabase
+          .from("business_hours")
+          .select("*")
+          .eq("business_id", business.id);
 
-        if (
-          !item.isClosed &&
-          (!item.open ||
-            !item.close)
-        ) {
-          throw new Error(
-            `${dayLabel} must have both opening and closing times.`
-          );
-        }
-
-        if (
-          !item.isClosed &&
-          item.open &&
-          item.close &&
-          item.open >= item.close
-        ) {
-          throw new Error(
-            `${dayLabel} closing time must be later than opening time.`
-          );
-        }
+      if (existingError) {
+        throw existingError;
       }
 
-      /*
-       * Read the current rows first.
-       *
-       * We deliberately do not use upsert with
-       * onConflict because the current schema
-       * has not been confirmed to have a unique
-       * (business_id, day_of_week) constraint.
-       */
-      const {
-        data: currentHours,
-        error: fetchError,
-      } = await supabase
-        .from("business_hours")
-        .select(
-          "id, business_id, day_of_week"
-        )
-        .eq(
-          "business_id",
-          business.id
+      for (const hour of hours) {
+        const existing = (existingRows ?? []).find(
+          (row: any) => {
+            const dayValue = firstValue(
+              row.day_of_week,
+              row.day,
+              row.day_name
+            );
+
+            if (typeof dayValue === "number") {
+              return dayValue === hour.dayOfWeek;
+            }
+
+            return (
+              String(dayValue ?? "").toLowerCase() ===
+              hour.day.toLowerCase()
+            );
+          }
         );
 
-      if (fetchError) {
-        throw new Error(
-          fetchError.message
-        );
-      }
-
-      for (const item of hours) {
-        const existing =
-          (currentHours ?? []).find(
-            (row) =>
-              Number(
-                row.day_of_week
-              ) === item.day
-          );
-
-        const values = {
-          business_id:
-            business.id,
-
-          day_of_week:
-            item.day,
-
-          is_open:
-            !item.isClosed,
-
-          opens_at:
-            item.isClosed
-              ? null
-              : item.open,
-
-          closes_at:
-            item.isClosed
-              ? null
-              : item.close,
-
-          updated_at:
-            new Date().toISOString(),
+        const payload = {
+          business_id: business.id,
+          day_of_week: hour.dayOfWeek,
+          is_open: hour.isOpen,
+          open_time: hour.openTime,
+          close_time: hour.closeTime,
         };
 
         if (existing?.id) {
-          const {
-            error: updateError,
-          } = await supabase
+          const { error } = await supabase
             .from("business_hours")
-            .update(values)
-            .eq(
-              "id",
-              existing.id
-            )
-            .eq(
-              "business_id",
-              business.id
-            );
+            .update(payload)
+            .eq("id", existing.id)
+            .eq("business_id", business.id);
 
-          if (updateError) {
-            throw new Error(
-              updateError.message
-            );
+          if (error) {
+            throw error;
           }
         } else {
-          const {
-            error: insertError,
-          } = await supabase
+          const { error } = await supabase
             .from("business_hours")
-            .insert(values);
+            .insert(payload);
 
-          if (insertError) {
-            throw new Error(
-              insertError.message
-            );
+          if (error) {
+            throw error;
           }
         }
       }
 
-      setMessage(
-        "Business hours saved."
-      );
-    } catch (err) {
+      setMessage("Business hours saved successfully.");
+    } catch (hoursError: any) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to save business hours."
+        hoursError?.message ||
+          "Failed to save business hours."
       );
     } finally {
       setSavingHours(false);
     }
   }
 
-  function updateHour(
+  function updateSocial(
     index: number,
-    field:
-      | "open"
-      | "close"
-      | "isClosed",
-    value: string | boolean
+    value: string
   ) {
-    setHours((current) =>
-      current.map(
-        (item, itemIndex) =>
-          itemIndex === index
-            ? {
-                ...item,
-                [field]: value,
-              }
-            : item
+    setSocials((current) =>
+      current.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              url: value,
+            }
+          : item
       )
     );
   }
 
-  const addressParts = [
-    firstValue(location, [
-      "address_line_1",
-      "address",
-    ]),
-    firstValue(location, [
-      "address_line_2",
-    ]),
-    firstValue(location, [
-      "city",
-    ]),
-    firstValue(location, [
-      "state_region",
-    ]),
-    firstValue(location, [
-      "postal_code",
-    ]),
-    country?.name,
-  ].filter(Boolean);
+  function updateHour(
+    index: number,
+    field: "isOpen" | "openTime" | "closeTime",
+    value: boolean | string
+  ) {
+    setHours((current) =>
+      current.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              [field]: value,
+            }
+          : item
+      )
+    );
+  }
+
+  function handleCategoryChange(
+    event: ChangeEvent<HTMLSelectElement>
+  ) {
+    const value = event.target.value;
+
+    setSelectedCategoryId(value);
+
+    if (
+      selectedSubcategoryId &&
+      !subcategories.some(
+        (subcategory) =>
+          subcategory.id === selectedSubcategoryId &&
+          subcategory.category_id === value
+      )
+    ) {
+      setSelectedSubcategoryId("");
+    }
+
+    clearStatus();
+  }
+
+  function handleSubcategoryChange(
+    event: ChangeEvent<HTMLSelectElement>
+  ) {
+    setSelectedSubcategoryId(event.target.value);
+    clearStatus();
+  }
+
+  const reviewCount = getReviewCount(rating, reviews);
+  const formattedRating = formatRating(rating);
+
+  const verificationLabel =
+    business.verification_status === "approved"
+      ? "Verified"
+      : business.verification_status === "pending"
+      ? "Verification pending"
+      : business.verification_status === "needs_more_information"
+      ? "More information required"
+      : "Not verified";
+
+  const profileStatus = business.is_public
+    ? "Public"
+    : "Private";
 
   return (
     <main className="profile-page">
-      <header className="profile-page-header">
-        <div>
-          <span className="profile-eyebrow">
-            Business profile
-          </span>
-
-          <h1>{business.name}</h1>
-
-          <p>
-            Manage the information customers
-            see when they discover your business.
-          </p>
-        </div>
-
-        <Link
-          href={`/businesses/${business.slug}`}
-          className="view-profile-button"
-        >
-          View public profile
-        </Link>
-      </header>
-
-      {(message || error) && (
-        <div
-          className={`profile-message ${
-            error ? "error" : "success"
-          }`}
-        >
-          {error || message}
-        </div>
-      )}
-
-      <section className="profile-cover">
-        <div className="profile-cover-pattern" />
-
-        <div className="profile-identity">
-          <div className="profile-avatar">
-            {logoPreview ? (
-              <img
-                src={logoPreview}
-                alt={`${business.name} logo`}
-              />
-            ) : (
-              <span>
-                {getInitials(
-                  name || initials
-                )}
-              </span>
-            )}
-          </div>
-
-          <div className="profile-identity-text">
-            <div className="profile-name-row">
-              <h2>{business.name}</h2>
-
-              {verified && (
-                <span
-                  className="verification-check"
-                  title="Verified business"
-                  aria-label="Verified business"
-                  style={{
-                    display:
-                      "inline-flex",
-                    width: 20,
-                    height: 20,
-                    flexShrink: 0,
-                    alignItems:
-                      "center",
-                    justifyContent:
-                      "center",
-                    background:
-                      "transparent",
-                    border: "none",
-                    padding: 0,
-                  }}
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    width="20"
-                    height="20"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M12 2.5l2.1 1.35 2.48-.08 1.06 2.25 2.05 1.39-.47 2.43.47 2.43-2.05 1.39-1.06 2.25-2.48-.08L12 21.5l-2.1-1.35-2.48.08-1.06-2.25-2.05-1.39.47-2.43-.47-2.43 2.05-1.39 1.06-2.25 2.48.08L12 2.5z"
-                      fill="#1877F2"
-                    />
-
-                    <path
-                      d="M8.3 12.2l2.25 2.25 5.15-5.15"
-                      fill="none"
-                      stroke="#FFFFFF"
-                      strokeWidth="2.2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </span>
-              )}
-            </div>
-
-            <p>
-              {country?.name ||
-                business.country_code}
+      <div className="profile-container">
+        <div className="profile-header">
+          <div>
+            <p className="profile-eyebrow">
+              Business workspace
             </p>
 
-            <div className="profile-status-row">
-              {verified ? (
-                <span className="verified-badge">
-                  ✓ Verified Business
-                </span>
-              ) : (
-                <Link
-                  href="/business/verification"
-                  className="verify-profile-button"
-                >
-                  Get verified
-                </Link>
-              )}
+            <h1>Business Profile</h1>
 
-              <span
-                className={
-                  business.is_public
-                    ? "visibility-badge public"
-                    : "visibility-badge private"
-                }
-              >
-                {business.is_public
-                  ? "Public profile"
-                  : "Private profile"}
-              </span>
-            </div>
+            <p className="profile-header-description">
+              Manage the information customers see on your
+              IFC BIZGROWTH business profile.
+            </p>
           </div>
+
+          <Link
+            href={`/business/${business.slug}`}
+            className="profile-public-link"
+          >
+            View public profile
+          </Link>
         </div>
 
-        <div className="profile-cover-actions">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            hidden
-            onChange={chooseLogo}
-          />
+        {message ? (
+          <div className="profile-message success">
+            {message}
+          </div>
+        ) : null}
 
-          <button
-            type="button"
-            onClick={() =>
-              fileInputRef.current?.click()
-            }
-            disabled={uploadingLogo}
-          >
-            {logoPreview
-              ? "Change logo"
-              : "Add logo"}
-          </button>
+        {error ? (
+          <div className="profile-message error">
+            {error}
+          </div>
+        ) : null}
 
-          {selectedLogo && (
+        <section className="profile-card profile-identity-card">
+          <div className="profile-identity">
+            <div className="profile-logo-wrapper">
+              {currentLogoUrl ? (
+                <img
+                  src={currentLogoUrl}
+                  alt={`${business.name} logo`}
+                  className="profile-logo"
+                />
+              ) : (
+                <div className="profile-logo-placeholder">
+                  {initials}
+                </div>
+              )}
+            </div>
+
+            <div className="profile-identity-content">
+              <div className="profile-identity-title">
+                <h2>{business.name}</h2>
+
+                <span
+                  className={`profile-verification ${
+                    business.verification_status ===
+                    "approved"
+                      ? "verified"
+                      : ""
+                  }`}
+                >
+                  {verificationLabel}
+                </span>
+              </div>
+
+              <p>
+                {business.description ||
+                  "Add a business description to tell customers what your business offers."}
+              </p>
+
+              <div className="profile-status-row">
+                <span
+                  className={
+                    business.is_public
+                      ? "status-public"
+                      : "status-private"
+                  }
+                >
+                  {profileStatus}
+                </span>
+
+                {business.is_featured ? (
+                  <span className="status-featured">
+                    Featured
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          <div className="profile-logo-actions">
+            <input
+              ref={logoInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleLogoChange}
+              hidden
+            />
+
             <button
               type="button"
-              className="primary"
-              onClick={uploadLogo}
-              disabled={uploadingLogo}
+              className="profile-secondary-button"
+              onClick={() => logoInputRef.current?.click()}
+              disabled={uploadingLogo || removingLogo}
             >
               {uploadingLogo
                 ? "Uploading..."
-                : "Save logo"}
+                : "Change logo"}
             </button>
-          )}
 
-          {logoPath &&
-            !selectedLogo && (
+            {currentLogoUrl ? (
               <button
                 type="button"
-                className="danger"
+                className="profile-danger-button"
                 onClick={removeLogo}
-                disabled={uploadingLogo}
+                disabled={uploadingLogo || removingLogo}
               >
-                Remove
+                {removingLogo
+                  ? "Removing..."
+                  : "Remove logo"}
               </button>
-            )}
-        </div>
-      </section>
+            ) : null}
+          </div>
+        </section>
 
-      <div className="profile-grid">
-        <div className="profile-main-column">
-          <section className="profile-card">
-            <div className="profile-card-heading">
-              <div>
-                <h2>
-                  Business information
-                </h2>
-
-                <p>
-                  Information customers use
-                  to understand and contact
-                  your business.
-                </p>
-              </div>
-            </div>
-
-            <form onSubmit={saveBusiness}>
-              <div className="profile-form-grid">
-                <label>
-                  Business name
-
-                  <input
-                    value={name}
-                    onChange={(e) =>
-                      setName(
-                        e.target.value
-                      )
-                    }
-                    maxLength={150}
-                    required
-                  />
-                </label>
-
-                <label>
-                  Business email
-
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) =>
-                      setEmail(
-                        e.target.value
-                      )
-                    }
-                    maxLength={254}
-                  />
-                </label>
-
-                <label>
-                  Phone number
-
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) =>
-                      setPhone(
-                        e.target.value
-                      )
-                    }
-                    maxLength={40}
-                  />
-                </label>
-
-                <label>
-                  Website
-
-                  <input
-                    type="url"
-                    value={website}
-                    onChange={(e) =>
-                      setWebsite(
-                        e.target.value
-                      )
-                    }
-                    placeholder="https://example.com"
-                  />
-                </label>
-
-                <label className="full">
-                  About the business
-
-                  <textarea
-                    value={description}
-                    onChange={(e) =>
-                      setDescription(
-                        e.target.value
-                      )
-                    }
-                    rows={6}
-                    maxLength={2000}
-                    placeholder="Tell customers about your business..."
-                  />
-                </label>
-              </div>
-
-              <div className="profile-public-toggle">
+        <div className="profile-layout">
+          <div className="profile-main">
+            <section className="profile-card">
+              <div className="profile-section-header">
                 <div>
-                  <strong>
-                    Show this business publicly
-                  </strong>
-
+                  <h2>Business information</h2>
                   <p>
-                    When enabled, customers can
-                    discover your business through
-                    the public IFC BIZGROWTH
-                    directory.
+                    Keep your basic business information
+                    accurate and up to date.
                   </p>
                 </div>
-
-                <button
-                  type="button"
-                  className={`toggle ${
-                    isPublic ? "on" : ""
-                  }`}
-                  aria-pressed={isPublic}
-                  onClick={() =>
-                    setIsPublic(
-                      (value) => !value
-                    )
-                  }
-                >
-                  <span />
-                </button>
               </div>
 
-              <div className="form-actions">
+              <form
+                className="profile-form"
+                onSubmit={saveBusiness}
+              >
+                <div className="profile-form-grid">
+                  <div className="profile-field">
+                    <label htmlFor="business-name">
+                      Business name
+                    </label>
+
+                    <input
+                      id="business-name"
+                      type="text"
+                      value={businessName}
+                      onChange={(event) =>
+                        setBusinessName(event.target.value)
+                      }
+                      required
+                    />
+                  </div>
+
+                  <div className="profile-field">
+                    <label htmlFor="business-email">
+                      Business email
+                    </label>
+
+                    <input
+                      id="business-email"
+                      type="email"
+                      value={email}
+                      onChange={(event) =>
+                        setEmail(event.target.value)
+                      }
+                    />
+                  </div>
+
+                  <div className="profile-field">
+                    <label htmlFor="business-phone">
+                      Phone number
+                    </label>
+
+                    <input
+                      id="business-phone"
+                      type="tel"
+                      value={phone}
+                      onChange={(event) =>
+                        setPhone(event.target.value)
+                      }
+                    />
+                  </div>
+
+                  <div className="profile-field">
+                    <label htmlFor="business-website">
+                      Website
+                    </label>
+
+                    <input
+                      id="business-website"
+                      type="url"
+                      value={websiteUrl}
+                      onChange={(event) =>
+                        setWebsiteUrl(event.target.value)
+                      }
+                      placeholder="https://example.com"
+                    />
+                  </div>
+
+                  <div className="profile-field">
+                    <label htmlFor="business-country">
+                      Country code
+                    </label>
+
+                    <input
+                      id="business-country"
+                      type="text"
+                      value={countryCode}
+                      onChange={(event) =>
+                        setCountryCode(
+                          event.target.value.toUpperCase()
+                        )
+                      }
+                      maxLength={2}
+                    />
+                  </div>
+                </div>
+
+                <div className="profile-field">
+                  <label htmlFor="business-description">
+                    Description
+                  </label>
+
+                  <textarea
+                    id="business-description"
+                    value={description}
+                    onChange={(event) =>
+                      setDescription(event.target.value)
+                    }
+                    rows={5}
+                  />
+                </div>
+
+                <label className="profile-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={isPublic}
+                    onChange={(event) =>
+                      setIsPublic(event.target.checked)
+                    }
+                  />
+
+                  <span>
+                    Make my business profile public
+                  </span>
+                </label>
+
                 <button
-                  className="save-button"
                   type="submit"
+                  className="profile-primary-button"
                   disabled={savingBusiness}
                 >
                   {savingBusiness
                     ? "Saving..."
-                    : "Save information"}
+                    : "Save business information"}
+                </button>
+              </form>
+            </section>
+
+            <section className="profile-card">
+              <div className="profile-section-header">
+                <div>
+                  <h2>Business category</h2>
+                  <p>
+                    Select the category that best describes
+                    your business and an optional
+                    subcategory.
+                  </p>
+                </div>
+              </div>
+
+              <div className="profile-form">
+                <div className="profile-form-grid">
+                  <div className="profile-field">
+                    <label htmlFor="business-category">
+                      Category
+                    </label>
+
+                    <select
+                      id="business-category"
+                      value={selectedCategoryId}
+                      onChange={handleCategoryChange}
+                    >
+                      <option value="">
+                        Select a category
+                      </option>
+
+                      {categories.map((category) => (
+                        <option
+                          key={category.id}
+                          value={category.id}
+                        >
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="profile-field">
+                    <label htmlFor="business-subcategory">
+                      Subcategory
+                    </label>
+
+                    <select
+                      id="business-subcategory"
+                      value={selectedSubcategoryId}
+                      onChange={handleSubcategoryChange}
+                      disabled={!selectedCategoryId}
+                    >
+                      <option value="">
+                        Select a subcategory
+                      </option>
+
+                      {availableSubcategories.map(
+                        (subcategory) => (
+                          <option
+                            key={subcategory.id}
+                            value={subcategory.id}
+                          >
+                            {subcategory.name}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="profile-primary-button"
+                  onClick={saveCategory}
+                  disabled={
+                    savingCategory || !selectedCategoryId
+                  }
+                >
+                  {savingCategory
+                    ? "Saving..."
+                    : "Save category"}
                 </button>
               </div>
-            </form>
-          </section>
+            </section>
 
-          <section className="profile-card">
-            <div className="profile-card-heading">
-              <div>
-                <h2>
-                  Contact & social media
-                </h2>
-
-                <p>
-                  Add the channels customers can
-                  use to reach your business.
-                </p>
+            <section className="profile-card">
+              <div className="profile-section-header">
+                <div>
+                  <h2>Contact & social media</h2>
+                  <p>
+                    Add the social profiles customers can
+                    use to find your business online.
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <form onSubmit={saveSocials}>
-              <div className="social-grid">
-                {SOCIAL_PLATFORMS.map(
-                  (platform) => (
-                    <label
-                      key={platform.key}
+              <div className="profile-form">
+                <div className="profile-social-list">
+                  {socials.map((social, index) => (
+                    <div
+                      className="profile-field"
+                      key={social.platform}
                     >
-                      {platform.label}
+                      <label
+                        htmlFor={`social-${social.platform}`}
+                      >
+                        {social.platform}
+                      </label>
 
                       <input
+                        id={`social-${social.platform}`}
                         type="url"
-                        value={
-                          socials[
-                            platform.key
-                          ] ?? ""
-                        }
-                        onChange={(e) =>
-                          setSocials(
-                            (current) => ({
-                              ...current,
-                              [platform.key]:
-                                e.target.value,
-                            })
+                        value={social.url}
+                        onChange={(event) =>
+                          updateSocial(
+                            index,
+                            event.target.value
                           )
                         }
-                        placeholder={
-                          platform.placeholder
-                        }
+                        placeholder={`https://${social.platform.toLowerCase()}.com/...`}
                       />
-                    </label>
-                  )
-                )}
-              </div>
+                    </div>
+                  ))}
+                </div>
 
-              <div className="form-actions">
                 <button
-                  className="save-button"
-                  type="submit"
+                  type="button"
+                  className="profile-primary-button"
+                  onClick={saveSocials}
                   disabled={savingSocials}
                 >
                   {savingSocials
                     ? "Saving..."
-                    : "Save contact links"}
+                    : "Save social links"}
                 </button>
               </div>
-            </form>
-          </section>
+            </section>
 
-          <section className="profile-card">
-            <div className="profile-card-heading">
-              <div>
-                <h2>
-                  Business location
-                </h2>
-
-                <p>
-                  Give customers the complete
-                  address of your business.
-                </p>
-              </div>
-            </div>
-
-            <form onSubmit={saveLocation}>
-              <div className="profile-form-grid">
-                <label className="full">
-                  Address
-
-                  <input
-                    value={address1}
-                    onChange={(e) =>
-                      setAddress1(
-                        e.target.value
-                      )
-                    }
-                    placeholder="Street address"
-                    required
-                  />
-                </label>
-
-                <label className="full">
-                  Address line 2
-
-                  <input
-                    value={address2}
-                    onChange={(e) =>
-                      setAddress2(
-                        e.target.value
-                      )
-                    }
-                    placeholder="Suite, building, landmark..."
-                  />
-                </label>
-
-                <label>
-                  City
-
-                  <input
-                    value={city}
-                    onChange={(e) =>
-                      setCity(
-                        e.target.value
-                      )
-                    }
-                    required
-                  />
-                </label>
-
-                <label>
-                  State / Region
-
-                  <input
-                    value={stateRegion}
-                    onChange={(e) =>
-                      setStateRegion(
-                        e.target.value
-                      )
-                    }
-                    required
-                  />
-                </label>
-
-                <label>
-                  Postal code
-
-                  <input
-                    value={postalCode}
-                    onChange={(e) =>
-                      setPostalCode(
-                        e.target.value
-                      )
-                    }
-                  />
-                </label>
-
-                <label>
-                  Country
-
-                  <input
-                    value={
-                      country?.name ||
-                      business.country_code
-                    }
-                    disabled
-                  />
-                </label>
-              </div>
-
-              <div className="location-preview">
-                <div className="location-preview-icon">
-                  ⌖
-                </div>
-
+            <section className="profile-card">
+              <div className="profile-section-header">
                 <div>
-                  <strong>
-                    {addressParts.length
-                      ? addressParts.join(
-                          ", "
-                        )
-                      : "Location not completed"}
-                  </strong>
-
-                  <span>
-                    Customers will see this
-                    address on your public
-                    profile.
-                  </span>
+                  <h2>Business location</h2>
+                  <p>
+                    Add your primary business location so
+                    customers can find you.
+                  </p>
                 </div>
               </div>
 
-              <div className="form-actions">
+              <form
+                className="profile-form"
+                onSubmit={saveLocation}
+              >
+                <div className="profile-form-grid">
+                  <div className="profile-field">
+                    <label htmlFor="business-city">
+                      City
+                    </label>
+
+                    <input
+                      id="business-city"
+                      type="text"
+                      value={city}
+                      onChange={(event) =>
+                        setCity(event.target.value)
+                      }
+                      required
+                    />
+                  </div>
+
+                  <div className="profile-field">
+                    <label htmlFor="business-state">
+                      State / Region
+                    </label>
+
+                    <input
+                      id="business-state"
+                      type="text"
+                      value={stateRegion}
+                      onChange={(event) =>
+                        setStateRegion(event.target.value)
+                      }
+                      required
+                    />
+                  </div>
+
+                  <div className="profile-field">
+                    <label htmlFor="business-postal">
+                      Postal code
+                    </label>
+
+                    <input
+                      id="business-postal"
+                      type="text"
+                      value={postalCode}
+                      onChange={(event) =>
+                        setPostalCode(event.target.value)
+                      }
+                    />
+                  </div>
+
+                  <div className="profile-field profile-field-full">
+                    <label htmlFor="business-address">
+                      Address
+                    </label>
+
+                    <input
+                      id="business-address"
+                      type="text"
+                      value={address}
+                      onChange={(event) =>
+                        setAddress(event.target.value)
+                      }
+                      required
+                    />
+                  </div>
+
+                  <div className="profile-field profile-field-full">
+                    <label htmlFor="business-address-2">
+                      Address line 2
+                    </label>
+
+                    <input
+                      id="business-address-2"
+                      type="text"
+                      value={addressLine2}
+                      onChange={(event) =>
+                        setAddressLine2(event.target.value)
+                      }
+                    />
+                  </div>
+                </div>
+
+                <p className="profile-helper-text">
+                  Your device location may be used to save
+                  the coordinates of your business location.
+                </p>
+
                 <button
-                  className="save-button"
                   type="submit"
+                  className="profile-primary-button"
                   disabled={savingLocation}
                 >
                   {savingLocation
                     ? "Saving..."
-                    : "Save location"}
+                    : "Save business location"}
                 </button>
+              </form>
+            </section>
+
+            <section className="profile-card">
+              <div className="profile-section-header">
+                <div>
+                  <h2>Business hours</h2>
+                  <p>
+                    Tell customers when your business is
+                    open.
+                  </p>
+                </div>
               </div>
-            </form>
-          </section>
 
-          <section className="profile-card">
-            <div className="profile-card-heading">
-              <div>
-                <h2>
-                  Business hours
-                </h2>
+              <div className="profile-hours-list">
+                {hours.map((hour, index) => (
+                  <div
+                    className="profile-hours-row"
+                    key={hour.day}
+                  >
+                    <div className="profile-hours-day">
+                      <strong>{hour.day}</strong>
 
-                <p>
-                  Tell customers when your
-                  business is open.
-                </p>
-              </div>
-            </div>
-
-            <form onSubmit={saveHours}>
-              <div className="hours-list">
-                {hours.map(
-                  (item, index) => (
-                    <div
-                      className="hours-row"
-                      key={item.day}
-                    >
-                      <strong>
-                        {item.label}
-                      </strong>
-
-                      <label className="closed-control">
+                      <label className="profile-checkbox">
                         <input
                           type="checkbox"
-                          checked={
-                            item.isClosed
-                          }
-                          onChange={(e) =>
+                          checked={hour.isOpen}
+                          onChange={(event) =>
                             updateHour(
                               index,
-                              "isClosed",
-                              e.target.checked
+                              "isOpen",
+                              event.target.checked
                             )
                           }
                         />
 
-                        Closed
+                        <span>Open</span>
                       </label>
-
-                      {!item.isClosed && (
-                        <div className="hours-times">
-                          <input
-                            type="time"
-                            value={
-                              item.open
-                            }
-                            onChange={(e) =>
-                              updateHour(
-                                index,
-                                "open",
-                                e.target.value
-                              )
-                            }
-                          />
-
-                          <span>
-                            to
-                          </span>
-
-                          <input
-                            type="time"
-                            value={
-                              item.close
-                            }
-                            onChange={(e) =>
-                              updateHour(
-                                index,
-                                "close",
-                                e.target.value
-                              )
-                            }
-                          />
-                        </div>
-                      )}
                     </div>
-                  )
-                )}
-              </div>
 
-              <div className="form-actions">
-                <button
-                  className="save-button"
-                  type="submit"
-                  disabled={savingHours}
-                >
-                  {savingHours
-                    ? "Saving..."
-                    : "Save business hours"}
-                </button>
-              </div>
-            </form>
-          </section>
-        </div>
-
-        <aside className="profile-side-column">
-          <section className="profile-card rating-card">
-            <div className="rating-number">
-              {averageRating}
-            </div>
-
-            <div>
-              <div className="stars">
-                {"★★★★★"
-                  .split("")
-                  .map(
-                    (star, index) => (
-                      <span
-                        key={index}
-                        className={
-                          index <
-                          Math.round(
-                            Number(
-                              averageRating
-                            )
+                    <div className="profile-hours-times">
+                      <input
+                        type="time"
+                        value={hour.openTime}
+                        disabled={!hour.isOpen}
+                        onChange={(event) =>
+                          updateHour(
+                            index,
+                            "openTime",
+                            event.target.value
                           )
-                            ? "filled"
-                            : ""
                         }
-                      >
-                        {star}
-                      </span>
-                    )
-                  )}
+                      />
+
+                      <span>to</span>
+
+                      <input
+                        type="time"
+                        value={hour.closeTime}
+                        disabled={!hour.isOpen}
+                        onChange={(event) =>
+                          updateHour(
+                            index,
+                            "closeTime",
+                            event.target.value
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
 
-              <strong>
-                {reviewCount} reviews
-              </strong>
-
-              <span>
-                Customer rating
-              </span>
-            </div>
-          </section>
-
-          <section className="profile-card">
-            <div className="side-heading">
-              <h2>
-                Profile status
-              </h2>
-            </div>
-
-            <div className="status-list">
-              <div>
-                <span>
-                  Business
-                </span>
-
-                <strong>
-                  {business.status}
-                </strong>
-              </div>
-
-              <div>
-                <span>
-                  Visibility
-                </span>
-
-                <strong>
-                  {business.is_public
-                    ? "Public"
-                    : "Private"}
-                </strong>
-              </div>
-
-              <div>
-                <span>
-                  Verification
-                </span>
-
-                <strong
-                  className={
-                    verified
-                      ? "verified-text"
-                      : ""
-                  }
-                >
-                  {verified
-                    ? "Verified"
-                    : "Not verified"}
-                </strong>
-              </div>
-            </div>
-
-            {!verified && (
-              <Link
-                href="/business/verification"
-                className="verification-cta"
+              <button
+                type="button"
+                className="profile-primary-button"
+                onClick={saveHours}
+                disabled={savingHours}
               >
-                <span>✓</span>
+                {savingHours
+                  ? "Saving..."
+                  : "Save business hours"}
+              </button>
+            </section>
+          </div>
 
+          <aside className="profile-sidebar">
+            <section className="profile-card profile-rating-card">
+              <div className="profile-rating-value">
+                {formattedRating}
+              </div>
+
+              <div className="profile-rating-stars">
+                ★★★★★
+              </div>
+
+              <p>
+                Based on {reviewCount}{" "}
+                {reviewCount === 1 ? "review" : "reviews"}
+              </p>
+            </section>
+
+            <section className="profile-card">
+              <div className="profile-section-header">
                 <div>
-                  <strong>
-                    Verify your business
-                  </strong>
+                  <h2>Profile status</h2>
+                </div>
+              </div>
 
-                  <small>
-                    Build customer trust with
-                    IFC BIZGROWTH verification.
-                  </small>
+              <div className="profile-status-list">
+                <div className="profile-status-item">
+                  <span>Visibility</span>
+                  <strong>{profileStatus}</strong>
                 </div>
 
-                <b>→</b>
-              </Link>
-            )}
-          </section>
+                <div className="profile-status-item">
+                  <span>Verification</span>
+                  <strong>{verificationLabel}</strong>
+                </div>
 
-          <section className="profile-card">
-            <div className="side-heading">
-              <h2>
-                Profile content
-              </h2>
-            </div>
+                <div className="profile-status-item">
+                  <span>Featured</span>
+                  <strong>
+                    {business.is_featured
+                      ? "Yes"
+                      : "No"}
+                  </strong>
+                </div>
+              </div>
+            </section>
 
-            <div className="content-counts">
-              <div>
-                <strong>
-                  {media.length}
-                </strong>
-
-                <span>
-                  Photos
-                </span>
+            <section className="profile-card">
+              <div className="profile-section-header">
+                <div>
+                  <h2>Profile content</h2>
+                </div>
               </div>
 
-              <div>
-                <strong>
-                  {services.length}
-                </strong>
+              <div className="profile-status-list">
+                <div className="profile-status-item">
+                  <span>Photos</span>
+                  <strong>{media.length}</strong>
+                </div>
 
-                <span>
-                  Services
-                </span>
+                <div className="profile-status-item">
+                  <span>Products</span>
+                  <strong>{products.length}</strong>
+                </div>
+
+                <div className="profile-status-item">
+                  <span>Services</span>
+                  <strong>{services.length}</strong>
+                </div>
+
+                <div className="profile-status-item">
+                  <span>Promotions</span>
+                  <strong>{promotions.length}</strong>
+                </div>
+              </div>
+            </section>
+
+            <section className="profile-card">
+              <div className="profile-section-header">
+                <div>
+                  <h2>Account contact</h2>
+                </div>
               </div>
 
-              <div>
-                <strong>
-                  {products.length}
-                </strong>
+              <p className="profile-account-email">
+                {accountEmail}
+              </p>
 
-                <span>
-                  Products
-                </span>
-              </div>
-
-              <div>
-                <strong>
-                  {promotions.length}
-                </strong>
-
-                <span>
-                  Updates
-                </span>
-              </div>
-            </div>
-          </section>
-
-          <section className="profile-card">
-            <div className="side-heading">
-              <h2>
-                Account contact
-              </h2>
-            </div>
-
-            <div className="account-contact">
-              <span>
-                Account email
-              </span>
-
-              <strong>
-                {accountEmail ||
-                  "Not available"}
-              </strong>
-            </div>
-          </section>
-        </aside>
+              {country ? (
+                <p className="profile-helper-text">
+                  {firstValue(
+                    country.name,
+                    country.country_name
+                  ) ?? business.country_code}
+                </p>
+              ) : null}
+            </section>
+          </aside>
+        </div>
       </div>
     </main>
   );
-}
+  }
