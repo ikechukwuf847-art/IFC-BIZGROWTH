@@ -27,6 +27,31 @@ type Business = {
   is_featured: boolean;
 };
 
+type Category = {
+  id: string;
+  name: string;
+  slug: string;
+  is_active: boolean;
+  sort_order: number;
+};
+
+type Subcategory = {
+  id: string;
+  category_id: string;
+  name: string;
+  slug: string;
+  is_active: boolean;
+  sort_order: number;
+};
+
+type CategoryAssignment = {
+  category_id: string;
+};
+
+type SubcategoryAssignment = {
+  subcategory_id: string;
+};
+
 type Props = {
   business: Business;
   accountEmail: string;
@@ -40,8 +65,12 @@ type Props = {
   services: any[];
   promotions: any[];
   reviews: any[];
-  rating: any;
+    rating: any;
   country: any;
+  categories: Category[];
+  subcategories: Subcategory[];
+  categoryAssignment: CategoryAssignment | null;
+  subcategoryAssignment: SubcategoryAssignment | null;
 };
 
 const SOCIAL_PLATFORMS = [
@@ -249,8 +278,12 @@ export default function ProfileWorkspace({
   services,
   promotions,
   reviews,
-  rating,
+    rating,
   country,
+  categories,
+  subcategories,
+  categoryAssignment,
+  subcategoryAssignment,
 }: Props) {
   const supabase =
     createSupabaseBrowserClient();
@@ -328,6 +361,25 @@ export default function ProfileWorkspace({
     normalizeHours(businessHours)
   );
 
+    const [
+    selectedCategoryId,
+    setSelectedCategoryId,
+  ] = useState(
+    categoryAssignment?.category_id ?? ""
+  );
+
+  const [
+    selectedSubcategoryId,
+    setSelectedSubcategoryId,
+  ] = useState(
+    subcategoryAssignment?.subcategory_id ?? ""
+  );
+
+  const [
+    savingCategory,
+    setSavingCategory,
+  ] = useState(false);
+
   const [savingBusiness, setSavingBusiness] =
     useState(false);
 
@@ -345,6 +397,13 @@ export default function ProfileWorkspace({
 
   const [error, setError] =
     useState("");
+
+  const availableSubcategories =
+    subcategories.filter(
+      (subcategory) =>
+        subcategory.category_id ===
+        selectedCategoryId
+    );
 
   const verificationStatus = String(
     business.verification_status ?? ""
@@ -365,6 +424,69 @@ export default function ProfileWorkspace({
       "avg_rating",
     ])
   );
+
+  async function saveCategory(
+    event: FormEvent
+  ) {
+    event.preventDefault();
+
+    setSavingCategory(true);
+    setMessage("");
+    setError("");
+
+    try {
+      if (!selectedCategoryId) {
+        throw new Error(
+          "Please select a business category."
+        );
+      }
+
+      if (
+        selectedSubcategoryId &&
+        !availableSubcategories.some(
+          (subcategory) =>
+            subcategory.id ===
+            selectedSubcategoryId
+        )
+      ) {
+        throw new Error(
+          "The selected subcategory is not valid for this category."
+        );
+      }
+
+      const { error: rpcError } =
+        await supabase.rpc(
+          "save_business_category",
+          {
+            p_business_id:
+              business.id,
+            p_category_id:
+              selectedCategoryId,
+            p_subcategory_id:
+              selectedSubcategoryId ||
+              null,
+          }
+        );
+
+      if (rpcError) {
+        throw new Error(
+          rpcError.message
+        );
+      }
+
+      setMessage(
+        "Business category saved."
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to save business category."
+      );
+    } finally {
+      setSavingCategory(false);
+    }
+    }
 
   async function saveBusiness(
     event: FormEvent
@@ -1832,6 +1954,114 @@ export default function ProfileWorkspace({
               </div>
             </form>
           </section>
+
+                    <section className="profile-card">
+            <div className="profile-card-heading">
+              <div>
+                <h2>
+                  Business category
+                </h2>
+
+                <p>
+                  Choose the category that best
+                  describes your business.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={saveCategory}>
+              <div className="profile-form-grid">
+                <label>
+                  Category
+
+                  <select
+                    value={selectedCategoryId}
+                    onChange={(e) => {
+                      setSelectedCategoryId(
+                        e.target.value
+                      );
+                      setSelectedSubcategoryId(
+                        ""
+                      );
+                    }}
+                    required
+                  >
+                    <option value="">
+                      Select a category
+                    </option>
+
+                    {categories.map(
+                      (category) => (
+                        <option
+                          key={category.id}
+                          value={category.id}
+                        >
+                          {category.name}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </label>
+
+                <label>
+                  Subcategory
+
+                  <select
+                    value={
+                      selectedSubcategoryId
+                    }
+                    onChange={(e) =>
+                      setSelectedSubcategoryId(
+                        e.target.value
+                      )
+                    }
+                    disabled={
+                      !selectedCategoryId ||
+                      availableSubcategories.length ===
+                        0
+                    }
+                  >
+                    <option value="">
+                      {selectedCategoryId
+                        ? "Select a subcategory"
+                        : "Select category first"}
+                    </option>
+
+                    {availableSubcategories.map(
+                      (subcategory) => (
+                        <option
+                          key={subcategory.id}
+                          value={
+                            subcategory.id
+                          }
+                        >
+                          {subcategory.name}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </label>
+
+                <p className="profile-category-help">
+                  This helps customers find your
+                  business in the right category.
+                </p>
+              </div>
+
+              <div className="form-actions">
+                <button
+                  className="save-button"
+                  type="submit"
+                  disabled={savingCategory}
+                >
+                  {savingCategory
+                    ? "Saving..."
+                    : "Save category"}
+                </button>
+              </div>
+            </form>
+          </section>
+          
         </div>
 
         <aside className="profile-side-column">
