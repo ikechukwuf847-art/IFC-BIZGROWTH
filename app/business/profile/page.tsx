@@ -21,6 +21,23 @@ type Business = {
   is_featured: boolean;
 };
 
+type Category = {
+  id: string;
+  name: string;
+  slug: string;
+  is_active: boolean;
+  sort_order: number;
+};
+
+type Subcategory = {
+  id: string;
+  category_id: string;
+  name: string;
+  slug: string;
+  is_active: boolean;
+  sort_order: number;
+};
+
 function getInitials(name: string) {
   const words = name
     .trim()
@@ -129,17 +146,21 @@ export default async function BusinessProfilePage() {
    * in parallel.
    */
   const [
-    locationResult,
-    socialResult,
-    hoursResult,
-    mediaResult,
-    productsResult,
-    servicesResult,
-    promotionsResult,
-    reviewsResult,
-    ratingResult,
-    countryResult,
-  ] = await Promise.all([
+  locationResult,
+  socialResult,
+  hoursResult,
+  mediaResult,
+  productsResult,
+  servicesResult,
+  promotionsResult,
+  reviewsResult,
+  ratingResult,
+  countryResult,
+  categoriesResult,
+  subcategoriesResult,
+  categoryAssignmentResult,
+  subcategoryAssignmentResult,
+] = await Promise.all([
     /*
      * Primary business location first.
      */
@@ -157,6 +178,58 @@ export default async function BusinessProfilePage() {
       .order("created_at", {
         ascending: false,
       })
+      .limit(1)
+      .maybeSingle(),
+
+          /*
+     * Active business categories.
+     */
+    supabase
+      .from("business_categories")
+      .select(
+        "id, name, slug, is_active, sort_order"
+      )
+      .eq("is_active", true)
+      .order("sort_order", {
+        ascending: true,
+      }),
+
+    /*
+     * Active business subcategories.
+     */
+    supabase
+      .from("business_subcategories")
+      .select(
+        "id, category_id, name, slug, is_active, sort_order"
+      )
+      .eq("is_active", true)
+      .order("sort_order", {
+        ascending: true,
+      }),
+
+    /*
+     * Current business category.
+     */
+    supabase
+      .from("business_category_assignments")
+      .select("category_id")
+      .eq(
+        "business_id",
+        business.id
+      )
+      .limit(1)
+      .maybeSingle(),
+
+    /*
+     * Current business subcategory.
+     */
+    supabase
+      .from("business_subcategory_assignments")
+      .select("subcategory_id")
+      .eq(
+        "business_id",
+        business.id
+      )
       .limit(1)
       .maybeSingle(),
 
@@ -404,24 +477,38 @@ export default async function BusinessProfilePage() {
   const country =
     countryResult.data ?? null;
 
+      const categories =
+    (categoriesResult.data ?? []) as Category[];
+
+  const subcategories =
+    (subcategoriesResult.data ?? []) as Subcategory[];
+
+  const categoryAssignment =
+    categoryAssignmentResult.data ?? null;
+
+  const subcategoryAssignment =
+    subcategoryAssignmentResult.data ?? null;
+
   return (
     <ProfileWorkspace
-      business={business}
-      accountEmail={user.email ?? ""}
-      logoUrl={logoUrl}
-      initials={getInitials(
-        business.name
-      )}
-      location={location}
-      socialLinks={socialLinks}
-      businessHours={businessHours}
-      media={media}
-      products={products}
-      services={services}
-      promotions={promotions}
-      reviews={reviews}
-      rating={rating}
-      country={country}
-    />
+  business={business}
+  accountEmail={user.email ?? ""}
+  logoUrl={logoUrl}
+  initials={getInitials(business.name)}
+  location={location}
+  socialLinks={socialLinks}
+  businessHours={businessHours}
+  media={media}
+  products={products}
+  services={services}
+  promotions={promotions}
+  reviews={reviews}
+  rating={rating}
+  country={country}
+  categories={categories}
+  subcategories={subcategories}
+  categoryAssignment={categoryAssignment}
+  subcategoryAssignment={subcategoryAssignment}
+/>
   );
   }
