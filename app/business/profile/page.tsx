@@ -14,86 +14,124 @@ type Business = {
   phone: string | null;
   website_url: string | null;
   logo_url: string | null;
-  country_code: string | null;
+  country_code: string;
   status: string;
   verification_status: string;
   is_public: boolean;
   is_featured: boolean;
 };
 
-type Category = {
-  id: string;
-  name: string;
-  slug: string;
-  is_active: boolean;
-  sort_order: number;
-};
+function getInitials(name: string) {
+  const words = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
 
-type Subcategory = {
-  id: string;
-  category_id: string;
-  name: string;
-  slug: string;
-  is_active: boolean;
-  sort_order: number;
-};
+  if (!words.length) {
+    return "B";
+  }
+
+  if (words.length === 1) {
+    return words[0]
+      .slice(0, 2)
+      .toUpperCase();
+  }
+
+  return `${words[0][0]}${words[1][0]}`.toUpperCase();
+}
 
 export default async function BusinessProfilePage() {
-  const supabase = await createSupabaseServerClient();
+  const supabase =
+    await createSupabaseServerClient();
 
+  /*
+   * Get authenticated user.
+   */
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login?next=/business/profile");
+    redirect(
+      "/login?next=/business/profile"
+    );
   }
 
-  const { data: business, error: businessError } = await supabase
+  /*
+   * Get the business owned by the
+   * authenticated account.
+   */
+  const {
+    data: business,
+    error: businessError,
+  } = await supabase
     .from("businesses")
-    .select(
-      `
-        id,
-        owner_id,
-        name,
-        slug,
-        description,
-        email,
-        phone,
-        website_url,
-        logo_url,
-        country_code,
-        status,
-        verification_status,
-        is_public,
-        is_featured
-      `
-    )
+    .select(`
+      id,
+      owner_id,
+      name,
+      slug,
+      description,
+      email,
+      phone,
+      website_url,
+      logo_url,
+      country_code,
+      status,
+      verification_status,
+      is_public,
+      is_featured
+    `)
     .eq("owner_id", user.id)
     .maybeSingle<Business>();
 
   if (businessError) {
-    console.error("Failed to load business:", businessError);
+    console.error(
+      "Business profile error:",
+      businessError
+    );
   }
 
   if (!business) {
     redirect("/business/create");
   }
 
+  /*
+   * Create a signed URL for the private
+   * business logo.
+   */
   let logoUrl: string | null = null;
 
   if (business.logo_url) {
-    const { data: signedLogo } = await supabase.storage
+    const {
+      data: signedLogo,
+      error: logoError,
+    } = await supabase.storage
       .from("business-logos")
-      .createSignedUrl(business.logo_url, 60 * 60);
+      .createSignedUrl(
+        business.logo_url,
+        60 * 60
+      );
 
-    logoUrl = signedLogo?.signedUrl ?? null;
+    if (logoError) {
+      console.error(
+        "Business logo error:",
+        logoError
+      );
+    }
+
+    logoUrl =
+      signedLogo?.signedUrl ?? null;
   }
 
+  /*
+   * Load all profile-related information
+   * in parallel.
+   */
   const [
     locationResult,
-    socialLinksResult,
-    businessHoursResult,
+    socialResult,
+    hoursResult,
     mediaResult,
     productsResult,
     servicesResult,
@@ -101,260 +139,279 @@ export default async function BusinessProfilePage() {
     reviewsResult,
     ratingResult,
     countryResult,
-    categoriesResult,
-    subcategoriesResult,
-    categoryAssignmentResult,
-    subcategoryAssignmentResult,
   ] = await Promise.all([
+    /*
+     * Primary business location first.
+     */
     supabase
       .from("business_locations")
-      .select(
-        `
-          id,
-          business_id,
-          country_id,
-          country_code,
-          city,
-          state_region,
-          address,
-          address_line_1,
-          address_line_2,
-          postal_code,
-          latitude,
-          longitude,
-          is_primary,
-          is_active,
-          is_public
-        `
+      .select("*")
+      .eq(
+        "business_id",
+        business.id
       )
-      .eq("business_id", business.id)
-      .eq("is_primary", true)
       .eq("is_active", true)
+      .order("is_primary", {
+        ascending: false,
+      })
+      .order("created_at", {
+        ascending: false,
+      })
+      .limit(1)
       .maybeSingle(),
 
+    /*
+     * Social media links.
+     *
+     * No is_public column is referenced
+     * because that column does not exist
+     * in business_social_links.
+     */
     supabase
       .from("business_social_links")
       .select("*")
-      .eq("business_id", business.id)
-      .order("platform", { ascending: true }),
+      .eq(
+        "business_id",
+        business.id
+      )
+      .order("created_at", {
+        ascending: true,
+      }),
 
+    /*
+     * Business opening hours.
+     */
     supabase
       .from("business_hours")
       .select("*")
-      .eq("business_id", business.id)
-      .order("day_of_week", { ascending: true }),
+      .eq(
+        "business_id",
+        business.id
+      )
+      .order("day_of_week", {
+        ascending: true,
+      }),
 
+    /*
+     * Business media.
+     */
     supabase
       .from("business_media")
       .select("*")
-      .eq("business_id", business.id)
-      .order("created_at", { ascending: false }),
+      .eq(
+        "business_id",
+        business.id
+      )
+      .order("created_at", {
+        ascending: false,
+      }),
 
+    /*
+     * Products.
+     */
     supabase
       .from("business_products")
       .select("*")
-      .eq("business_id", business.id)
-      .order("created_at", { ascending: false }),
+      .eq(
+        "business_id",
+        business.id
+      )
+      .order("is_featured", {
+        ascending: false,
+      })
+      .order("sort_order", {
+        ascending: true,
+      }),
 
+    /*
+     * Services.
+     */
     supabase
       .from("business_services")
       .select("*")
-      .eq("business_id", business.id)
-      .order("created_at", { ascending: false }),
+      .eq(
+        "business_id",
+        business.id
+      )
+      .order("created_at", {
+        ascending: true,
+      }),
 
+    /*
+     * Promotions.
+     */
     supabase
       .from("business_promotions")
       .select("*")
-      .eq("business_id", business.id)
-      .order("created_at", { ascending: false }),
+      .eq(
+        "business_id",
+        business.id
+      )
+      .order("created_at", {
+        ascending: false,
+      }),
 
+    /*
+     * Published reviews only.
+     */
     supabase
       .from("business_reviews")
       .select("*")
-      .eq("business_id", business.id)
-      .eq("status", "published")
-      .order("created_at", { ascending: false })
+      .eq(
+        "business_id",
+        business.id
+      )
+      .eq(
+        "is_published",
+        true
+      )
+      .order("created_at", {
+        ascending: false,
+      })
       .limit(5),
 
-    supabase.rpc("get_business_rating", {
-      p_business_id: business.id,
-    }),
+    /*
+     * Business rating RPC.
+     */
+    supabase.rpc(
+      "get_business_rating",
+      {
+        p_business_id:
+          business.id,
+      }
+    ).maybeSingle(),
 
+    /*
+     * Business country.
+     */
     supabase
       .from("countries")
-      .select("*")
-      .eq("code", business.country_code)
-      .maybeSingle(),
-
-    supabase
-      .from("business_categories")
-      .select("id, name, slug, is_active, sort_order")
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true }),
-
-    supabase
-      .from("business_subcategories")
       .select(
-        "id, category_id, name, slug, is_active, sort_order"
+        "id, code, name, official_name, currency_code"
       )
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true }),
-
-    supabase
-      .from("business_category_assignments")
-      .select("category_id")
-      .eq("business_id", business.id)
-      .limit(1)
-      .maybeSingle(),
-
-    supabase
-      .from("business_subcategory_assignments")
-      .select("subcategory_id")
-      .eq("business_id", business.id)
-      .limit(1)
+      .eq(
+        "code",
+        business.country_code
+      )
       .maybeSingle(),
   ]);
 
+  /*
+   * Log individual query errors without
+   * breaking the profile page.
+   */
   if (locationResult.error) {
     console.error(
-      "Failed to load business location:",
+      "Business location error:",
       locationResult.error
     );
   }
 
-  if (socialLinksResult.error) {
+  if (socialResult.error) {
     console.error(
-      "Failed to load social links:",
-      socialLinksResult.error
+      "Business social links error:",
+      socialResult.error
     );
   }
 
-  if (businessHoursResult.error) {
+  if (hoursResult.error) {
     console.error(
-      "Failed to load business hours:",
-      businessHoursResult.error
+      "Business hours error:",
+      hoursResult.error
     );
   }
 
   if (mediaResult.error) {
-    console.error("Failed to load business media:", mediaResult.error);
+    console.error(
+      "Business media error:",
+      mediaResult.error
+    );
   }
 
   if (productsResult.error) {
     console.error(
-      "Failed to load business products:",
+      "Business products error:",
       productsResult.error
     );
   }
 
   if (servicesResult.error) {
     console.error(
-      "Failed to load business services:",
+      "Business services error:",
       servicesResult.error
     );
   }
 
   if (promotionsResult.error) {
     console.error(
-      "Failed to load business promotions:",
+      "Business promotions error:",
       promotionsResult.error
     );
   }
 
   if (reviewsResult.error) {
     console.error(
-      "Failed to load business reviews:",
+      "Business reviews error:",
       reviewsResult.error
     );
   }
 
   if (ratingResult.error) {
     console.error(
-      "Failed to load business rating:",
+      "Business rating error:",
       ratingResult.error
     );
   }
 
   if (countryResult.error) {
     console.error(
-      "Failed to load business country:",
+      "Business country error:",
       countryResult.error
     );
   }
 
-  if (categoriesResult.error) {
-    console.error(
-      "Failed to load business categories:",
-      categoriesResult.error
-    );
-  }
+  /*
+   * Normalize query results before passing
+   * them to the client workspace.
+   */
+  const location =
+    locationResult.data ?? null;
 
-  if (subcategoriesResult.error) {
-    console.error(
-      "Failed to load business subcategories:",
-      subcategoriesResult.error
-    );
-  }
+  const socialLinks =
+    socialResult.data ?? [];
 
-  if (categoryAssignmentResult.error) {
-    console.error(
-      "Failed to load business category assignment:",
-      categoryAssignmentResult.error
-    );
-  }
+  const businessHours =
+    hoursResult.data ?? [];
 
-  if (subcategoryAssignmentResult.error) {
-    console.error(
-      "Failed to load business subcategory assignment:",
-      subcategoryAssignmentResult.error
-    );
-  }
+  const media =
+    mediaResult.data ?? [];
 
-  const location = locationResult.data ?? null;
+  const products =
+    productsResult.data ?? [];
 
-  const socialLinks = socialLinksResult.data ?? [];
+  const services =
+    servicesResult.data ?? [];
 
-  const businessHours = businessHoursResult.data ?? [];
+  const promotions =
+    promotionsResult.data ?? [];
 
-  const media = mediaResult.data ?? [];
+  const reviews =
+    reviewsResult.data ?? [];
 
-  const products = productsResult.data ?? [];
+  const rating =
+    ratingResult.data ?? null;
 
-  const services = servicesResult.data ?? [];
-
-  const promotions = promotionsResult.data ?? [];
-
-  const reviews = reviewsResult.data ?? [];
-
-  const rating = ratingResult.data ?? null;
-
-  const country = countryResult.data ?? null;
-
-  const categories = (categoriesResult.data ?? []) as Category[];
-
-  const subcategories =
-    (subcategoriesResult.data ?? []) as Subcategory[];
-
-  const categoryAssignment =
-    categoryAssignmentResult.data ?? null;
-
-  const subcategoryAssignment =
-    subcategoryAssignmentResult.data ?? null;
-
-  const initials =
-    business.name
-      ?.split(" ")
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join("") || "B";
+  const country =
+    countryResult.data ?? null;
 
   return (
     <ProfileWorkspace
       business={business}
       accountEmail={user.email ?? ""}
       logoUrl={logoUrl}
-      initials={initials}
+      initials={getInitials(
+        business.name
+      )}
       location={location}
       socialLinks={socialLinks}
       businessHours={businessHours}
@@ -365,10 +422,6 @@ export default async function BusinessProfilePage() {
       reviews={reviews}
       rating={rating}
       country={country}
-      categories={categories}
-      subcategories={subcategories}
-      categoryAssignment={categoryAssignment}
-      subcategoryAssignment={subcategoryAssignment}
     />
   );
   }
