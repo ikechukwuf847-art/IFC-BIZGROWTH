@@ -146,21 +146,21 @@ export default async function BusinessProfilePage() {
    * in parallel.
    */
   const [
-  locationResult,
-  socialResult,
-  hoursResult,
-  mediaResult,
-  productsResult,
-  servicesResult,
-  promotionsResult,
-  reviewsResult,
-  ratingResult,
-  countryResult,
-  categoriesResult,
-  subcategoriesResult,
-  categoryAssignmentResult,
-  subcategoryAssignmentResult,
-] = await Promise.all([
+    locationResult,
+    categoriesResult,
+    subcategoriesResult,
+    categoryAssignmentResult,
+    subcategoryAssignmentResult,
+    socialResult,
+    hoursResult,
+    mediaResult,
+    productsResult,
+    servicesResult,
+    promotionsResult,
+    reviewsResult,
+    ratingResult,
+    countryResult,
+  ] = await Promise.all([
     /*
      * Primary business location first.
      */
@@ -181,7 +181,7 @@ export default async function BusinessProfilePage() {
       .limit(1)
       .maybeSingle(),
 
-          /*
+    /*
      * Active business categories.
      */
     supabase
@@ -477,7 +477,7 @@ export default async function BusinessProfilePage() {
   const country =
     countryResult.data ?? null;
 
-      const categories =
+  const categories =
     (categoriesResult.data ?? []) as Category[];
 
   const subcategories =
@@ -491,24 +491,24 @@ export default async function BusinessProfilePage() {
 
   return (
     <ProfileWorkspace
-  business={business}
-  accountEmail={user.email ?? ""}
-  logoUrl={logoUrl}
-  initials={getInitials(business.name)}
-  location={location}
-  socialLinks={socialLinks}
-  businessHours={businessHours}
-  media={media}
-  products={products}
-  services={services}
-  promotions={promotions}
-  reviews={reviews}
-  rating={rating}
-  country={country}
-  categories={categories}
-  subcategories={subcategories}
-  categoryAssignment={categoryAssignment}
-  subcategoryAssignment={subcategoryAssignment}
-/>
+      business={business}
+      accountEmail={user.email ?? ""}
+      logoUrl={logoUrl}
+      initials={getInitials(business.name)}
+      location={location}
+      socialLinks={socialLinks}
+      businessHours={businessHours}
+      media={media}
+      products={products}
+      services={services}
+      promotions={promotions}
+      reviews={reviews}
+      rating={rating}
+      country={country}
+      categories={categories}
+      subcategories={subcategories}
+      categoryAssignment={categoryAssignment}
+      subcategoryAssignment={subcategoryAssignment}
+    />
   );
   }
