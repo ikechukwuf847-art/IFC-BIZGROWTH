@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import "./profile.css";
 
 type Business = {
