@@ -588,7 +588,7 @@ export default function Home() {
             <div className="footer-column">
               <h4>Discover</h4>
 
-              <Link href="/businesses">
+              <Link href="/discover">
                 Businesses
               </Link>
 
