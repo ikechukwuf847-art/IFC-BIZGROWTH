@@ -612,7 +612,7 @@ export default function Home() {
                 Business Login
               </Link>
 
-              <Link href="/business/marketing">
+              <Link href="/marketing-support">
                 Marketing Support
               </Link>
             </div>
