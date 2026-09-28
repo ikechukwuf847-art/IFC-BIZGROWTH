@@ -755,7 +755,78 @@ export default function ProfileWorkspace({
     }
   }
 
-  
+  async function geocodeBusinessAddress() {
+  const addressParts = [
+    address1.trim(),
+    address2.trim(),
+    city.trim(),
+    stateRegion.trim(),
+    business.country_code,
+  ].filter(Boolean);
+
+  if (addressParts.length === 0) {
+    return {
+      latitude: null,
+      longitude: null,
+    };
+  }
+
+  try {
+    const response = await fetch("/api/geocode", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        address: addressParts.join(", "),
+      }),
+    });
+
+    if (!response.ok) {
+      return {
+        latitude: null,
+        longitude: null,
+      };
+    }
+
+    const data = await response.json();
+
+    const latitude = Number(data.latitude);
+    const longitude = Number(data.longitude);
+
+    if (
+      !Number.isFinite(latitude) ||
+      latitude < -90 ||
+      latitude > 90
+    ) {
+      return {
+        latitude: null,
+        longitude: null,
+      };
+    }
+
+    if (
+      !Number.isFinite(longitude) ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      return {
+        latitude: null,
+        longitude: null,
+      };
+    }
+
+    return {
+      latitude: Number(latitude.toFixed(7)),
+      longitude: Number(longitude.toFixed(7)),
+    };
+  } catch {
+    return {
+      latitude: null,
+      longitude: null,
+    };
+  }
+        }
 
   async function saveLocation(
     event: FormEvent
@@ -828,8 +899,7 @@ export default function ProfileWorkspace({
        * There are NO latitude/longitude
        * input fields for businesses.
        */
-      const coordinates =
-        await getDeviceCoordinates();
+      const coordinates = await geocodeBusinessAddress();
 
       const payload = {
         business_id: business.id,
