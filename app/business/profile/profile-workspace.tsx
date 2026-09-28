@@ -755,74 +755,7 @@ export default function ProfileWorkspace({
     }
   }
 
-  async function getDeviceCoordinates() {
-    if (
-      typeof navigator === "undefined" ||
-      !("geolocation" in navigator)
-    ) {
-      return {
-        latitude: null,
-        longitude: null,
-      };
-    }
-
-    try {
-      const position =
-        await new Promise<GeolocationPosition>(
-          (resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(
-              resolve,
-              reject,
-              {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0,
-              }
-            );
-          }
-        );
-
-      const latitude = Number(
-        position.coords.latitude.toFixed(7)
-      );
-
-      const longitude = Number(
-        position.coords.longitude.toFixed(7)
-      );
-
-      if (
-        !Number.isFinite(latitude) ||
-        latitude < -90 ||
-        latitude > 90
-      ) {
-        return {
-          latitude: null,
-          longitude: null,
-        };
-      }
-
-      if (
-        !Number.isFinite(longitude) ||
-        longitude < -180 ||
-        longitude > 180
-      ) {
-        return {
-          latitude: null,
-          longitude: null,
-        };
-      }
-
-      return {
-        latitude,
-        longitude,
-      };
-    } catch {
-      return {
-        latitude: null,
-        longitude: null,
-      };
-    }
-  }
+  
 
   async function saveLocation(
     event: FormEvent
