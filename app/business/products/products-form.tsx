@@ -1,5 +1,5 @@
 "use client";
-import "./products.css";
+
 import { ChangeEvent, FormEvent, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
