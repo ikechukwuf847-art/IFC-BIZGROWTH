@@ -91,7 +91,9 @@ export default function AdvertisingPage() {
   const [business, setBusiness] = useState<Business | null>(null);
   const [packages, setPackages] = useState<Package[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
+  const [advertisements, setAdvertisements] = useState<
+    Advertisement[]
+  >([]);
   const [stats, setStats] = useState<Stat[]>([]);
 
   const [tab, setTab] = useState<Tab>("campaigns");
@@ -105,18 +107,14 @@ export default function AdvertisingPage() {
   const [campaignName, setCampaignName] = useState("");
   const [objective, setObjective] = useState("visibility");
 
-  const localCurrency =
-    business?.countries?.[0]?.currency_code || "NGN";
-
   const loadData = useCallback(async () => {
     setLoading(true);
     setError("");
 
     try {
-      // --------------------------------------------------
-      // AUTH
-      // --------------------------------------------------
-
+      /*
+       * 1. Get the currently authenticated user.
+       */
       const {
         data: { user },
         error: authError,
@@ -130,20 +128,17 @@ export default function AdvertisingPage() {
         throw new Error("Please sign in to continue.");
       }
 
-      // --------------------------------------------------
-      // FIND BUSINESS
-      // --------------------------------------------------
-
-      let businessId: string | null = null;
-
-      // First: business_members
-      const { data: membership, error: membershipError } =
+      /*
+       * 2. Load ALL businesses connected to this user.
+       *
+       * Do not use limit(1).
+       * A user can own/manage multiple businesses.
+       */
+      const { data: memberships, error: membershipError } =
         await supabase
           .from("business_members")
-          .select("business_id")
-          .eq("user_id", user.id)
-          .limit(1)
-          .maybeSingle();
+          .select("business_id,role")
+          .eq("user_id", user.id);
 
       if (membershipError) {
         throw new Error(
@@ -151,67 +146,107 @@ export default function AdvertisingPage() {
         );
       }
 
-      if (membership?.business_id) {
-        businessId = membership.business_id;
+      const membershipBusinessIds = (memberships || [])
+        .map((item) => item.business_id)
+        .filter(Boolean);
+
+      /*
+       * 3. Also check businesses where this user is owner_id.
+       */
+      const { data: ownedBusinesses, error: ownerError } =
+        await supabase
+          .from("businesses")
+          .select("id")
+          .eq("owner_id", user.id);
+
+      if (ownerError) {
+        throw new Error(
+          `Unable to load owned businesses: ${ownerError.message}`
+        );
       }
 
-      // Fallback: businesses.owner_id
-      if (!businessId) {
-        const { data: ownedBusiness, error: ownerError } =
-          await supabase
-            .from("businesses")
-            .select("id")
-            .eq("owner_id", user.id)
-            .limit(1)
-            .maybeSingle();
+      const ownedBusinessIds = (ownedBusinesses || [])
+        .map((item) => item.id)
+        .filter(Boolean);
 
-        if (ownerError) {
-          throw new Error(
-            `Unable to load owned business: ${ownerError.message}`
-          );
-        }
+      /*
+       * 4. Combine membership and ownership IDs.
+       */
+      const businessIds = Array.from(
+        new Set([
+          ...membershipBusinessIds,
+          ...ownedBusinessIds,
+        ])
+      );
 
-        if (ownedBusiness?.id) {
-          businessId = ownedBusiness.id;
-        }
-      }
-
-      if (!businessId) {
+      if (businessIds.length === 0) {
         throw new Error(
           "No business account is connected to your account."
         );
       }
 
-      // --------------------------------------------------
-      // BUSINESS
-      // --------------------------------------------------
+      /*
+       * 5. Load all businesses accessible to this user.
+       */
+      const {
+        data: availableBusinesses,
+        error: businessesError,
+      } = await supabase
+        .from("businesses")
+        .select(
+          "id,name,email,country_code,status,verification_status,is_public,owner_id"
+        )
+        .in("id", businessIds);
 
-      const { data: businessData, error: businessError } =
-        await supabase
-          .from("businesses")
-          .select("id,name,email,country_code")
-          .eq("id", businessId)
-          .maybeSingle();
-
-      if (businessError) {
+      if (businessesError) {
         throw new Error(
-          `Unable to load business: ${businessError.message}`
+          `Unable to load businesses: ${businessesError.message}`
         );
       }
 
-      if (!businessData) {
-        throw new Error("Business account was not found.");
+      if (
+        !availableBusinesses ||
+        availableBusinesses.length === 0
+      ) {
+        throw new Error(
+          "No accessible business account was found."
+        );
       }
 
-      // --------------------------------------------------
-      // COUNTRY
-      // --------------------------------------------------
+      /*
+       * 6. Select the business to use for advertising.
+       *
+       * Prefer an active public business.
+       * Otherwise use any active business.
+       * Finally fall back to the first accessible business.
+       */
+      const selectedBusiness =
+        availableBusinesses.find(
+          (item) =>
+            item.status === "active" &&
+            item.is_public === true
+        ) ||
+        availableBusinesses.find(
+          (item) => item.status === "active"
+        ) ||
+        availableBusinesses[0];
 
+      if (!selectedBusiness) {
+        throw new Error(
+          "No active business account was found."
+        );
+      }
+
+      const businessId = selectedBusiness.id;
+
+      /*
+       * 7. Load the business country/currency.
+       */
       const { data: countryData, error: countryError } =
         await supabase
           .from("countries")
           .select("code,currency_code")
-          .eq("code", businessData.country_code)
+          .eq("code", selectedBusiness.country_code)
           .maybeSingle();
 
       if (countryError) {
@@ -221,29 +256,30 @@ export default function AdvertisingPage() {
       }
 
       setBusiness({
-        id: businessData.id,
-        name: businessData.name,
-        email: businessData.email,
-        country_code: businessData.country_code,
+        id: selectedBusiness.id,
+        name: selectedBusiness.name,
+        email: selectedBusiness.email,
+        country_code: selectedBusiness.country_code,
         countries: countryData
           ? [{ currency_code: countryData.currency_code }]
           : [],
       });
 
-      // --------------------------------------------------
-      // PACKAGES
-      // --------------------------------------------------
-
-      const { data: packagesData, error: packagesError } =
-        await supabase
-          .from("ad_packages")
-          .select(
-            "id,name,slug,description,price,currency_code,duration_days"
-          )
-          .eq("is_active", true)
-          .order("duration_days", {
-            ascending: true,
-          });
+      /*
+       * 8. Load active advertising packages.
+       */
+      const {
+        data: packagesData,
+        error: packagesError,
+      } = await supabase
+        .from("ad_packages")
+        .select(
+          "id,name,slug,description,price,currency_code,duration_days"
+        )
+        .eq("is_active", true)
+        .order("duration_days", {
+          ascending: true,
+        });
 
       if (packagesError) {
         throw new Error(
@@ -255,20 +291,21 @@ export default function AdvertisingPage() {
 
       setPackages(loadedPackages);
 
-      // --------------------------------------------------
-      // CAMPAIGNS
-      // --------------------------------------------------
-
-      const { data: campaignsData, error: campaignsError } =
-        await supabase
-          .from("ad_campaigns")
-          .select(
-            "id,business_id,package_id,name,objective,budget,currency_code,starts_at,ends_at,status,created_at"
-          )
-          .eq("business_id", businessId)
-          .order("created_at", {
-            ascending: false,
-          });
+      /*
+       * 9. Load this business's campaigns.
+       */
+      const {
+        data: campaignsData,
+        error: campaignsError,
+      } = await supabase
+        .from("ad_campaigns")
+        .select(
+          "id,business_id,package_id,name,objective,budget,currency_code,starts_at,ends_at,status,created_at"
+        )
+        .eq("business_id", businessId)
+        .order("created_at", {
+          ascending: false,
+        });
 
       if (campaignsError) {
         throw new Error(
@@ -276,6 +313,10 @@ export default function AdvertisingPage() {
         );
       }
 
+      /*
+       * Attach package information manually.
+       * This avoids Supabase relationship/type issues.
+       */
       const campaignsWithPackages: Campaign[] =
         (campaignsData || []).map((campaign) => {
           const packageData = loadedPackages.find(
@@ -284,16 +325,18 @@ export default function AdvertisingPage() {
 
           return {
             ...campaign,
-            ad_packages: packageData ? [packageData] : [],
+            ad_packages: packageData
+              ? [packageData]
+              : [],
           };
         }) as Campaign[];
 
       setCampaigns(campaignsWithPackages);
 
-      // --------------------------------------------------
-      // ADVERTISEMENTS
-      // --------------------------------------------------
-
+      /*
+       * 10. If there are no campaigns, there cannot be
+       * advertisements or statistics.
+       */
       const campaignIds = campaignsWithPackages.map(
         (campaign) => campaign.id
       );
@@ -304,6 +347,9 @@ export default function AdvertisingPage() {
         return;
       }
 
+      /*
+       * 11. Load advertisements belonging to campaigns.
+       */
       const {
         data: advertisementsData,
         error: advertisementsError,
@@ -325,10 +371,9 @@ export default function AdvertisingPage() {
 
       setAdvertisements(loadedAdvertisements);
 
-      // --------------------------------------------------
-      // STATS
-      // --------------------------------------------------
-
+      /*
+       * 12. Load statistics for those advertisements.
+       */
       const advertisementIds = loadedAdvertisements.map(
         (advertisement) => advertisement.id
       );
@@ -371,10 +416,6 @@ export default function AdvertisingPage() {
     loadData();
   }, [loadData]);
 
-  // --------------------------------------------------
-  // DERIVED DATA
-  // --------------------------------------------------
-
   const activeCampaigns = useMemo(
     () =>
       campaigns.filter(
@@ -388,11 +429,14 @@ export default function AdvertisingPage() {
       stats.reduce(
         (total, item) => ({
           impressions:
-            total.impressions + Number(item.impressions || 0),
+            total.impressions +
+            Number(item.impressions || 0),
           clicks:
-            total.clicks + Number(item.clicks || 0),
+            total.clicks +
+            Number(item.clicks || 0),
           contacts:
-            total.contacts + Number(item.contacts || 0),
+            total.contacts +
+            Number(item.contacts || 0),
           conversions:
             total.conversions +
             Number(item.conversions || 0),
@@ -407,10 +451,9 @@ export default function AdvertisingPage() {
     [stats]
   );
 
-  // --------------------------------------------------
-  // CREATE CAMPAIGN
-  // --------------------------------------------------
-
+  /*
+   * Create advertising campaign and initialize payment.
+   */
   const createCampaign = async () => {
     if (!business) {
       setError("Business account not found.");
@@ -450,10 +493,9 @@ export default function AdvertisingPage() {
         );
       }
 
-      // --------------------------------------------------
-      // CREATE CAMPAIGN
-      // --------------------------------------------------
-
+      /*
+       * Create campaign.
+       */
       const campaignResponse = await fetch(
         `${supabaseUrl}/functions/v1/create-ad-campaign`,
         {
@@ -490,10 +532,9 @@ export default function AdvertisingPage() {
         );
       }
 
-      // --------------------------------------------------
-      // PAYMENT
-      // --------------------------------------------------
-
+      /*
+       * Initialize Paystack payment.
+       */
       const paymentResponse = await fetch(
         `${supabaseUrl}/functions/v1/create-payment`,
         {
@@ -540,10 +581,6 @@ export default function AdvertisingPage() {
     }
   };
 
-  // --------------------------------------------------
-  // LOADING
-  // --------------------------------------------------
-
   if (loading) {
     return (
       <main className="advertising-page">
@@ -554,10 +591,6 @@ export default function AdvertisingPage() {
       </main>
     );
   }
-
-  // --------------------------------------------------
-  // PAGE
-  // --------------------------------------------------
 
   return (
     <main className="advertising-page">
@@ -594,6 +627,7 @@ export default function AdvertisingPage() {
           <button
             type="button"
             onClick={() => setError("")}
+            aria-label="Dismiss error"
           >
             ×
           </button>
@@ -1013,9 +1047,7 @@ export default function AdvertisingPage() {
         <section className="advertising-content">
           <div className="section-heading">
             <div>
-              <h2>
-                Advertising statistics
-              </h2>
+              <h2>Advertising statistics</h2>
 
               <p>
                 Performance data from your
@@ -1120,4 +1152,4 @@ export default function AdvertisingPage() {
       )}
     </main>
   );
-  }
+}
