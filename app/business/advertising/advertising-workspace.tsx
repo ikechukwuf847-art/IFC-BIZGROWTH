@@ -1,920 +1,940 @@
-"use client";
+.advertising-page {
+  min-height: 100vh;
+  background: #f5f7fb;
+  color: #111827;
+  padding: 32px 24px 70px;
+}
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+.advertising-shell {
+  width: min(1240px, 100%);
+  margin: 0 auto;
+}
 
-type AdPackage = {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  price: number;
-  currency_code: string;
-  duration_days: number;
-  is_active: boolean;
-};
+.advertising-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 30px;
+  margin-bottom: 28px;
+}
 
-type AdPlacement = {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  placement_type: string;
-  is_active: boolean;
-};
+.eyebrow {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
 
-type Campaign = {
-  id: string;
-  package_id: string | null;
-  name: string;
-  objective: string;
-  budget: number;
-  currency_code: string;
-  starts_at: string;
-  ends_at: string;
-  status: string;
-  created_at: string;
-  updated_at: string;
-};
+.advertising-header h1 {
+  margin: 0;
+  font-size: clamp(30px, 4vw, 46px);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
 
-type Props = {
-  businessId: string;
-  businessName: string;
-  businessStatus: string;
-  packages: AdPackage[];
-  placements: AdPlacement[];
-  campaigns: Campaign[];
-};
+.advertising-header p {
+  max-width: 650px;
+  margin: 12px 0 0;
+  color: #667085;
+  font-size: 15px;
+  line-height: 1.7;
+}
 
-function formatMoney(amount: number, currency: string) {
-  try {
-    return new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  } catch {
-    return `${currency} ${amount.toLocaleString()}`;
+.business-chip {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 190px;
+  padding: 12px 15px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 5px 20px rgba(15, 23, 42, 0.04);
+}
+
+.business-chip strong,
+.business-chip small {
+  display: block;
+}
+
+.business-chip strong {
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.business-chip small {
+  margin-top: 3px;
+  color: #667085;
+  font-size: 11px;
+}
+
+.business-dot {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #16a34a;
+  box-shadow: 0 0 0 5px #dcfce7;
+}
+
+.advertising-nav {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  padding: 5px;
+  margin-bottom: 26px;
+  border: 1px solid #e5e7eb;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 5px 20px rgba(15, 23, 42, 0.04);
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 48px;
+  flex: 1;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: #667085;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  transition: 0.2s ease;
+}
+
+.nav-item small {
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 10px;
+}
+
+.nav-item:hover {
+  color: #111827;
+  background: #f8fafc;
+}
+
+.nav-item.active {
+  color: #fff;
+  background: #2563eb;
+}
+
+.nav-item.active small {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+.alert {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 17px;
+  margin-bottom: 20px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+.alert strong {
+  margin-right: 4px;
+}
+
+.alert-error {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.alert-success {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.alert button {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 20px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.section-heading.compact {
+  margin-top: 42px;
+}
+
+.section-heading h2 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -0.025em;
+}
+
+.section-heading p {
+  margin: 6px 0 0;
+  color: #667085;
+  font-size: 13px;
+}
+
+.campaign-builder {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+.builder-card,
+.checkout-card,
+.stats-table-card,
+.active-card,
+.empty-card,
+.info-box {
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.04);
+}
+
+.builder-card {
+  padding: 25px;
+}
+
+.card-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.step-number {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.card-heading h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.card-heading p {
+  margin: 4px 0 0;
+  color: #667085;
+  font-size: 12px;
+}
+
+.package-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.package-card {
+  min-height: 145px;
+  padding: 17px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+  color: #111827;
+  text-align: left;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.package-card:hover {
+  border-color: #93c5fd;
+  transform: translateY(-1px);
+}
+
+.package-card.selected {
+  border: 2px solid #2563eb;
+  background: #eff6ff;
+}
+
+.package-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #667085;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.package-card strong {
+  display: block;
+  margin-top: 25px;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+}
+
+.package-card small {
+  display: block;
+  margin-top: 7px;
+  color: #98a2b3;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.check {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #fff;
+  font-size: 11px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.form-grid label {
+  display: block;
+}
+
+.form-grid label > span {
+  display: block;
+  margin-bottom: 8px;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.form-grid input,
+.form-grid select {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid #d0d5dd;
+  border-radius: 11px;
+  outline: none;
+  background: #fff;
+  color: #111827;
+  font: inherit;
+  font-size: 13px;
+  transition: 0.2s ease;
+}
+
+.form-grid input:focus,
+.form-grid select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.checkout-card {
+  display: grid;
+  grid-template-columns: 1.4fr 0.7fr auto;
+  align-items: center;
+  gap: 25px;
+  padding: 23px 25px;
+}
+
+.checkout-label {
+  display: block;
+  margin-bottom: 6px;
+  color: #98a2b3;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.checkout-card h3 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.checkout-card p {
+  margin: 5px 0 0;
+  color: #667085;
+  font-size: 12px;
+}
+
+.checkout-price {
+  text-align: right;
+}
+
+.checkout-price small {
+  display: block;
+  color: #98a2b3;
+  font-size: 10px;
+}
+
+.checkout-price strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 22px;
+}
+
+.primary-button,
+.secondary-button {
+  min-height: 46px;
+  padding: 0 20px;
+  border-radius: 11px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+  transition: 0.2s ease;
+}
+
+.primary-button {
+  border: 0;
+  background: #2563eb;
+  color: #fff;
+}
+
+.primary-button:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.secondary-button {
+  border: 1px solid #d0d5dd;
+  background: #fff;
+  color: #344054;
+}
+
+.secondary-button:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.secondary-button.full {
+  width: 100%;
+}
+
+.secure-note {
+  grid-column: 1 / -1;
+  margin-top: -12px;
+  color: #98a2b3;
+  font-size: 10px;
+}
+
+.campaign-list {
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.campaign-row {
+  display: grid;
+  grid-template-columns: 1fr 180px 130px;
+  align-items: center;
+  gap: 20px;
+  padding: 17px 20px;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.campaign-row:last-child {
+  border-bottom: 0;
+}
+
+.campaign-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.campaign-icon,
+.empty-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 11px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.campaign-info h3 {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.campaign-info p {
+  margin: 4px 0 0;
+  color: #98a2b3;
+  font-size: 11px;
+  text-transform: capitalize;
+}
+
+.campaign-meta {
+  text-align: right;
+}
+
+.campaign-meta strong,
+.campaign-meta span {
+  display: block;
+}
+
+.campaign-meta strong {
+  font-size: 13px;
+}
+
+.campaign-meta span {
+  margin-top: 4px;
+  color: #98a2b3;
+  font-size: 10px;
+}
+
+.status {
+  justify-self: end;
+  padding: 6px 9px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 750;
+  text-transform: capitalize;
+}
+
+.status-active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-pending_payment {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-draft {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.status-paused {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-completed {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.status-cancelled,
+.status-rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.empty-card {
+  padding: 50px 25px;
+  text-align: center;
+}
+
+.empty-card.large {
+  padding: 75px 25px;
+}
+
+.empty-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 15px;
+}
+
+.empty-card h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.empty-card p {
+  max-width: 480px;
+  margin: 8px auto 20px;
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.info-box {
+  margin-top: 18px;
+  padding: 17px 20px;
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.info-box strong {
+  color: #1d4ed8;
+  font-size: 13px;
+}
+
+.info-box p {
+  margin: 5px 0 0;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.active-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.active-card {
+  padding: 25px;
+}
+
+.active-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 9px;
+  border-radius: 20px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.live-badge span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #16a34a;
+}
+
+.active-package {
+  color: #667085;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.active-card h3 {
+  margin: 22px 0 7px;
+  font-size: 20px;
+}
+
+.active-card > p {
+  margin: 0;
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.date-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 25px 0 15px;
+}
+
+.date-grid div {
+  padding: 14px;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.date-grid small,
+.date-grid strong {
+  display: block;
+}
+
+.date-grid small {
+  color: #98a2b3;
+  font-size: 10px;
+}
+
+.date-grid strong {
+  margin-top: 5px;
+  font-size: 12px;
+}
+
+.active-price {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+  margin-bottom: 15px;
+  border-top: 1px solid #eef2f6;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.active-price small {
+  color: #667085;
+  font-size: 11px;
+}
+
+.active-price strong {
+  font-size: 16px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 15px;
+  margin-bottom: 18px;
+}
+
+.stat-card {
+  padding: 21px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.04);
+}
+
+.stat-card span,
+.stat-card small {
+  display: block;
+}
+
+.stat-card span {
+  color: #667085;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.stat-card strong {
+  display: block;
+  margin: 13px 0 5px;
+  font-size: 27px;
+  letter-spacing: -0.04em;
+}
+
+.stat-card small {
+  color: #98a2b3;
+  font-size: 10px;
+}
+
+.stats-table-card {
+  overflow: hidden;
+}
+
+.table-heading {
+  padding: 20px 22px;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.table-heading h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.table-heading p {
+  margin: 5px 0 0;
+  color: #98a2b3;
+  font-size: 11px;
+}
+
+.stats-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.stats-table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 650px;
+}
+
+.stats-table-wrap th,
+.stats-table-wrap td {
+  padding: 14px 20px;
+  border-bottom: 1px solid #eef2f6;
+  text-align: left;
+  font-size: 12px;
+}
+
+.stats-table-wrap th {
+  background: #f8fafc;
+  color: #667085;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stats-table-wrap td {
+  color: #344054;
+}
+
+.table-empty {
+  padding: 45px 20px;
+  text-align: center;
+  color: #98a2b3;
+  font-size: 12px;
+}
+
+.advertising-loading {
+  display: grid;
+  min-height: 70vh;
+  place-items: center;
+  align-content: center;
+  gap: 13px;
+  color: #667085;
+  font-size: 13px;
+}
+
+.loading-spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid #dbeafe;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: advertising-spin 0.8s linear infinite;
+}
+
+@keyframes advertising-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en-NG", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
-
-function toLocalDateTimeValue(date: Date) {
-  const offset = date.getTimezoneOffset();
-  const local = new Date(date.getTime() - offset * 60 * 1000);
-
-  return local.toISOString().slice(0, 16);
-}
-
-function addDays(date: Date, days: number) {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
-}
-
-function getStatusLabel(status: string) {
-  return status.replaceAll("_", " ");
-}
-
-export default function AdvertisingWorkspace({
-  businessId,
-  businessName,
-  businessStatus,
-  packages,
-  placements,
-  campaigns,
-}: Props) {
-  const router = useRouter();
-  const supabase = createSupabaseBrowserClient();
-
-  const [selectedPackageId, setSelectedPackageId] = useState(
-    packages[0]?.id ?? "",
-  );
-
-  const [campaignName, setCampaignName] = useState("");
-  const [objective, setObjective] = useState("visibility");
-  const [startsAt, setStartsAt] = useState(() => {
-    const start = new Date();
-    start.setMinutes(start.getMinutes() + 30);
-    return toLocalDateTimeValue(start);
-  });
-
-  const selectedPackage = useMemo(
-    () =>
-      packages.find(
-        (item) => item.id === selectedPackageId,
-      ) ?? null,
-    [packages, selectedPackageId],
-  );
-
-  const calculatedEnd = useMemo(() => {
-    if (!selectedPackage || !startsAt) return "";
-
-    const start = new Date(startsAt);
-
-    if (Number.isNaN(start.getTime())) return "";
-
-    return toLocalDateTimeValue(
-      addDays(start, selectedPackage.duration_days),
-    );
-  }, [selectedPackage, startsAt]);
-
-  const [endsAt, setEndsAt] = useState("");
-
-  const effectiveEndsAt = endsAt || calculatedEnd;
-
-  const [activeSection, setActiveSection] =
-    useState<"plans" | "campaigns">("plans");
-
-  const [showCampaignForm, setShowCampaignForm] =
-    useState(false);
-
-  const [submitting, setSubmitting] = useState(false);
-  const [payingCampaignId, setPayingCampaignId] =
-    useState<string | null>(null);
-
-  const [message, setMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
-
-  function choosePackage(packageId: string) {
-    setSelectedPackageId(packageId);
-    setEndsAt("");
-    setShowCampaignForm(true);
-
-    window.scrollTo({
-      top: document.body.scrollHeight,
-      behavior: "smooth",
-    });
+@media (max-width: 1050px) {
+  .package-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  async function createCampaign(event: React.FormEvent) {
-    event.preventDefault();
-
-    setMessage(null);
-
-    if (businessStatus !== "active") {
-      setMessage({
-        type: "error",
-        text: "Your business must be active before you can create an advertising campaign.",
-      });
-      return;
-    }
-
-    if (!selectedPackage) {
-      setMessage({
-        type: "error",
-        text: "Please select an advertising package.",
-      });
-      return;
-    }
-
-    if (!campaignName.trim()) {
-      setMessage({
-        type: "error",
-        text: "Enter a campaign name.",
-      });
-      return;
-    }
-
-    const start = new Date(startsAt);
-    const end = new Date(effectiveEndsAt);
-
-    if (
-      Number.isNaN(start.getTime()) ||
-      Number.isNaN(end.getTime())
-    ) {
-      setMessage({
-        type: "error",
-        text: "Please select valid campaign dates.",
-      });
-      return;
-    }
-
-    if (start <= new Date()) {
-      setMessage({
-        type: "error",
-        text: "Campaign start time must be in the future.",
-      });
-      return;
-    }
-
-    if (end <= start) {
-      setMessage({
-        type: "error",
-        text: "Campaign end time must be after the start time.",
-      });
-      return;
-    }
-
-    setSubmitting(true);
-
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session?.access_token) {
-        router.push("/login");
-        return;
-      }
-
-      const { data, error } =
-        await supabase.functions.invoke(
-          "create-ad-campaign",
-          {
-            body: {
-              business_id: businessId,
-              package_id: selectedPackage.id,
-              name: campaignName.trim(),
-              objective,
-              budget: Number(selectedPackage.price),
-              currency_code:
-                selectedPackage.currency_code.toUpperCase(),
-              starts_at: start.toISOString(),
-              ends_at: end.toISOString(),
-            },
-          },
-        );
-
-      if (error) {
-        throw new Error(
-          error.message ||
-            "Unable to create advertising campaign.",
-        );
-      }
-
-      if (!data?.success) {
-        throw new Error(
-          data?.message ||
-            "Unable to create advertising campaign.",
-        );
-      }
-
-      const campaign = data.campaign;
-
-      if (!campaign?.id) {
-        throw new Error(
-          "Campaign was created but no campaign ID was returned.",
-        );
-      }
-
-      setMessage({
-        type: "success",
-        text: "Campaign created. Continue to payment to send it for review.",
-      });
-
-      setCampaignName("");
-      setShowCampaignForm(false);
-
-      router.refresh();
-
-      await startPayment(
-        selectedPackage,
-        campaign.id,
-      );
-    } catch (error) {
-      setMessage({
-        type: "error",
-        text:
-          error instanceof Error
-            ? error.message
-            : "Something went wrong while creating the campaign.",
-      });
-    } finally {
-      setSubmitting(false);
-    }
+  .checkout-card {
+    grid-template-columns: 1fr 1fr;
   }
 
-  async function startPayment(
-    packageData: AdPackage,
-    campaignId: string,
-  ) {
-    setMessage(null);
-    setPayingCampaignId(campaignId);
-
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session?.access_token) {
-        router.push("/login");
-        return;
-      }
-
-      const { data, error } =
-        await supabase.functions.invoke(
-          "create-payment",
-          {
-            body: {
-              business_id: businessId,
-              order_type: "ad_campaign",
-              package_id: packageData.id,
-              currency_code:
-                packageData.currency_code.toUpperCase(),
-              description:
-                `Advertising campaign payment: ${campaignId}`,
-              metadata: {
-                campaign_id: campaignId,
-                business_name: businessName,
-              },
-            },
-          },
-        );
-
-      if (error) {
-        throw new Error(
-          error.message ||
-            "Unable to initialize payment.",
-        );
-      }
-
-      if (!data?.success) {
-        throw new Error(
-          data?.message ||
-            "Unable to initialize payment.",
-        );
-      }
-
-      const authorizationUrl =
-        data?.payment?.authorization_url;
-
-      if (!authorizationUrl) {
-        throw new Error(
-          "Payment was initialized but no checkout URL was returned.",
-        );
-      }
-
-      window.location.assign(authorizationUrl);
-    } catch (error) {
-      setMessage({
-        type: "error",
-        text:
-          error instanceof Error
-            ? error.message
-            : "Unable to start payment.",
-      });
-    } finally {
-      setPayingCampaignId(null);
-    }
+  .checkout-card .primary-button {
+    grid-column: 1 / -1;
   }
 
-  return (
-    <div className="advertising-workspace">
-      <div className="advertising-tabs">
-        <button
-          type="button"
-          className={
-            activeSection === "plans"
-              ? "advertising-tab advertising-tab--active"
-              : "advertising-tab"
-          }
-          onClick={() => setActiveSection("plans")}
-        >
-          Advertising plans
-        </button>
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 
-        <button
-          type="button"
-          className={
-            activeSection === "campaigns"
-              ? "advertising-tab advertising-tab--active"
-              : "advertising-tab"
-          }
-          onClick={() => setActiveSection("campaigns")}
-        >
-          My campaigns
-          <span>{campaigns.length}</span>
-        </button>
-      </div>
+@media (max-width: 760px) {
+  .advertising-page {
+    padding: 20px 14px 45px;
+  }
 
-      {message && (
-        <div
-          className={`advertising-message advertising-message--${message.type}`}
-          role="alert"
-        >
-          {message.text}
-        </div>
-      )}
+  .advertising-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 
-      {activeSection === "plans" && (
-        <>
-          <section className="advertising-section">
-            <div className="advertising-section-heading">
-              <div>
-                <span className="advertising-kicker">
-                  PRICING
-                </span>
-                <h2>Choose your advertising plan</h2>
-                <p>
-                  Prices, currencies and campaign duration are
-                  loaded directly from your advertising packages.
-                </p>
-              </div>
-            </div>
+  .business-chip {
+    width: 100%;
+  }
 
-            {packages.length === 0 ? (
-              <div className="advertising-empty">
-                <div className="advertising-empty-icon">!</div>
-                <h3>No advertising plans are available</h3>
-                <p>
-                  There are currently no active advertising
-                  packages configured for your account.
-                </p>
-              </div>
-            ) : (
-              <div className="advertising-plans">
-                {packages.map((plan, index) => (
-                  <article
-                    className={`advertising-plan-card ${
-                      selectedPackageId === plan.id
-                        ? "advertising-plan-card--selected"
-                        : ""
-                    } ${
-                      index === 1
-                        ? "advertising-plan-card--featured"
-                        : ""
-                    }`}
-                    key={plan.id}
-                  >
-                    {index === 1 && (
-                      <div className="advertising-plan-badge">
-                        Popular
-                      </div>
-                    )}
+  .advertising-nav {
+    overflow-x: auto;
+  }
 
-                    <div className="advertising-plan-top">
-                      <div>
-                        <span className="advertising-plan-label">
-                          {plan.name}
-                        </span>
+  .nav-item {
+    min-width: 130px;
+  }
 
-                        <h3>
-                          {formatMoney(
-                            Number(plan.price),
-                            plan.currency_code,
-                          )}
-                        </h3>
-                      </div>
+  .package-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 
-                      <div className="advertising-plan-duration">
-                        {plan.duration_days}
-                        <small>days</small>
-                      </div>
-                    </div>
+  .form-grid,
+  .active-grid {
+    grid-template-columns: 1fr;
+  }
 
-                    <p className="advertising-plan-description">
-                      {plan.description ||
-                        `Run an advertising campaign for ${plan.duration_days} days.`}
-                    </p>
+  .campaign-row {
+    grid-template-columns: 1fr;
+    gap: 13px;
+  }
 
-                    <div className="advertising-plan-details">
-                      <div>
-                        <span>Budget</span>
-                        <strong>
-                          {formatMoney(
-                            Number(plan.price),
-                            plan.currency_code,
-                          )}
-                        </strong>
-                      </div>
+  .campaign-meta {
+    text-align: left;
+  }
 
-                      <div>
-                        <span>Duration</span>
-                        <strong>
-                          {plan.duration_days} days
-                        </strong>
-                      </div>
+  .status {
+    justify-self: start;
+  }
 
-                      <div>
-                        <span>Currency</span>
-                        <strong>
-                          {plan.currency_code}
-                        </strong>
-                      </div>
-                    </div>
+  .checkout-card {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
 
-                    <button
-                      type="button"
-                      className={
-                        selectedPackageId === plan.id
-                          ? "advertising-button advertising-button--primary"
-                          : "advertising-button advertising-button--secondary"
-                      }
-                      onClick={() => choosePackage(plan.id)}
-                    >
-                      {selectedPackageId === plan.id
-                        ? "Selected plan"
-                        : "Choose this plan"}
-                    </button>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
+  .checkout-price {
+    text-align: left;
+  }
 
-          <section className="advertising-section advertising-section--light">
-            <div className="advertising-section-heading">
-              <div>
-                <span className="advertising-kicker">
-                  WHERE YOUR AD CAN APPEAR
-                </span>
-                <h2>Available ad placements</h2>
-                <p>
-                  These placements are managed from your IFC
-                  BIZGROWTH advertising system.
-                </p>
-              </div>
-            </div>
+  .checkout-card .primary-button {
+    grid-column: auto;
+    width: 100%;
+  }
 
-            {placements.length === 0 ? (
-              <div className="advertising-empty advertising-empty--small">
-                <h3>No placements available</h3>
-                <p>
-                  Advertising placements have not been activated
-                  yet.
-                </p>
-              </div>
-            ) : (
-              <div className="advertising-placement-grid">
-                {placements.map((placement) => (
-                  <div
-                    className="advertising-placement-card"
-                    key={placement.id}
-                  >
-                    <div className="advertising-placement-icon">
-                      AD
-                    </div>
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
 
-                    <div>
-                      <h3>{placement.name}</h3>
+@media (max-width: 480px) {
+  .advertising-header h1 {
+    font-size: 30px;
+  }
 
-                      <span>
-                        {placement.placement_type}
-                      </span>
+  .builder-card,
+  .active-card {
+    padding: 18px;
+  }
 
-                      {placement.description && (
-                        <p>{placement.description}</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
+  .package-grid {
+    grid-template-columns: 1fr;
+  }
 
-          {showCampaignForm && selectedPackage && (
-            <section className="advertising-section advertising-create-section">
-              <div className="advertising-section-heading">
-                <div>
-                  <span className="advertising-kicker">
-                    CREATE CAMPAIGN
-                  </span>
+  .package-card {
+    min-height: 120px;
+  }
 
-                  <h2>
-                    Set up your{" "}
-                    {selectedPackage.name} campaign
-                  </h2>
+  .package-card strong {
+    margin-top: 18px;
+  }
 
-                  <p>
-                    Your package price is locked to the amount
-                    configured in the backend.
-                  </p>
-                </div>
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
 
-                <button
-                  type="button"
-                  className="advertising-close-button"
-                  onClick={() =>
-                    setShowCampaignForm(false)
-                  }
-                >
-                  Close
-                </button>
-              </div>
-
-              <form
-                className="advertising-form"
-                onSubmit={createCampaign}
-              >
-                <div className="advertising-form-grid">
-                  <label>
-                    <span>Campaign name</span>
-                    <input
-                      type="text"
-                      value={campaignName}
-                      onChange={(event) =>
-                        setCampaignName(event.target.value)
-                      }
-                      placeholder="e.g. Summer business campaign"
-                      maxLength={150}
-                      required
-                    />
-                  </label>
-
-                  <label>
-                    <span>Campaign objective</span>
-
-                    <select
-                      value={objective}
-                      onChange={(event) =>
-                        setObjective(event.target.value)
-                      }
-                    >
-                      <option value="visibility">
-                        Increase visibility
-                      </option>
-
-                      <option value="website_traffic">
-                        Drive website traffic
-                      </option>
-
-                      <option value="product_awareness">
-                        Promote products
-                      </option>
-
-                      <option value="service_awareness">
-                        Promote services
-                      </option>
-
-                      <option value="brand_awareness">
-                        Build brand awareness
-                      </option>
-                    </select>
-                  </label>
-
-                  <label>
-                    <span>Start date and time</span>
-
-                    <input
-                      type="datetime-local"
-                      value={startsAt}
-                      onChange={(event) => {
-                        setStartsAt(event.target.value);
-                        setEndsAt("");
-                      }}
-                      required
-                    />
-                  </label>
-
-                  <label>
-                    <span>End date and time</span>
-
-                    <input
-                      type="datetime-local"
-                      value={effectiveEndsAt}
-                      onChange={(event) =>
-                        setEndsAt(event.target.value)
-                      }
-                      min={startsAt}
-                      required
-                    />
-
-                    <small>
-                      Default: {selectedPackage.duration_days}{" "}
-                      days after the campaign starts.
-                    </small>
-                  </label>
-                </div>
-
-                <div className="advertising-campaign-summary">
-                  <div>
-                    <span>Selected plan</span>
-                    <strong>
-                      {selectedPackage.name}
-                    </strong>
-                  </div>
-
-                  <div>
-                    <span>Campaign budget</span>
-                    <strong>
-                      {formatMoney(
-                        Number(selectedPackage.price),
-                        selectedPackage.currency_code,
-                      )}
-                    </strong>
-                  </div>
-
-                  <div>
-                    <span>Duration</span>
-                    <strong>
-                      {selectedPackage.duration_days} days
-                    </strong>
-                  </div>
-                </div>
-
-                <div className="advertising-form-note">
-                  <strong>What happens next?</strong>
-                  <p>
-                    Your campaign is created as pending payment.
-                    After successful payment, the payment webhook
-                    moves it to review. IFC BIZGROWTH then reviews
-                    the campaign before it can become active.
-                  </p>
-                </div>
-
-                <div className="advertising-form-actions">
-                  <button
-                    type="button"
-                    className="advertising-button advertising-button--secondary"
-                    onClick={() =>
-                      setShowCampaignForm(false)
-                    }
-                    disabled={submitting}
-                  >
-                    Cancel
-                  </button>
-
-                  <button
-                    type="submit"
-                    className="advertising-button advertising-button--primary"
-                    disabled={submitting}
-                  >
-                    {submitting
-                      ? "Creating campaign..."
-                      : "Create & continue to payment"}
-                  </button>
-                </div>
-              </form>
-            </section>
-          )}
-        </>
-      )}
-
-      {activeSection === "campaigns" && (
-        <section className="advertising-section">
-          <div className="advertising-section-heading advertising-section-heading--campaigns">
-            <div>
-              <span className="advertising-kicker">
-                CAMPAIGNS
-              </span>
-
-              <h2>Your advertising campaigns</h2>
-
-              <p>
-                Manage campaigns created for {businessName}.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              className="advertising-button advertising-button--primary"
-              onClick={() => {
-                setActiveSection("plans");
-                setShowCampaignForm(true);
-              }}
-              disabled={packages.length === 0}
-            >
-              Create campaign
-            </button>
-          </div>
-
-          {campaigns.length === 0 ? (
-            <div className="advertising-empty">
-              <div className="advertising-empty-icon">
-                AD
-              </div>
-
-              <h3>No campaigns yet</h3>
-
-              <p>
-                Choose an advertising plan to create your first
-                campaign.
-              </p>
-
-              {packages.length > 0 && (
-                <button
-                  type="button"
-                  className="advertising-button advertising-button--primary"
-                  onClick={() => {
-                    setActiveSection("plans");
-                    setShowCampaignForm(true);
-                  }}
-                >
-                  View advertising plans
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="advertising-campaign-list">
-              {campaigns.map((campaign) => (
-                <article
-                  className="advertising-campaign-card"
-                  key={campaign.id}
-                >
-                  <div className="advertising-campaign-main">
-                    <div className="advertising-campaign-icon">
-                      AD
-                    </div>
-
-                    <div>
-                      <div className="advertising-campaign-title-row">
-                        <h3>{campaign.name}</h3>
-
-                        <span
-                          className={`advertising-campaign-status advertising-campaign-status--${campaign.status}`}
-                        >
-                          {getStatusLabel(
-                            campaign.status,
-                          )}
-                        </span>
-                      </div>
-
-                      <p>
-                        Objective:{" "}
-                        {campaign.objective.replaceAll(
-                          "_",
-                          " ",
-                        )}
-                      </p>
-
-                      <div className="advertising-campaign-meta">
-                        <span>
-                          {formatMoney(
-                            Number(campaign.budget),
-                            campaign.currency_code,
-                          )}
-                        </span>
-
-                        <span>
-                          {formatDate(campaign.starts_at)}
-                        </span>
-
-                        <span>
-                          → {formatDate(campaign.ends_at)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="advertising-campaign-actions">
-                    {campaign.status ===
-                      "pending_payment" &&
-                      campaign.package_id && (
-                        <button
-                          type="button"
-                          className="advertising-button advertising-button--primary advertising-button--small"
-                          disabled={
-                            payingCampaignId ===
-                            campaign.id
-                          }
-                          onClick={() => {
-                            const campaignPackage =
-                              packages.find(
-                                (item) =>
-                                  item.id ===
-                                  campaign.package_id,
-                              );
-
-                            if (!campaignPackage) {
-                              setMessage({
-                                type: "error",
-                                text: "The advertising package for this campaign is no longer available.",
-                              });
-                              return;
-                            }
-
-                            startPayment(
-                              campaignPackage,
-                              campaign.id,
-                            );
-                          }}
-                        >
-                          {payingCampaignId ===
-                          campaign.id
-                            ? "Opening payment..."
-                            : "Pay now"}
-                        </button>
-                      )}
-
-                    {campaign.status ===
-                      "pending_review" && (
-                      <span className="advertising-review-note">
-                        Payment received — awaiting review
-                      </span>
-                    )}
-
-                    {campaign.status === "active" && (
-                      <span className="advertising-active-note">
-                        Campaign is active
-                      </span>
-                    )}
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-    </div>
-  );
+  .date-grid {
+    grid-template-columns: 1fr;
+  }
   }
