@@ -275,70 +275,281 @@ export default function AdvertisingPage() {
         (campaign) => campaign.id
       );
 
-      if (campaignIds.length === 0) {
-        setAdvertisements([]);
-        setStats([]);
-        return;
-      }
+const loadData = useCallback(async () => {
+  setLoading(true);
+  setError("");
 
-      const { data: advertisementsData, error: advertisementsError } =
+  try {
+    // --------------------------------------------------
+    // 1. AUTHENTICATED USER
+    // --------------------------------------------------
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError) {
+      throw new Error(authError.message);
+    }
+
+    if (!user) {
+      throw new Error("Please sign in to continue.");
+    }
+
+    // --------------------------------------------------
+    // 2. FIND BUSINESS
+    //    FIRST: business_members
+    //    FALLBACK: businesses.owner_id
+    // --------------------------------------------------
+
+    let businessId: string | null = null;
+
+    const { data: membership, error: membershipError } =
+      await supabase
+        .from("business_members")
+        .select("business_id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+
+    if (membershipError) {
+      throw new Error(
+        `Unable to load business membership: ${membershipError.message}`
+      );
+    }
+
+    if (membership?.business_id) {
+      businessId = membership.business_id;
+    }
+
+    // --------------------------------------------------
+    // FALLBACK TO BUSINESS OWNER
+    // --------------------------------------------------
+
+    if (!businessId) {
+      const { data: ownedBusiness, error: ownerBusinessError } =
         await supabase
-          .from("advertisements")
-          .select(
-            "id,campaign_id,placement_id,title,description,destination_url,status"
-          )
-          .in("campaign_id", campaignIds);
+          .from("businesses")
+          .select("id")
+          .eq("owner_id", user.id)
+          .limit(1)
+          .maybeSingle();
 
-      if (advertisementsError) {
+      if (ownerBusinessError) {
         throw new Error(
-          `Unable to load advertisements: ${advertisementsError.message}`
+          `Unable to load owned business: ${ownerBusinessError.message}`
         );
       }
 
-      const loadedAdvertisements =
-        (advertisementsData || []) as Advertisement[];
+      if (ownedBusiness?.id) {
+        businessId = ownedBusiness.id;
+      }
+    }
 
-      setAdvertisements(loadedAdvertisements);
+    if (!businessId) {
+      throw new Error(
+        "No business account is connected to your account."
+      );
+    }
 
-      // --------------------------------------------------
-      // 9. LOAD AD STATISTICS
-      // --------------------------------------------------
+    // --------------------------------------------------
+    // 3. LOAD BUSINESS
+    // --------------------------------------------------
 
-      const advertisementIds = loadedAdvertisements.map(
+    const { data: businessData, error: businessError } =
+      await supabase
+        .from("businesses")
+        .select(
+          "id,name,email,country_code"
+        )
+        .eq("id", businessId)
+        .maybeSingle();
+
+    if (businessError) {
+      throw new Error(
+        `Unable to load business: ${businessError.message}`
+      );
+    }
+
+    if (!businessData) {
+      throw new Error("Business account was not found.");
+    }
+
+    // --------------------------------------------------
+    // 4. LOAD COUNTRY
+    // --------------------------------------------------
+
+    const { data: countryData, error: countryError } =
+      await supabase
+        .from("countries")
+        .select("code,currency_code")
+        .eq("code", businessData.country_code)
+        .maybeSingle();
+
+    if (countryError) {
+      throw new Error(
+        `Unable to load business currency: ${countryError.message}`
+      );
+    }
+
+    setBusiness({
+      id: businessData.id,
+      name: businessData.name,
+      email: businessData.email,
+      country_code: businessData.country_code,
+      countries: countryData
+        ? [{ currency_code: countryData.currency_code }]
+        : [],
+    });
+
+    // --------------------------------------------------
+    // 5. LOAD ADVERTISING PACKAGES
+    // --------------------------------------------------
+
+    const { data: packagesData, error: packagesError } =
+      await supabase
+        .from("ad_packages")
+        .select(
+          "id,name,slug,description,price,currency_code,duration_days"
+        )
+        .eq("is_active", true)
+        .order("duration_days", {
+          ascending: true,
+        });
+
+    if (packagesError) {
+      throw new Error(
+        `Unable to load advertising packages: ${packagesError.message}`
+      );
+    }
+
+    const loadedPackages = (packagesData || []) as Package[];
+
+    setPackages(loadedPackages);
+
+    // --------------------------------------------------
+    // 6. LOAD CAMPAIGNS
+    // --------------------------------------------------
+
+    const { data: campaignsData, error: campaignsError } =
+      await supabase
+        .from("ad_campaigns")
+        .select(
+          "id,business_id,package_id,name,objective,budget,currency_code,starts_at,ends_at,status,created_at"
+        )
+        .eq("business_id", businessId)
+        .order("created_at", {
+          ascending: false,
+        });
+
+    if (campaignsError) {
+      throw new Error(
+        `Unable to load campaigns: ${campaignsError.message}`
+      );
+    }
+
+    // --------------------------------------------------
+    // 7. CONNECT PACKAGES TO CAMPAIGNS
+    // --------------------------------------------------
+
+    const campaignsWithPackages: Campaign[] =
+      (campaignsData || []).map((campaign) => {
+        const packageData = loadedPackages.find(
+          (item) => item.id === campaign.package_id
+        );
+
+        return {
+          ...campaign,
+          ad_packages: packageData
+            ? [packageData]
+            : [],
+        };
+      }) as Campaign[];
+
+    setCampaigns(campaignsWithPackages);
+
+    // --------------------------------------------------
+    // 8. LOAD ADVERTISEMENTS
+    // --------------------------------------------------
+
+    const campaignIds =
+      campaignsWithPackages.map(
+        (campaign) => campaign.id
+      );
+
+    if (campaignIds.length === 0) {
+      setAdvertisements([]);
+      setStats([]);
+      return;
+    }
+
+    const {
+      data: advertisementsData,
+      error: advertisementsError,
+    } = await supabase
+      .from("advertisements")
+      .select(
+        "id,campaign_id,placement_id,title,description,destination_url,status"
+      )
+      .in("campaign_id", campaignIds);
+
+    if (advertisementsError) {
+      throw new Error(
+        `Unable to load advertisements: ${advertisementsError.message}`
+      );
+    }
+
+    const loadedAdvertisements =
+      (advertisementsData || []) as Advertisement[];
+
+    setAdvertisements(loadedAdvertisements);
+
+    // --------------------------------------------------
+    // 9. LOAD STATISTICS
+    // --------------------------------------------------
+
+    const advertisementIds =
+      loadedAdvertisements.map(
         (advertisement) => advertisement.id
       );
 
-      if (advertisementIds.length === 0) {
-        setStats([]);
-        return;
-      }
-
-      const { data: statsData, error: statsError } =
-        await supabase
-          .from("ad_daily_stats")
-          .select(
-            "id,advertisement_id,stat_date,impressions,clicks,contacts,conversions"
-          )
-          .in("advertisement_id", advertisementIds)
-          .order("stat_date", { ascending: false });
-
-      if (statsError) {
-        throw new Error(
-          `Unable to load advertising statistics: ${statsError.message}`
-        );
-      }
-
-      setStats((statsData || []) as Stat[]);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to load advertising data."
-      );
-    } finally {
-      setLoading(false);
+    if (advertisementIds.length === 0) {
+      setStats([]);
+      return;
     }
-  }, []);
+
+    const { data: statsData, error: statsError } =
+      await supabase
+        .from("ad_daily_stats")
+        .select(
+          "id,advertisement_id,stat_date,impressions,clicks,contacts,conversions"
+        )
+        .in(
+          "advertisement_id",
+          advertisementIds
+        )
+        .order("stat_date", {
+          ascending: false,
+        });
+
+    if (statsError) {
+      throw new Error(
+        `Unable to load advertising statistics: ${statsError.message}`
+      );
+    }
+
+    setStats((statsData || []) as Stat[]);
+  } catch (err) {
+    setError(
+      err instanceof Error
+        ? err.message
+        : "Unable to load advertising data."
+    );
+  } finally {
+    setLoading(false);
+  }
+}, []);
 
   useEffect(() => {
     loadData();
