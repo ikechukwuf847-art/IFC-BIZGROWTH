@@ -102,6 +102,7 @@ export default function AdvertisingPage() {
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(
     null
   );
+
   const [campaignName, setCampaignName] = useState("");
   const [objective, setObjective] = useState("visibility");
 
@@ -113,24 +114,39 @@ export default function AdvertisingPage() {
     setError("");
 
     try {
+      // --------------------------------------------------
+      // 1. AUTHENTICATED USER
+      // --------------------------------------------------
+
       const {
         data: { user },
         error: authError,
       } = await supabase.auth.getUser();
 
-      if (authError || !user) {
+      if (authError) {
+        throw new Error(authError.message);
+      }
+
+      if (!user) {
         throw new Error("Please sign in to continue.");
       }
 
-      const { data: membership, error: membershipError } = await supabase
-        .from("business_members")
-        .select("business_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
+      // --------------------------------------------------
+      // 2. FIND USER'S BUSINESS
+      // --------------------------------------------------
+
+      const { data: membership, error: membershipError } =
+        await supabase
+          .from("business_members")
+          .select("business_id")
+          .eq("user_id", user.id)
+          .limit(1)
+          .maybeSingle();
 
       if (membershipError) {
-        throw membershipError;
+        throw new Error(
+          `Unable to load business membership: ${membershipError.message}`
+        );
       }
 
       if (!membership?.business_id) {
@@ -139,93 +155,166 @@ export default function AdvertisingPage() {
 
       const businessId = membership.business_id;
 
-      const [
-        businessResult,
-        packagesResult,
-        campaignsResult,
-        advertisementsResult,
-      ] = await Promise.all([
-        supabase
+      // --------------------------------------------------
+      // 3. LOAD BUSINESS
+      // --------------------------------------------------
+
+      const { data: businessData, error: businessError } =
+        await supabase
           .from("businesses")
           .select(
-            "id,name,email,country_code,countries!businesses_country_code_fkey(currency_code)"
+            "id,name,email,country_code"
           )
           .eq("id", businessId)
-          .maybeSingle(),
+          .maybeSingle();
 
-        supabase
+      if (businessError) {
+        throw new Error(
+          `Unable to load business: ${businessError.message}`
+        );
+      }
+
+      if (!businessData) {
+        throw new Error("Business account was not found.");
+      }
+
+      // --------------------------------------------------
+      // 4. LOAD COUNTRY SEPARATELY
+      // --------------------------------------------------
+
+      const { data: countryData, error: countryError } =
+        await supabase
+          .from("countries")
+          .select("code,currency_code")
+          .eq("code", businessData.country_code)
+          .maybeSingle();
+
+      if (countryError) {
+        throw new Error(
+          `Unable to load business currency: ${countryError.message}`
+        );
+      }
+
+      setBusiness({
+        id: businessData.id,
+        name: businessData.name,
+        email: businessData.email,
+        country_code: businessData.country_code,
+        countries: countryData
+          ? [{ currency_code: countryData.currency_code }]
+          : [],
+      });
+
+      // --------------------------------------------------
+      // 5. LOAD ACTIVE ADVERTISING PACKAGES
+      // --------------------------------------------------
+
+      const { data: packagesData, error: packagesError } =
+        await supabase
           .from("ad_packages")
           .select(
             "id,name,slug,description,price,currency_code,duration_days"
           )
           .eq("is_active", true)
-          .order("duration_days", { ascending: true }),
+          .order("duration_days", { ascending: true });
 
-        supabase
+      if (packagesError) {
+        throw new Error(
+          `Unable to load advertising packages: ${packagesError.message}`
+        );
+      }
+
+      const loadedPackages = (packagesData || []) as Package[];
+
+      setPackages(loadedPackages);
+
+      // --------------------------------------------------
+      // 6. LOAD CAMPAIGNS
+      // --------------------------------------------------
+
+      const { data: campaignsData, error: campaignsError } =
+        await supabase
           .from("ad_campaigns")
           .select(
-            "id,business_id,package_id,name,objective,budget,currency_code,starts_at,ends_at,status,created_at,ad_packages(id,name,slug,description,price,currency_code,duration_days)"
+            "id,business_id,package_id,name,objective,budget,currency_code,starts_at,ends_at,status,created_at"
           )
           .eq("business_id", businessId)
-          .order("created_at", { ascending: false }),
+          .order("created_at", { ascending: false });
 
-        supabase
+      if (campaignsError) {
+        throw new Error(
+          `Unable to load campaigns: ${campaignsError.message}`
+        );
+      }
+
+      // --------------------------------------------------
+      // 7. ATTACH PACKAGE DATA TO CAMPAIGNS
+      // --------------------------------------------------
+
+      const campaignsWithPackages: Campaign[] = (
+        campaignsData || []
+      ).map((campaign) => {
+        const packageData = loadedPackages.find(
+          (item) => item.id === campaign.package_id
+        );
+
+        return {
+          ...campaign,
+          ad_packages: packageData ? [packageData] : [],
+        };
+      }) as Campaign[];
+
+      setCampaigns(campaignsWithPackages);
+
+      // --------------------------------------------------
+      // 8. LOAD ADVERTISEMENTS ONLY FOR THIS BUSINESS'S
+      //    CAMPAIGNS
+      // --------------------------------------------------
+
+      const campaignIds = campaignsWithPackages.map(
+        (campaign) => campaign.id
+      );
+
+      if (campaignIds.length === 0) {
+        setAdvertisements([]);
+        setStats([]);
+        return;
+      }
+
+      const { data: advertisementsData, error: advertisementsError } =
+        await supabase
           .from("advertisements")
           .select(
             "id,campaign_id,placement_id,title,description,destination_url,status"
-          ),
-      ]);
+          )
+          .in("campaign_id", campaignIds);
 
-      if (businessResult.error) {
-        throw businessResult.error;
+      if (advertisementsError) {
+        throw new Error(
+          `Unable to load advertisements: ${advertisementsError.message}`
+        );
       }
 
-      if (packagesResult.error) {
-        throw packagesResult.error;
-      }
+      const loadedAdvertisements =
+        (advertisementsData || []) as Advertisement[];
 
-      if (campaignsResult.error) {
-        throw campaignsResult.error;
-      }
+      setAdvertisements(loadedAdvertisements);
 
-      if (advertisementsResult.error) {
-        throw advertisementsResult.error;
-      }
+      // --------------------------------------------------
+      // 9. LOAD AD STATISTICS
+      // --------------------------------------------------
 
-      const businessData = businessResult.data;
-
-      if (businessData) {
-        const countries = Array.isArray(businessData.countries)
-          ? businessData.countries
-          : businessData.countries
-            ? [businessData.countries]
-            : [];
-
-        setBusiness({
-          id: businessData.id,
-          name: businessData.name,
-          email: businessData.email,
-          country_code: businessData.country_code,
-          countries,
-        });
-      } else {
-        setBusiness(null);
-      }
-
-      setPackages((packagesResult.data || []) as Package[]);
-
-      setCampaigns((campaignsResult.data || []) as Campaign[]);
-
-      setAdvertisements(
-        (advertisementsResult.data || []) as Advertisement[]
+      const advertisementIds = loadedAdvertisements.map(
+        (advertisement) => advertisement.id
       );
 
-      const advertisementIds = (advertisementsResult.data || []).map(
-        (item) => item.id
-      );
+      if (advertisementIds.length === 0) {
+        setStats([]);
+        return;
+      }
 
-      if (advertisementIds.length > 0) {
-        const { data: statsData, error: statsError } = await supabase
+      const { data: statsData, error: statsError } =
+        await supabase
           .from("ad_daily_stats")
           .select(
             "id,advertisement_id,stat_date,impressions,clicks,contacts,conversions"
@@ -233,14 +322,13 @@ export default function AdvertisingPage() {
           .in("advertisement_id", advertisementIds)
           .order("stat_date", { ascending: false });
 
-        if (statsError) {
-          throw statsError;
-        }
-
-        setStats((statsData || []) as Stat[]);
-      } else {
-        setStats([]);
+      if (statsError) {
+        throw new Error(
+          `Unable to load advertising statistics: ${statsError.message}`
+        );
       }
+
+      setStats((statsData || []) as Stat[]);
     } catch (err) {
       setError(
         err instanceof Error
@@ -257,7 +345,10 @@ export default function AdvertisingPage() {
   }, [loadData]);
 
   const activeCampaigns = useMemo(
-    () => campaigns.filter((campaign) => campaign.status === "active"),
+    () =>
+      campaigns.filter(
+        (campaign) => campaign.status === "active"
+      ),
     [campaigns]
   );
 
@@ -265,10 +356,13 @@ export default function AdvertisingPage() {
     () =>
       stats.reduce(
         (total, item) => ({
-          impressions: total.impressions + Number(item.impressions || 0),
+          impressions:
+            total.impressions + Number(item.impressions || 0),
           clicks: total.clicks + Number(item.clicks || 0),
-          contacts: total.contacts + Number(item.contacts || 0),
-          conversions: total.conversions + Number(item.conversions || 0),
+          contacts:
+            total.contacts + Number(item.contacts || 0),
+          conversions:
+            total.conversions + Number(item.conversions || 0),
         }),
         {
           impressions: 0,
@@ -305,14 +399,23 @@ export default function AdvertisingPage() {
       } = await supabase.auth.getSession();
 
       if (!session?.access_token) {
-        throw new Error("Your session has expired. Please sign in again.");
+        throw new Error(
+          "Your session has expired. Please sign in again."
+        );
       }
 
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseUrl =
+        process.env.NEXT_PUBLIC_SUPABASE_URL;
 
       if (!supabaseUrl) {
-        throw new Error("Supabase configuration is missing.");
+        throw new Error(
+          "Supabase configuration is missing."
+        );
       }
+
+      // --------------------------------------------------
+      // CREATE CAMPAIGN
+      // --------------------------------------------------
 
       const campaignResponse = await fetch(
         `${supabaseUrl}/functions/v1/create-ad-campaign`,
@@ -331,21 +434,28 @@ export default function AdvertisingPage() {
         }
       );
 
-      const campaignData = await campaignResponse.json();
+      const campaignData =
+        await campaignResponse.json();
 
       if (!campaignResponse.ok) {
         throw new Error(
-          campaignData?.error || "Unable to create advertising campaign."
+          campaignData?.error ||
+            "Unable to create advertising campaign."
         );
       }
 
-      const campaignId = campaignData?.campaign?.id;
+      const campaignId =
+        campaignData?.campaign?.id;
 
       if (!campaignId) {
         throw new Error(
           "Campaign was created but no campaign ID was returned."
         );
       }
+
+      // --------------------------------------------------
+      // CREATE PAYMENT
+      // --------------------------------------------------
 
       const paymentResponse = await fetch(
         `${supabaseUrl}/functions/v1/create-payment`,
@@ -364,19 +474,24 @@ export default function AdvertisingPage() {
         }
       );
 
-      const paymentData = await paymentResponse.json();
+      const paymentData =
+        await paymentResponse.json();
 
       if (!paymentResponse.ok) {
         throw new Error(
-          paymentData?.error || "Unable to initialize payment."
+          paymentData?.error ||
+            "Unable to initialize payment."
         );
       }
 
       if (!paymentData?.authorization_url) {
-        throw new Error("Payment authorization URL was not returned.");
+        throw new Error(
+          "Payment authorization URL was not returned."
+        );
       }
 
-      window.location.href = paymentData.authorization_url;
+      window.location.href =
+        paymentData.authorization_url;
     } catch (err) {
       setError(
         err instanceof Error
@@ -387,6 +502,10 @@ export default function AdvertisingPage() {
       setCreating(false);
     }
   };
+
+  // --------------------------------------------------
+  // LOADING
+  // --------------------------------------------------
 
   if (loading) {
     return (
@@ -399,40 +518,60 @@ export default function AdvertisingPage() {
     );
   }
 
+  // --------------------------------------------------
+  // PAGE
+  // --------------------------------------------------
+
   return (
     <main className="advertising-page">
       <section className="advertising-header">
         <div>
-          <span className="advertising-eyebrow">IFC BIZGROWTH</span>
+          <span className="advertising-eyebrow">
+            IFC BIZGROWTH
+          </span>
 
           <h1>Advertising</h1>
 
           <p>
-            Promote your business and put your brand in front of more
-            customers.
+            Promote your business and put your brand in
+            front of more customers.
           </p>
         </div>
 
         <div className="advertising-business">
           <span>Business</span>
-          <strong>{business?.name || "Business"}</strong>
+
+          <strong>
+            {business?.name || "Business"}
+          </strong>
         </div>
       </section>
 
       {error && (
-        <div className="advertising-error" role="alert">
+        <div
+          className="advertising-error"
+          role="alert"
+        >
           <span>{error}</span>
 
-          <button type="button" onClick={() => setError("")}>
+          <button
+            type="button"
+            onClick={() => setError("")}
+          >
             ×
           </button>
         </div>
       )}
 
-      <nav className="advertising-tabs" aria-label="Advertising navigation">
+      <nav
+        className="advertising-tabs"
+        aria-label="Advertising navigation"
+      >
         <button
           type="button"
-          className={tab === "campaigns" ? "active" : ""}
+          className={
+            tab === "campaigns" ? "active" : ""
+          }
           onClick={() => setTab("campaigns")}
         >
           Campaigns
@@ -440,19 +579,25 @@ export default function AdvertisingPage() {
 
         <button
           type="button"
-          className={tab === "active" ? "active" : ""}
+          className={
+            tab === "active" ? "active" : ""
+          }
           onClick={() => setTab("active")}
         >
           Active Campaign
 
           {activeCampaigns.length > 0 && (
-            <span className="tab-count">{activeCampaigns.length}</span>
+            <span className="tab-count">
+              {activeCampaigns.length}
+            </span>
           )}
         </button>
 
         <button
           type="button"
-          className={tab === "stats" ? "active" : ""}
+          className={
+            tab === "stats" ? "active" : ""
+          }
           onClick={() => setTab("stats")}
         >
           Stats
@@ -463,54 +608,77 @@ export default function AdvertisingPage() {
         <section className="advertising-content">
           <div className="section-heading">
             <div>
-              <h2>Choose an advertising package</h2>
+              <h2>
+                Choose an advertising package
+              </h2>
 
               <p>
-                Select how long you want your business promotion to run.
+                Select how long you want your business
+                promotion to run.
               </p>
             </div>
           </div>
 
-          <div className="package-grid">
-            {packages.map((item) => (
-              <article
-                key={item.id}
-                className={`package-card ${
-                  selectedPackage?.id === item.id ? "selected" : ""
-                }`}
-                onClick={() => setSelectedPackage(item)}
-              >
-                <div className="package-duration">
-                  {item.duration_days}{" "}
-                  {item.duration_days === 1 ? "day" : "days"}
-                </div>
+          {packages.length === 0 ? (
+            <div className="empty-state">
+              <h3>
+                No advertising packages available
+              </h3>
 
-                <h3>{item.name}</h3>
-
-                {item.description && <p>{item.description}</p>}
-
-                <strong className="package-price">
-                  {formatMoney(Number(item.price), localCurrency)}
-                </strong>
-
-                {item.currency_code !== localCurrency && (
-                  <small>
-                    Payment is processed in the supported payment currency.
-                  </small>
-                )}
-
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setSelectedPackage(item);
-                  }}
+              <p>
+                Advertising packages are currently
+                unavailable.
+              </p>
+            </div>
+          ) : (
+            <div className="package-grid">
+              {packages.map((item) => (
+                <article
+                  key={item.id}
+                  className={`package-card ${
+                    selectedPackage?.id === item.id
+                      ? "selected"
+                      : ""
+                  }`}
+                  onClick={() =>
+                    setSelectedPackage(item)
+                  }
                 >
-                  {selectedPackage?.id === item.id ? "Selected" : "Select"}
-                </button>
-              </article>
-            ))}
-          </div>
+                  <div className="package-duration">
+                    {item.duration_days}{" "}
+                    {item.duration_days === 1
+                      ? "day"
+                      : "days"}
+                  </div>
+
+                  <h3>{item.name}</h3>
+
+                  {item.description && (
+                    <p>{item.description}</p>
+                  )}
+
+                  <strong className="package-price">
+                    {formatMoney(
+                      Number(item.price),
+                      item.currency_code
+                    )}
+                  </strong>
+
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setSelectedPackage(item);
+                    }}
+                  >
+                    {selectedPackage?.id === item.id
+                      ? "Selected"
+                      : "Select"}
+                  </button>
+                </article>
+              ))}
+            </div>
+          )}
 
           {selectedPackage && (
             <section className="campaign-form-card">
@@ -519,8 +687,9 @@ export default function AdvertisingPage() {
                   <h2>Create campaign</h2>
 
                   <p>
-                    Your campaign will be activated automatically after
-                    successful payment.
+                    Your campaign will be activated
+                    automatically after successful
+                    payment.
                   </p>
                 </div>
               </div>
@@ -533,7 +702,9 @@ export default function AdvertisingPage() {
                     type="text"
                     value={campaignName}
                     onChange={(event) =>
-                      setCampaignName(event.target.value)
+                      setCampaignName(
+                        event.target.value
+                      )
                     }
                     placeholder="e.g. October Business Promotion"
                     maxLength={120}
@@ -545,7 +716,11 @@ export default function AdvertisingPage() {
 
                   <select
                     value={objective}
-                    onChange={(event) => setObjective(event.target.value)}
+                    onChange={(event) =>
+                      setObjective(
+                        event.target.value
+                      )
+                    }
                   >
                     <option value="visibility">
                       Brand visibility
@@ -569,13 +744,18 @@ export default function AdvertisingPage() {
               <div className="campaign-summary">
                 <div>
                   <span>Package</span>
-                  <strong>{selectedPackage.name}</strong>
+
+                  <strong>
+                    {selectedPackage.name}
+                  </strong>
                 </div>
 
                 <div>
                   <span>Duration</span>
+
                   <strong>
-                    {selectedPackage.duration_days} days
+                    {selectedPackage.duration_days}{" "}
+                    days
                   </strong>
                 </div>
 
@@ -584,8 +764,10 @@ export default function AdvertisingPage() {
 
                   <strong>
                     {formatMoney(
-                      Number(selectedPackage.price),
-                      localCurrency
+                      Number(
+                        selectedPackage.price
+                      ),
+                      selectedPackage.currency_code
                     )}
                   </strong>
                 </div>
@@ -610,7 +792,8 @@ export default function AdvertisingPage() {
                 <h2>Your campaigns</h2>
 
                 <p>
-                  View your previous and current advertising campaigns.
+                  View your previous and current
+                  advertising campaigns.
                 </p>
               </div>
             </div>
@@ -620,18 +803,23 @@ export default function AdvertisingPage() {
                 <h3>No campaigns yet</h3>
 
                 <p>
-                  Your advertising campaigns will appear here.
+                  Your advertising campaigns will
+                  appear here.
                 </p>
               </div>
             ) : (
               <div className="campaign-list">
                 {campaigns.map((campaign) => (
-                  <article className="campaign-row" key={campaign.id}>
+                  <article
+                    className="campaign-row"
+                    key={campaign.id}
+                  >
                     <div>
                       <h3>{campaign.name}</h3>
 
                       <p>
-                        {campaign.ad_packages?.[0]?.name ||
+                        {campaign.ad_packages?.[0]
+                          ?.name ||
                           `${campaign.budget} ${campaign.currency_code}`}
                       </p>
                     </div>
@@ -640,14 +828,18 @@ export default function AdvertisingPage() {
                       <span>Created</span>
 
                       <strong>
-                        {formatDate(campaign.created_at)}
+                        {formatDate(
+                          campaign.created_at
+                        )}
                       </strong>
                     </div>
 
                     <span
                       className={`campaign-status status-${campaign.status}`}
                     >
-                      {statusLabel(campaign.status)}
+                      {statusLabel(
+                        campaign.status
+                      )}
                     </span>
                   </article>
                 ))}
@@ -664,7 +856,8 @@ export default function AdvertisingPage() {
               <h2>Active campaigns</h2>
 
               <p>
-                Monitor the advertising campaigns currently running.
+                Monitor the advertising campaigns
+                currently running.
               </p>
             </div>
           </div>
@@ -674,35 +867,47 @@ export default function AdvertisingPage() {
               <h3>No active campaign</h3>
 
               <p>
-                Once your advertising payment is successful, your campaign
-                will appear here automatically.
+                Once your advertising payment is
+                successful, your campaign will appear
+                here automatically.
               </p>
             </div>
           ) : (
             <div className="active-campaign-grid">
               {activeCampaigns.map((campaign) => {
-                const advertisement = advertisements.find(
-                  (item) => item.campaign_id === campaign.id
-                );
+                const advertisement =
+                  advertisements.find(
+                    (item) =>
+                      item.campaign_id ===
+                      campaign.id
+                  );
 
-                const campaignStats = advertisement
-                  ? stats.filter(
-                      (item) =>
-                        item.advertisement_id === advertisement.id
-                    )
-                  : [];
+                const campaignStats =
+                  advertisement
+                    ? stats.filter(
+                        (item) =>
+                          item.advertisement_id ===
+                          advertisement.id
+                      )
+                    : [];
 
-                const impressions = campaignStats.reduce(
-                  (sum, item) =>
-                    sum + Number(item.impressions || 0),
-                  0
-                );
+                const impressions =
+                  campaignStats.reduce(
+                    (sum, item) =>
+                      sum +
+                      Number(
+                        item.impressions || 0
+                      ),
+                    0
+                  );
 
-                const clicks = campaignStats.reduce(
-                  (sum, item) =>
-                    sum + Number(item.clicks || 0),
-                  0
-                );
+                const clicks =
+                  campaignStats.reduce(
+                    (sum, item) =>
+                      sum +
+                      Number(item.clicks || 0),
+                    0
+                  );
 
                 return (
                   <article
@@ -711,9 +916,13 @@ export default function AdvertisingPage() {
                   >
                     <div className="active-campaign-top">
                       <div>
-                        <span className="active-label">LIVE</span>
+                        <span className="active-label">
+                          LIVE
+                        </span>
 
-                        <h3>{campaign.name}</h3>
+                        <h3>
+                          {campaign.name}
+                        </h3>
                       </div>
 
                       <span className="campaign-status status-active">
@@ -726,7 +935,9 @@ export default function AdvertisingPage() {
                         <span>Started</span>
 
                         <strong>
-                          {formatDate(campaign.starts_at)}
+                          {formatDate(
+                            campaign.starts_at
+                          )}
                         </strong>
                       </div>
 
@@ -734,7 +945,9 @@ export default function AdvertisingPage() {
                         <span>Ends</span>
 
                         <strong>
-                          {formatDate(campaign.ends_at)}
+                          {formatDate(
+                            campaign.ends_at
+                          )}
                         </strong>
                       </div>
                     </div>
@@ -768,10 +981,13 @@ export default function AdvertisingPage() {
         <section className="advertising-content">
           <div className="section-heading">
             <div>
-              <h2>Advertising statistics</h2>
+              <h2>
+                Advertising statistics
+              </h2>
 
               <p>
-                Performance data from your advertising campaigns.
+                Performance data from your
+                advertising campaigns.
               </p>
             </div>
           </div>
@@ -815,8 +1031,8 @@ export default function AdvertisingPage() {
               <h3>No statistics yet</h3>
 
               <p>
-                Statistics will appear here after your advertisements
-                receive activity.
+                Statistics will appear here after
+                your advertisements receive activity.
               </p>
             </div>
           ) : (
@@ -835,22 +1051,34 @@ export default function AdvertisingPage() {
                 <tbody>
                   {stats.map((item) => (
                     <tr key={item.id}>
-                      <td>{formatDate(item.stat_date)}</td>
-
                       <td>
-                        {Number(item.impressions).toLocaleString()}
+                        {formatDate(
+                          item.stat_date
+                        )}
                       </td>
 
                       <td>
-                        {Number(item.clicks).toLocaleString()}
+                        {Number(
+                          item.impressions
+                        ).toLocaleString()}
                       </td>
 
                       <td>
-                        {Number(item.contacts).toLocaleString()}
+                        {Number(
+                          item.clicks
+                        ).toLocaleString()}
                       </td>
 
                       <td>
-                        {Number(item.conversions).toLocaleString()}
+                        {Number(
+                          item.contacts
+                        ).toLocaleString()}
+                      </td>
+
+                      <td>
+                        {Number(
+                          item.conversions
+                        ).toLocaleString()}
                       </td>
                     </tr>
                   ))}
