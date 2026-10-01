@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/server";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import "./advertising.css";
 
 type Tab = "campaigns" | "active" | "stats";
