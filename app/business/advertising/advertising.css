@@ -1,1093 +1,808 @@
-"use client";
+.advertising-page {
+  min-height: 100vh;
+  background: #f5f7fb;
+  color: #172033;
+  padding: 36px 40px 70px;
+}
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import "./advertising.css";
+.advertising-page * {
+  box-sizing: border-box;
+}
 
-type Package = {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  price: number;
-  currency_code: string;
-  duration_days: number;
-};
+.advertising-header {
+  width: min(1240px, 100%);
+  margin: 0 auto 28px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 30px;
+}
 
-type Business = {
-  id: string;
-  name: string;
-  email: string | null;
-  country_code: string;
-  countries: {
-    currency_code: string;
-  }[];
-};
+.advertising-eyebrow {
+  display: inline-block;
+  margin-bottom: 9px;
+  color: #1769e0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
 
-type Campaign = {
-  id: string;
-  business_id: string;
-  package_id: string | null;
-  name: string;
-  objective: string;
-  budget: number;
-  currency_code: string;
-  starts_at: string;
-  ends_at: string;
-  status: string;
-  created_at: string;
-  ad_packages: Package[] | null;
-};
+.advertising-header h1 {
+  margin: 0;
+  color: #111827;
+  font-size: clamp(30px, 4vw, 42px);
+  line-height: 1.1;
+  font-weight: 800;
+}
 
-type Advertisement = {
-  id: string;
-  campaign_id: string;
-  placement_id: string;
-  title: string;
-  description: string | null;
-  destination_url: string | null;
-  status: string;
-};
+.advertising-header p {
+  margin: 10px 0 0;
+  color: #667085;
+  font-size: 15px;
+  line-height: 1.6;
+}
 
-type Stat = {
-  id: string;
-  advertisement_id: string;
-  stat_date: string;
-  impressions: number;
-  clicks: number;
-  contacts: number;
-  conversions: number;
-};
+.advertising-business {
+  min-width: 220px;
+  padding: 15px 18px;
+  border: 1px solid #e5eaf1;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 4px 16px rgba(16, 24, 40, 0.04);
+}
 
-type Tab = "campaigns" | "active" | "stats";
+.advertising-business span {
+  display: block;
+  margin-bottom: 5px;
+  color: #98a2b3;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
 
-const supabase = createSupabaseBrowserClient();
+.advertising-business strong {
+  display: block;
+  overflow: hidden;
+  color: #1d2939;
+  font-size: 14px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
-function formatMoney(amount: number, currency: string) {
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  } catch {
-    return `${currency} ${amount.toLocaleString()}`;
+.advertising-error {
+  width: min(1240px, 100%);
+  margin: 0 auto 22px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  border: 1px solid #fecdca;
+  border-radius: 12px;
+  background: #fff4f2;
+  color: #b42318;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.advertising-error button {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #b42318;
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.advertising-tabs {
+  width: min(1240px, 100%);
+  margin: 0 auto 30px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid #e4e9f0;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 3px 14px rgba(16, 24, 40, 0.035);
+}
+
+.advertising-tabs button {
+  min-height: 42px;
+  padding: 0 19px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #667085;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.advertising-tabs button:hover {
+  background: #f2f6fc;
+  color: #1769e0;
+}
+
+.advertising-tabs button.active {
+  background: #1769e0;
+  color: #ffffff;
+}
+
+.tab-count {
+  min-width: 21px;
+  height: 21px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  color: inherit;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.advertising-content {
+  width: min(1240px, 100%);
+  margin: 0 auto;
+}
+
+.section-heading {
+  margin-bottom: 18px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.section-heading h2 {
+  margin: 0;
+  color: #182230;
+  font-size: 21px;
+  font-weight: 800;
+}
+
+.section-heading p {
+  margin: 6px 0 0;
+  color: #667085;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.package-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.package-card {
+  position: relative;
+  padding: 24px;
+  border: 1px solid #e4e9f0;
+  border-radius: 17px;
+  background: #ffffff;
+  box-shadow: 0 5px 20px rgba(16, 24, 40, 0.04);
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.package-card:hover {
+  transform: translateY(-2px);
+  border-color: #b8d1f5;
+  box-shadow: 0 9px 26px rgba(16, 24, 40, 0.07);
+}
+
+.package-card.selected {
+  border-color: #1769e0;
+  box-shadow: 0 0 0 3px rgba(23, 105, 224, 0.1);
+}
+
+.package-duration {
+  display: inline-flex;
+  align-items: center;
+  min-height: 27px;
+  padding: 0 9px;
+  border-radius: 20px;
+  background: #eef5ff;
+  color: #1769e0;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.package-card h3 {
+  margin: 18px 0 7px;
+  color: #182230;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.package-card p {
+  min-height: 43px;
+  margin: 0;
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.package-price {
+  display: block;
+  margin-top: 20px;
+  color: #111827;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.package-card small {
+  display: block;
+  margin-top: 8px;
+  color: #98a2b3;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.package-card button {
+  width: 100%;
+  min-height: 43px;
+  margin-top: 20px;
+  border: 1px solid #1769e0;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #1769e0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.package-card button:hover,
+.package-card.selected button {
+  background: #1769e0;
+  color: #ffffff;
+}
+
+.campaign-form-card {
+  margin-top: 28px;
+  padding: 27px;
+  border: 1px solid #e2e8f0;
+  border-radius: 17px;
+  background: #ffffff;
+  box-shadow: 0 6px 24px rgba(16, 24, 40, 0.045);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #344054;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.form-grid input,
+.form-grid select {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 13px;
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  outline: none;
+  background: #ffffff;
+  color: #101828;
+  font-family: inherit;
+  font-size: 14px;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.form-grid input::placeholder {
+  color: #98a2b3;
+}
+
+.form-grid input:focus,
+.form-grid select:focus {
+  border-color: #1769e0;
+  box-shadow: 0 0 0 3px rgba(23, 105, 224, 0.1);
+}
+
+.campaign-summary {
+  margin-top: 22px;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.campaign-summary div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.campaign-summary span {
+  color: #98a2b3;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.campaign-summary strong {
+  color: #1d2939;
+  font-size: 14px;
+}
+
+.primary-button {
+  min-height: 46px;
+  margin-top: 20px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 10px;
+  background: #1769e0;
+  color: #ffffff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.primary-button:hover:not(:disabled) {
+  background: #1257bd;
+  transform: translateY(-1px);
+}
+
+.primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.campaign-history {
+  margin-top: 40px;
+}
+
+.campaign-list {
+  overflow: hidden;
+  border: 1px solid #e4e9f0;
+  border-radius: 15px;
+  background: #ffffff;
+  box-shadow: 0 4px 18px rgba(16, 24, 40, 0.035);
+}
+
+.campaign-row {
+  min-height: 83px;
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px 130px;
+  align-items: center;
+  gap: 20px;
+  border-bottom: 1px solid #edf0f4;
+}
+
+.campaign-row:last-child {
+  border-bottom: 0;
+}
+
+.campaign-row h3 {
+  margin: 0;
+  overflow: hidden;
+  color: #182230;
+  font-size: 14px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.campaign-row p {
+  margin: 5px 0 0;
+  color: #667085;
+  font-size: 12px;
+}
+
+.campaign-row-date {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.campaign-row-date span {
+  color: #98a2b3;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.campaign-row-date strong {
+  color: #344054;
+  font-size: 12px;
+}
+
+.campaign-status {
+  width: fit-content;
+  padding: 6px 9px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.status-active {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.status-pending_payment {
+  background: #fffaeb;
+  color: #b54708;
+}
+
+.status-pending_review {
+  background: #eff8ff;
+  color: #175cd3;
+}
+
+.status-draft {
+  background: #f2f4f7;
+  color: #475467;
+}
+
+.status-paused {
+  background: #f9f5ff;
+  color: #6941c6;
+}
+
+.status-completed {
+  background: #f2f4f7;
+  color: #344054;
+}
+
+.status-rejected,
+.status-cancelled {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.active-campaign-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.active-campaign-card {
+  padding: 23px;
+  border: 1px solid #dce5f0;
+  border-radius: 17px;
+  background: #ffffff;
+  box-shadow: 0 6px 22px rgba(16, 24, 40, 0.045);
+}
+
+.active-campaign-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.active-label {
+  display: inline-flex;
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  background: #ecfdf3;
+  color: #027a48;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.active-campaign-top h3 {
+  margin: 0;
+  color: #182230;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.active-campaign-dates {
+  margin-top: 24px;
+  padding-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px;
+  border-top: 1px solid #edf0f4;
+}
+
+.active-campaign-dates div,
+.active-campaign-metrics div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.active-campaign-dates span,
+.active-campaign-metrics span {
+  color: #98a2b3;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.active-campaign-dates strong {
+  color: #344054;
+  font-size: 12px;
+}
+
+.active-campaign-metrics {
+  margin-top: 18px;
+  padding: 17px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px;
+  border-radius: 11px;
+  background: #f8fafc;
+}
+
+.active-campaign-metrics strong {
+  color: #1769e0;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 17px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  padding: 21px;
+  border: 1px solid #e4e9f0;
+  border-radius: 15px;
+  background: #ffffff;
+  box-shadow: 0 4px 18px rgba(16, 24, 40, 0.035);
+}
+
+.stat-card span {
+  display: block;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.stat-card strong {
+  display: block;
+  margin-top: 9px;
+  color: #182230;
+  font-size: 27px;
+  font-weight: 800;
+}
+
+.stats-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid #e4e9f0;
+  border-radius: 15px;
+  background: #ffffff;
+  box-shadow: 0 4px 18px rgba(16, 24, 40, 0.035);
+}
+
+.stats-table {
+  width: 100%;
+  min-width: 650px;
+  border-collapse: collapse;
+}
+
+.stats-table th,
+.stats-table td {
+  padding: 15px 18px;
+  border-bottom: 1px solid #edf0f4;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.stats-table th {
+  background: #f8fafc;
+  color: #667085;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stats-table td {
+  color: #344054;
+  font-size: 13px;
+}
+
+.stats-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.empty-state {
+  padding: 55px 25px;
+  border: 1px dashed #d0d5dd;
+  border-radius: 15px;
+  background: #ffffff;
+  text-align: center;
+}
+
+.empty-state h3 {
+  margin: 0;
+  color: #344054;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.empty-state p {
+  max-width: 480px;
+  margin: 8px auto 0;
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.advertising-loading {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  color: #667085;
+  font-size: 14px;
+}
+
+.advertising-spinner {
+  width: 34px;
+  height: 34px;
+  border: 3px solid #dce8f8;
+  border-top-color: #1769e0;
+  border-radius: 50%;
+  animation: advertising-spin 0.8s linear infinite;
+}
+
+@keyframes advertising-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-  }).format(new Date(value));
-}
-
-function statusLabel(status: string) {
-  return status
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-export default function AdvertisingPage() {
-  const [business, setBusiness] = useState<Business | null>(null);
-  const [packages, setPackages] = useState<Package[]>([]);
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
-  const [stats, setStats] = useState<Stat[]>([]);
-
-  const [tab, setTab] = useState<Tab>("campaigns");
-  const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
-  const [error, setError] = useState("");
-
-  const [selectedPackage, setSelectedPackage] = useState<Package | null>(
-    null
-  );
-
-  const [campaignName, setCampaignName] = useState("");
-  const [objective, setObjective] = useState("visibility");
-
-  const localCurrency =
-    business?.countries?.[0]?.currency_code || "NGN";
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError("");
-
-    try {
-      // --------------------------------------------------
-      // 1. AUTHENTICATED USER
-      // --------------------------------------------------
-
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-
-      if (authError) {
-        throw new Error(authError.message);
-      }
-
-      if (!user) {
-        throw new Error("Please sign in to continue.");
-      }
-
-      // --------------------------------------------------
-      // 2. FIND USER'S BUSINESS
-      // --------------------------------------------------
-
-      const { data: membership, error: membershipError } =
-        await supabase
-          .from("business_members")
-          .select("business_id")
-          .eq("user_id", user.id)
-          .limit(1)
-          .maybeSingle();
-
-      if (membershipError) {
-        throw new Error(
-          `Unable to load business membership: ${membershipError.message}`
-        );
-      }
-
-      if (!membership?.business_id) {
-        throw new Error("No business account was found.");
-      }
-
-      const businessId = membership.business_id;
-
-      // --------------------------------------------------
-      // 3. LOAD BUSINESS
-      // --------------------------------------------------
-
-      const { data: businessData, error: businessError } =
-        await supabase
-          .from("businesses")
-          .select(
-            "id,name,email,country_code"
-          )
-          .eq("id", businessId)
-          .maybeSingle();
-
-      if (businessError) {
-        throw new Error(
-          `Unable to load business: ${businessError.message}`
-        );
-      }
-
-      if (!businessData) {
-        throw new Error("Business account was not found.");
-      }
-
-      // --------------------------------------------------
-      // 4. LOAD COUNTRY SEPARATELY
-      // --------------------------------------------------
-
-      const { data: countryData, error: countryError } =
-        await supabase
-          .from("countries")
-          .select("code,currency_code")
-          .eq("code", businessData.country_code)
-          .maybeSingle();
-
-      if (countryError) {
-        throw new Error(
-          `Unable to load business currency: ${countryError.message}`
-        );
-      }
-
-      setBusiness({
-        id: businessData.id,
-        name: businessData.name,
-        email: businessData.email,
-        country_code: businessData.country_code,
-        countries: countryData
-          ? [{ currency_code: countryData.currency_code }]
-          : [],
-      });
-
-      // --------------------------------------------------
-      // 5. LOAD ACTIVE ADVERTISING PACKAGES
-      // --------------------------------------------------
-
-      const { data: packagesData, error: packagesError } =
-        await supabase
-          .from("ad_packages")
-          .select(
-            "id,name,slug,description,price,currency_code,duration_days"
-          )
-          .eq("is_active", true)
-          .order("duration_days", { ascending: true });
-
-      if (packagesError) {
-        throw new Error(
-          `Unable to load advertising packages: ${packagesError.message}`
-        );
-      }
-
-      const loadedPackages = (packagesData || []) as Package[];
-
-      setPackages(loadedPackages);
-
-      // --------------------------------------------------
-      // 6. LOAD CAMPAIGNS
-      // --------------------------------------------------
-
-      const { data: campaignsData, error: campaignsError } =
-        await supabase
-          .from("ad_campaigns")
-          .select(
-            "id,business_id,package_id,name,objective,budget,currency_code,starts_at,ends_at,status,created_at"
-          )
-          .eq("business_id", businessId)
-          .order("created_at", { ascending: false });
-
-      if (campaignsError) {
-        throw new Error(
-          `Unable to load campaigns: ${campaignsError.message}`
-        );
-      }
-
-      // --------------------------------------------------
-      // 7. ATTACH PACKAGE DATA TO CAMPAIGNS
-      // --------------------------------------------------
-
-      const campaignsWithPackages: Campaign[] = (
-        campaignsData || []
-      ).map((campaign) => {
-        const packageData = loadedPackages.find(
-          (item) => item.id === campaign.package_id
-        );
-
-        return {
-          ...campaign,
-          ad_packages: packageData ? [packageData] : [],
-        };
-      }) as Campaign[];
-
-      setCampaigns(campaignsWithPackages);
-
-      // --------------------------------------------------
-      // 8. LOAD ADVERTISEMENTS ONLY FOR THIS BUSINESS'S
-      //    CAMPAIGNS
-      // --------------------------------------------------
-
-      const campaignIds = campaignsWithPackages.map(
-        (campaign) => campaign.id
-      );
-
-      if (campaignIds.length === 0) {
-        setAdvertisements([]);
-        setStats([]);
-        return;
-      }
-
-      const { data: advertisementsData, error: advertisementsError } =
-        await supabase
-          .from("advertisements")
-          .select(
-            "id,campaign_id,placement_id,title,description,destination_url,status"
-          )
-          .in("campaign_id", campaignIds);
-
-      if (advertisementsError) {
-        throw new Error(
-          `Unable to load advertisements: ${advertisementsError.message}`
-        );
-      }
-
-      const loadedAdvertisements =
-        (advertisementsData || []) as Advertisement[];
-
-      setAdvertisements(loadedAdvertisements);
-
-      // --------------------------------------------------
-      // 9. LOAD AD STATISTICS
-      // --------------------------------------------------
-
-      const advertisementIds = loadedAdvertisements.map(
-        (advertisement) => advertisement.id
-      );
-
-      if (advertisementIds.length === 0) {
-        setStats([]);
-        return;
-      }
-
-      const { data: statsData, error: statsError } =
-        await supabase
-          .from("ad_daily_stats")
-          .select(
-            "id,advertisement_id,stat_date,impressions,clicks,contacts,conversions"
-          )
-          .in("advertisement_id", advertisementIds)
-          .order("stat_date", { ascending: false });
-
-      if (statsError) {
-        throw new Error(
-          `Unable to load advertising statistics: ${statsError.message}`
-        );
-      }
-
-      setStats((statsData || []) as Stat[]);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to load advertising data."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const activeCampaigns = useMemo(
-    () =>
-      campaigns.filter(
-        (campaign) => campaign.status === "active"
-      ),
-    [campaigns]
-  );
-
-  const totalStats = useMemo(
-    () =>
-      stats.reduce(
-        (total, item) => ({
-          impressions:
-            total.impressions + Number(item.impressions || 0),
-          clicks: total.clicks + Number(item.clicks || 0),
-          contacts:
-            total.contacts + Number(item.contacts || 0),
-          conversions:
-            total.conversions + Number(item.conversions || 0),
-        }),
-        {
-          impressions: 0,
-          clicks: 0,
-          contacts: 0,
-          conversions: 0,
-        }
-      ),
-    [stats]
-  );
-
-  const createCampaign = async () => {
-    if (!business) {
-      setError("Business account not found.");
-      return;
-    }
-
-    if (!selectedPackage) {
-      setError("Select an advertising package first.");
-      return;
-    }
-
-    if (!campaignName.trim()) {
-      setError("Enter a campaign name.");
-      return;
-    }
-
-    setCreating(true);
-    setError("");
-
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session?.access_token) {
-        throw new Error(
-          "Your session has expired. Please sign in again."
-        );
-      }
-
-      const supabaseUrl =
-        process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-      if (!supabaseUrl) {
-        throw new Error(
-          "Supabase configuration is missing."
-        );
-      }
-
-      // --------------------------------------------------
-      // CREATE CAMPAIGN
-      // --------------------------------------------------
-
-      const campaignResponse = await fetch(
-        `${supabaseUrl}/functions/v1/create-ad-campaign`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            business_id: business.id,
-            package_id: selectedPackage.id,
-            name: campaignName.trim(),
-            objective,
-          }),
-        }
-      );
-
-      const campaignData =
-        await campaignResponse.json();
-
-      if (!campaignResponse.ok) {
-        throw new Error(
-          campaignData?.error ||
-            "Unable to create advertising campaign."
-        );
-      }
-
-      const campaignId =
-        campaignData?.campaign?.id;
-
-      if (!campaignId) {
-        throw new Error(
-          "Campaign was created but no campaign ID was returned."
-        );
-      }
-
-      // --------------------------------------------------
-      // CREATE PAYMENT
-      // --------------------------------------------------
-
-      const paymentResponse = await fetch(
-        `${supabaseUrl}/functions/v1/create-payment`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            business_id: business.id,
-            order_type: "ad_campaign",
-            package_id: selectedPackage.id,
-            campaign_id: campaignId,
-          }),
-        }
-      );
-
-      const paymentData =
-        await paymentResponse.json();
-
-      if (!paymentResponse.ok) {
-        throw new Error(
-          paymentData?.error ||
-            "Unable to initialize payment."
-        );
-      }
-
-      if (!paymentData?.authorization_url) {
-        throw new Error(
-          "Payment authorization URL was not returned."
-        );
-      }
-
-      window.location.href =
-        paymentData.authorization_url;
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to create your advertising campaign."
-      );
-
-      setCreating(false);
-    }
-  };
-
-  // --------------------------------------------------
-  // LOADING
-  // --------------------------------------------------
-
-  if (loading) {
-    return (
-      <main className="advertising-page">
-        <div className="advertising-loading">
-          <div className="advertising-spinner" />
-          <p>Loading advertising...</p>
-        </div>
-      </main>
-    );
+@media (max-width: 1000px) {
+  .package-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  // --------------------------------------------------
-  // PAGE
-  // --------------------------------------------------
-
-  return (
-    <main className="advertising-page">
-      <section className="advertising-header">
-        <div>
-          <span className="advertising-eyebrow">
-            IFC BIZGROWTH
-          </span>
-
-          <h1>Advertising</h1>
-
-          <p>
-            Promote your business and put your brand in
-            front of more customers.
-          </p>
-        </div>
-
-        <div className="advertising-business">
-          <span>Business</span>
-
-          <strong>
-            {business?.name || "Business"}
-          </strong>
-        </div>
-      </section>
-
-      {error && (
-        <div
-          className="advertising-error"
-          role="alert"
-        >
-          <span>{error}</span>
-
-          <button
-            type="button"
-            onClick={() => setError("")}
-          >
-            ×
-          </button>
-        </div>
-      )}
-
-      <nav
-        className="advertising-tabs"
-        aria-label="Advertising navigation"
-      >
-        <button
-          type="button"
-          className={
-            tab === "campaigns" ? "active" : ""
-          }
-          onClick={() => setTab("campaigns")}
-        >
-          Campaigns
-        </button>
-
-        <button
-          type="button"
-          className={
-            tab === "active" ? "active" : ""
-          }
-          onClick={() => setTab("active")}
-        >
-          Active Campaign
-
-          {activeCampaigns.length > 0 && (
-            <span className="tab-count">
-              {activeCampaigns.length}
-            </span>
-          )}
-        </button>
-
-        <button
-          type="button"
-          className={
-            tab === "stats" ? "active" : ""
-          }
-          onClick={() => setTab("stats")}
-        >
-          Stats
-        </button>
-      </nav>
-
-      {tab === "campaigns" && (
-        <section className="advertising-content">
-          <div className="section-heading">
-            <div>
-              <h2>
-                Choose an advertising package
-              </h2>
-
-              <p>
-                Select how long you want your business
-                promotion to run.
-              </p>
-            </div>
-          </div>
-
-          {packages.length === 0 ? (
-            <div className="empty-state">
-              <h3>
-                No advertising packages available
-              </h3>
-
-              <p>
-                Advertising packages are currently
-                unavailable.
-              </p>
-            </div>
-          ) : (
-            <div className="package-grid">
-              {packages.map((item) => (
-                <article
-                  key={item.id}
-                  className={`package-card ${
-                    selectedPackage?.id === item.id
-                      ? "selected"
-                      : ""
-                  }`}
-                  onClick={() =>
-                    setSelectedPackage(item)
-                  }
-                >
-                  <div className="package-duration">
-                    {item.duration_days}{" "}
-                    {item.duration_days === 1
-                      ? "day"
-                      : "days"}
-                  </div>
-
-                  <h3>{item.name}</h3>
-
-                  {item.description && (
-                    <p>{item.description}</p>
-                  )}
-
-                  <strong className="package-price">
-                    {formatMoney(
-                      Number(item.price),
-                      item.currency_code
-                    )}
-                  </strong>
-
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setSelectedPackage(item);
-                    }}
-                  >
-                    {selectedPackage?.id === item.id
-                      ? "Selected"
-                      : "Select"}
-                  </button>
-                </article>
-              ))}
-            </div>
-          )}
-
-          {selectedPackage && (
-            <section className="campaign-form-card">
-              <div className="section-heading">
-                <div>
-                  <h2>Create campaign</h2>
-
-                  <p>
-                    Your campaign will be activated
-                    automatically after successful
-                    payment.
-                  </p>
-                </div>
-              </div>
-
-              <div className="form-grid">
-                <label>
-                  Campaign name
-
-                  <input
-                    type="text"
-                    value={campaignName}
-                    onChange={(event) =>
-                      setCampaignName(
-                        event.target.value
-                      )
-                    }
-                    placeholder="e.g. October Business Promotion"
-                    maxLength={120}
-                  />
-                </label>
-
-                <label>
-                  Objective
-
-                  <select
-                    value={objective}
-                    onChange={(event) =>
-                      setObjective(
-                        event.target.value
-                      )
-                    }
-                  >
-                    <option value="visibility">
-                      Brand visibility
-                    </option>
-
-                    <option value="customer_acquisition">
-                      Customer acquisition
-                    </option>
-
-                    <option value="website_traffic">
-                      Website traffic
-                    </option>
-
-                    <option value="promotion">
-                      Promote an offer
-                    </option>
-                  </select>
-                </label>
-              </div>
-
-              <div className="campaign-summary">
-                <div>
-                  <span>Package</span>
-
-                  <strong>
-                    {selectedPackage.name}
-                  </strong>
-                </div>
-
-                <div>
-                  <span>Duration</span>
-
-                  <strong>
-                    {selectedPackage.duration_days}{" "}
-                    days
-                  </strong>
-                </div>
-
-                <div>
-                  <span>Price</span>
-
-                  <strong>
-                    {formatMoney(
-                      Number(
-                        selectedPackage.price
-                      ),
-                      selectedPackage.currency_code
-                    )}
-                  </strong>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                className="primary-button"
-                disabled={creating}
-                onClick={createCampaign}
-              >
-                {creating
-                  ? "Preparing payment..."
-                  : "Continue to payment"}
-              </button>
-            </section>
-          )}
-
-          <section className="campaign-history">
-            <div className="section-heading">
-              <div>
-                <h2>Your campaigns</h2>
-
-                <p>
-                  View your previous and current
-                  advertising campaigns.
-                </p>
-              </div>
-            </div>
-
-            {campaigns.length === 0 ? (
-              <div className="empty-state">
-                <h3>No campaigns yet</h3>
-
-                <p>
-                  Your advertising campaigns will
-                  appear here.
-                </p>
-              </div>
-            ) : (
-              <div className="campaign-list">
-                {campaigns.map((campaign) => (
-                  <article
-                    className="campaign-row"
-                    key={campaign.id}
-                  >
-                    <div>
-                      <h3>{campaign.name}</h3>
-
-                      <p>
-                        {campaign.ad_packages?.[0]
-                          ?.name ||
-                          `${campaign.budget} ${campaign.currency_code}`}
-                      </p>
-                    </div>
-
-                    <div className="campaign-row-date">
-                      <span>Created</span>
-
-                      <strong>
-                        {formatDate(
-                          campaign.created_at
-                        )}
-                      </strong>
-                    </div>
-
-                    <span
-                      className={`campaign-status status-${campaign.status}`}
-                    >
-                      {statusLabel(
-                        campaign.status
-                      )}
-                    </span>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
-        </section>
-      )}
-
-      {tab === "active" && (
-        <section className="advertising-content">
-          <div className="section-heading">
-            <div>
-              <h2>Active campaigns</h2>
-
-              <p>
-                Monitor the advertising campaigns
-                currently running.
-              </p>
-            </div>
-          </div>
-
-          {activeCampaigns.length === 0 ? (
-            <div className="empty-state">
-              <h3>No active campaign</h3>
-
-              <p>
-                Once your advertising payment is
-                successful, your campaign will appear
-                here automatically.
-              </p>
-            </div>
-          ) : (
-            <div className="active-campaign-grid">
-              {activeCampaigns.map((campaign) => {
-                const advertisement =
-                  advertisements.find(
-                    (item) =>
-                      item.campaign_id ===
-                      campaign.id
-                  );
-
-                const campaignStats =
-                  advertisement
-                    ? stats.filter(
-                        (item) =>
-                          item.advertisement_id ===
-                          advertisement.id
-                      )
-                    : [];
-
-                const impressions =
-                  campaignStats.reduce(
-                    (sum, item) =>
-                      sum +
-                      Number(
-                        item.impressions || 0
-                      ),
-                    0
-                  );
-
-                const clicks =
-                  campaignStats.reduce(
-                    (sum, item) =>
-                      sum +
-                      Number(item.clicks || 0),
-                    0
-                  );
-
-                return (
-                  <article
-                    className="active-campaign-card"
-                    key={campaign.id}
-                  >
-                    <div className="active-campaign-top">
-                      <div>
-                        <span className="active-label">
-                          LIVE
-                        </span>
-
-                        <h3>
-                          {campaign.name}
-                        </h3>
-                      </div>
-
-                      <span className="campaign-status status-active">
-                        Active
-                      </span>
-                    </div>
-
-                    <div className="active-campaign-dates">
-                      <div>
-                        <span>Started</span>
-
-                        <strong>
-                          {formatDate(
-                            campaign.starts_at
-                          )}
-                        </strong>
-                      </div>
-
-                      <div>
-                        <span>Ends</span>
-
-                        <strong>
-                          {formatDate(
-                            campaign.ends_at
-                          )}
-                        </strong>
-                      </div>
-                    </div>
-
-                    <div className="active-campaign-metrics">
-                      <div>
-                        <span>Impressions</span>
-
-                        <strong>
-                          {impressions.toLocaleString()}
-                        </strong>
-                      </div>
-
-                      <div>
-                        <span>Clicks</span>
-
-                        <strong>
-                          {clicks.toLocaleString()}
-                        </strong>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </section>
-      )}
-
-      {tab === "stats" && (
-        <section className="advertising-content">
-          <div className="section-heading">
-            <div>
-              <h2>
-                Advertising statistics
-              </h2>
-
-              <p>
-                Performance data from your
-                advertising campaigns.
-              </p>
-            </div>
-          </div>
-
-          <div className="stats-grid">
-            <div className="stat-card">
-              <span>Impressions</span>
-
-              <strong>
-                {totalStats.impressions.toLocaleString()}
-              </strong>
-            </div>
-
-            <div className="stat-card">
-              <span>Clicks</span>
-
-              <strong>
-                {totalStats.clicks.toLocaleString()}
-              </strong>
-            </div>
-
-            <div className="stat-card">
-              <span>Contacts</span>
-
-              <strong>
-                {totalStats.contacts.toLocaleString()}
-              </strong>
-            </div>
-
-            <div className="stat-card">
-              <span>Conversions</span>
-
-              <strong>
-                {totalStats.conversions.toLocaleString()}
-              </strong>
-            </div>
-          </div>
-
-          {stats.length === 0 ? (
-            <div className="empty-state">
-              <h3>No statistics yet</h3>
-
-              <p>
-                Statistics will appear here after
-                your advertisements receive activity.
-              </p>
-            </div>
-          ) : (
-            <div className="stats-table-wrapper">
-              <table className="stats-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Impressions</th>
-                    <th>Clicks</th>
-                    <th>Contacts</th>
-                    <th>Conversions</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {stats.map((item) => (
-                    <tr key={item.id}>
-                      <td>
-                        {formatDate(
-                          item.stat_date
-                        )}
-                      </td>
-
-                      <td>
-                        {Number(
-                          item.impressions
-                        ).toLocaleString()}
-                      </td>
-
-                      <td>
-                        {Number(
-                          item.clicks
-                        ).toLocaleString()}
-                      </td>
-
-                      <td>
-                        {Number(
-                          item.contacts
-                        ).toLocaleString()}
-                      </td>
-
-                      <td>
-                        {Number(
-                          item.conversions
-                        ).toLocaleString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      )}
-    </main>
-  );
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .active-campaign-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .advertising-page {
+    padding: 25px 18px 50px;
+  }
+
+  .advertising-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .advertising-business {
+    min-width: 0;
+  }
+
+  .advertising-tabs {
+    overflow-x: auto;
+    margin-bottom: 24px;
+  }
+
+  .advertising-tabs button {
+    flex: 0 0 auto;
+  }
+
+  .package-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .campaign-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .campaign-row {
+    grid-template-columns: 1fr;
+    gap: 11px;
+  }
+
+  .campaign-row .campaign-status {
+    margin-top: 2px;
+  }
+
+  .section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 520px) {
+  .advertising-page {
+    padding: 20px 14px 40px;
+  }
+
+  .advertising-header h1 {
+    font-size: 30px;
+  }
+
+  .advertising-tabs {
+    border-radius: 11px;
+  }
+
+  .advertising-tabs button {
+    padding: 0 13px;
+    font-size: 12px;
+  }
+
+  .package-card,
+  .campaign-form-card,
+  .active-campaign-card {
+    padding: 19px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-card strong {
+    font-size: 24px;
+  }
+
+  .active-campaign-dates,
+  .active-campaign-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .advertising-error {
+    align-items: flex-start;
+  }
   }
