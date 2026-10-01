@@ -36,7 +36,7 @@ type Campaign = {
   ends_at: string;
   status: string;
   created_at: string;
-  ad_packages?: Package | null;
+  ad_packages: Package[] | null;
 };
 
 type Advertisement = {
@@ -82,7 +82,9 @@ function formatDate(value: string) {
 }
 
 function statusLabel(status: string) {
-  return status.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+  return status
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 export default function AdvertisingPage() {
@@ -97,7 +99,9 @@ export default function AdvertisingPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
 
-  const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
+  const [selectedPackage, setSelectedPackage] = useState<Package | null>(
+    null
+  );
   const [campaignName, setCampaignName] = useState("");
   const [objective, setObjective] = useState("visibility");
 
@@ -125,7 +129,9 @@ export default function AdvertisingPage() {
         .limit(1)
         .maybeSingle();
 
-      if (membershipError) throw membershipError;
+      if (membershipError) {
+        throw membershipError;
+      }
 
       if (!membership?.business_id) {
         throw new Error("No business account was found.");
@@ -170,33 +176,55 @@ export default function AdvertisingPage() {
           ),
       ]);
 
-      if (businessResult.error) throw businessResult.error;
-      if (packagesResult.error) throw packagesResult.error;
-      if (campaignsResult.error) throw campaignsResult.error;
-      if (advertisementsResult.error) throw advertisementsResult.error;
+      if (businessResult.error) {
+        throw businessResult.error;
+      }
 
-      setBusiness(
-        businessResult.data
-          ? ({
-              ...businessResult.data,
-              countries: Array.isArray(businessResult.data.countries)
-                ? businessResult.data.countries
-                : businessResult.data.countries
-                  ? [businessResult.data.countries]
-                  : [],
-            } as Business)
-          : null
-      );
+      if (packagesResult.error) {
+        throw packagesResult.error;
+      }
+
+      if (campaignsResult.error) {
+        throw campaignsResult.error;
+      }
+
+      if (advertisementsResult.error) {
+        throw advertisementsResult.error;
+      }
+
+      const businessData = businessResult.data;
+
+      if (businessData) {
+        const countries = Array.isArray(businessData.countries)
+          ? businessData.countries
+          : businessData.countries
+            ? [businessData.countries]
+            : [];
+
+        setBusiness({
+          id: businessData.id,
+          name: businessData.name,
+          email: businessData.email,
+          country_code: businessData.country_code,
+          countries,
+        });
+      } else {
+        setBusiness(null);
+      }
 
       setPackages((packagesResult.data || []) as Package[]);
+
       setCampaigns((campaignsResult.data || []) as Campaign[]);
-      setAdvertisements((advertisementsResult.data || []) as Advertisement[]);
+
+      setAdvertisements(
+        (advertisementsResult.data || []) as Advertisement[]
+      );
 
       const advertisementIds = (advertisementsResult.data || []).map(
         (item) => item.id
       );
 
-      if (advertisementIds.length) {
+      if (advertisementIds.length > 0) {
         const { data: statsData, error: statsError } = await supabase
           .from("ad_daily_stats")
           .select(
@@ -205,7 +233,9 @@ export default function AdvertisingPage() {
           .in("advertisement_id", advertisementIds)
           .order("stat_date", { ascending: false });
 
-        if (statsError) throw statsError;
+        if (statsError) {
+          throw statsError;
+        }
 
         setStats((statsData || []) as Stat[]);
       } else {
@@ -213,7 +243,9 @@ export default function AdvertisingPage() {
       }
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Unable to load advertising data."
+        err instanceof Error
+          ? err.message
+          : "Unable to load advertising data."
       );
     } finally {
       setLoading(false);
@@ -249,7 +281,12 @@ export default function AdvertisingPage() {
   );
 
   const createCampaign = async () => {
-    if (!business || !selectedPackage) {
+    if (!business) {
+      setError("Business account not found.");
+      return;
+    }
+
+    if (!selectedPackage) {
       setError("Select an advertising package first.");
       return;
     }
@@ -305,7 +342,9 @@ export default function AdvertisingPage() {
       const campaignId = campaignData?.campaign?.id;
 
       if (!campaignId) {
-        throw new Error("Campaign was created but no campaign ID was returned.");
+        throw new Error(
+          "Campaign was created but no campaign ID was returned."
+        );
       }
 
       const paymentResponse = await fetch(
@@ -344,6 +383,7 @@ export default function AdvertisingPage() {
           ? err.message
           : "Unable to create your advertising campaign."
       );
+
       setCreating(false);
     }
   };
@@ -364,7 +404,9 @@ export default function AdvertisingPage() {
       <section className="advertising-header">
         <div>
           <span className="advertising-eyebrow">IFC BIZGROWTH</span>
+
           <h1>Advertising</h1>
+
           <p>
             Promote your business and put your brand in front of more
             customers.
@@ -379,7 +421,8 @@ export default function AdvertisingPage() {
 
       {error && (
         <div className="advertising-error" role="alert">
-          {error}
+          <span>{error}</span>
+
           <button type="button" onClick={() => setError("")}>
             ×
           </button>
@@ -401,6 +444,7 @@ export default function AdvertisingPage() {
           onClick={() => setTab("active")}
         >
           Active Campaign
+
           {activeCampaigns.length > 0 && (
             <span className="tab-count">{activeCampaigns.length}</span>
           )}
@@ -420,6 +464,7 @@ export default function AdvertisingPage() {
           <div className="section-heading">
             <div>
               <h2>Choose an advertising package</h2>
+
               <p>
                 Select how long you want your business promotion to run.
               </p>
@@ -472,6 +517,7 @@ export default function AdvertisingPage() {
               <div className="section-heading">
                 <div>
                   <h2>Create campaign</h2>
+
                   <p>
                     Your campaign will be activated automatically after
                     successful payment.
@@ -482,10 +528,13 @@ export default function AdvertisingPage() {
               <div className="form-grid">
                 <label>
                   Campaign name
+
                   <input
                     type="text"
                     value={campaignName}
-                    onChange={(event) => setCampaignName(event.target.value)}
+                    onChange={(event) =>
+                      setCampaignName(event.target.value)
+                    }
                     placeholder="e.g. October Business Promotion"
                     maxLength={120}
                   />
@@ -493,16 +542,26 @@ export default function AdvertisingPage() {
 
                 <label>
                   Objective
+
                   <select
                     value={objective}
                     onChange={(event) => setObjective(event.target.value)}
                   >
-                    <option value="visibility">Brand visibility</option>
+                    <option value="visibility">
+                      Brand visibility
+                    </option>
+
                     <option value="customer_acquisition">
                       Customer acquisition
                     </option>
-                    <option value="website_traffic">Website traffic</option>
-                    <option value="promotion">Promote an offer</option>
+
+                    <option value="website_traffic">
+                      Website traffic
+                    </option>
+
+                    <option value="promotion">
+                      Promote an offer
+                    </option>
                   </select>
                 </label>
               </div>
@@ -515,11 +574,14 @@ export default function AdvertisingPage() {
 
                 <div>
                   <span>Duration</span>
-                  <strong>{selectedPackage.duration_days} days</strong>
+                  <strong>
+                    {selectedPackage.duration_days} days
+                  </strong>
                 </div>
 
                 <div>
                   <span>Price</span>
+
                   <strong>
                     {formatMoney(
                       Number(selectedPackage.price),
@@ -535,7 +597,9 @@ export default function AdvertisingPage() {
                 disabled={creating}
                 onClick={createCampaign}
               >
-                {creating ? "Preparing payment..." : "Continue to payment"}
+                {creating
+                  ? "Preparing payment..."
+                  : "Continue to payment"}
               </button>
             </section>
           )}
@@ -544,14 +608,20 @@ export default function AdvertisingPage() {
             <div className="section-heading">
               <div>
                 <h2>Your campaigns</h2>
-                <p>View your previous and current advertising campaigns.</p>
+
+                <p>
+                  View your previous and current advertising campaigns.
+                </p>
               </div>
             </div>
 
             {campaigns.length === 0 ? (
               <div className="empty-state">
                 <h3>No campaigns yet</h3>
-                <p>Your advertising campaigns will appear here.</p>
+
+                <p>
+                  Your advertising campaigns will appear here.
+                </p>
               </div>
             ) : (
               <div className="campaign-list">
@@ -559,15 +629,19 @@ export default function AdvertisingPage() {
                   <article className="campaign-row" key={campaign.id}>
                     <div>
                       <h3>{campaign.name}</h3>
+
                       <p>
-                        {campaign.ad_packages?.name ||
+                        {campaign.ad_packages?.[0]?.name ||
                           `${campaign.budget} ${campaign.currency_code}`}
                       </p>
                     </div>
 
                     <div className="campaign-row-date">
                       <span>Created</span>
-                      <strong>{formatDate(campaign.created_at)}</strong>
+
+                      <strong>
+                        {formatDate(campaign.created_at)}
+                      </strong>
                     </div>
 
                     <span
@@ -588,13 +662,17 @@ export default function AdvertisingPage() {
           <div className="section-heading">
             <div>
               <h2>Active campaigns</h2>
-              <p>Monitor the advertising campaigns currently running.</p>
+
+              <p>
+                Monitor the advertising campaigns currently running.
+              </p>
             </div>
           </div>
 
           {activeCampaigns.length === 0 ? (
             <div className="empty-state">
               <h3>No active campaign</h3>
+
               <p>
                 Once your advertising payment is successful, your campaign
                 will appear here automatically.
@@ -609,25 +687,32 @@ export default function AdvertisingPage() {
 
                 const campaignStats = advertisement
                   ? stats.filter(
-                      (item) => item.advertisement_id === advertisement.id
+                      (item) =>
+                        item.advertisement_id === advertisement.id
                     )
                   : [];
 
                 const impressions = campaignStats.reduce(
-                  (sum, item) => sum + Number(item.impressions || 0),
+                  (sum, item) =>
+                    sum + Number(item.impressions || 0),
                   0
                 );
 
                 const clicks = campaignStats.reduce(
-                  (sum, item) => sum + Number(item.clicks || 0),
+                  (sum, item) =>
+                    sum + Number(item.clicks || 0),
                   0
                 );
 
                 return (
-                  <article className="active-campaign-card" key={campaign.id}>
+                  <article
+                    className="active-campaign-card"
+                    key={campaign.id}
+                  >
                     <div className="active-campaign-top">
                       <div>
                         <span className="active-label">LIVE</span>
+
                         <h3>{campaign.name}</h3>
                       </div>
 
@@ -639,24 +724,36 @@ export default function AdvertisingPage() {
                     <div className="active-campaign-dates">
                       <div>
                         <span>Started</span>
-                        <strong>{formatDate(campaign.starts_at)}</strong>
+
+                        <strong>
+                          {formatDate(campaign.starts_at)}
+                        </strong>
                       </div>
 
                       <div>
                         <span>Ends</span>
-                        <strong>{formatDate(campaign.ends_at)}</strong>
+
+                        <strong>
+                          {formatDate(campaign.ends_at)}
+                        </strong>
                       </div>
                     </div>
 
                     <div className="active-campaign-metrics">
                       <div>
                         <span>Impressions</span>
-                        <strong>{impressions.toLocaleString()}</strong>
+
+                        <strong>
+                          {impressions.toLocaleString()}
+                        </strong>
                       </div>
 
                       <div>
                         <span>Clicks</span>
-                        <strong>{clicks.toLocaleString()}</strong>
+
+                        <strong>
+                          {clicks.toLocaleString()}
+                        </strong>
                       </div>
                     </div>
                   </article>
@@ -672,38 +769,54 @@ export default function AdvertisingPage() {
           <div className="section-heading">
             <div>
               <h2>Advertising statistics</h2>
-              <p>Performance data from your advertising campaigns.</p>
+
+              <p>
+                Performance data from your advertising campaigns.
+              </p>
             </div>
           </div>
 
           <div className="stats-grid">
             <div className="stat-card">
               <span>Impressions</span>
-              <strong>{totalStats.impressions.toLocaleString()}</strong>
+
+              <strong>
+                {totalStats.impressions.toLocaleString()}
+              </strong>
             </div>
 
             <div className="stat-card">
               <span>Clicks</span>
-              <strong>{totalStats.clicks.toLocaleString()}</strong>
+
+              <strong>
+                {totalStats.clicks.toLocaleString()}
+              </strong>
             </div>
 
             <div className="stat-card">
               <span>Contacts</span>
-              <strong>{totalStats.contacts.toLocaleString()}</strong>
+
+              <strong>
+                {totalStats.contacts.toLocaleString()}
+              </strong>
             </div>
 
             <div className="stat-card">
               <span>Conversions</span>
-              <strong>{totalStats.conversions.toLocaleString()}</strong>
+
+              <strong>
+                {totalStats.conversions.toLocaleString()}
+              </strong>
             </div>
           </div>
 
           {stats.length === 0 ? (
             <div className="empty-state">
               <h3>No statistics yet</h3>
+
               <p>
-                Statistics will appear here after your advertisements receive
-                activity.
+                Statistics will appear here after your advertisements
+                receive activity.
               </p>
             </div>
           ) : (
@@ -723,10 +836,22 @@ export default function AdvertisingPage() {
                   {stats.map((item) => (
                     <tr key={item.id}>
                       <td>{formatDate(item.stat_date)}</td>
-                      <td>{Number(item.impressions).toLocaleString()}</td>
-                      <td>{Number(item.clicks).toLocaleString()}</td>
-                      <td>{Number(item.contacts).toLocaleString()}</td>
-                      <td>{Number(item.conversions).toLocaleString()}</td>
+
+                      <td>
+                        {Number(item.impressions).toLocaleString()}
+                      </td>
+
+                      <td>
+                        {Number(item.clicks).toLocaleString()}
+                      </td>
+
+                      <td>
+                        {Number(item.contacts).toLocaleString()}
+                      </td>
+
+                      <td>
+                        {Number(item.conversions).toLocaleString()}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -737,4 +862,4 @@ export default function AdvertisingPage() {
       )}
     </main>
   );
-  }
+}
