@@ -397,19 +397,19 @@ export default function MarketingPage() {
       const token = await getAccessToken();
 
       const { data: paymentData, error: paymentError } =
-        await supabase.functions.invoke(
-          "create-payment",
-          {
-            body: {
-              type: "marketing",
-              business_id: businessId,
-              marketing_request_id: request.id,
-            },
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        );
+  await supabase.functions.invoke(
+    "create-payment",
+    {
+      body: {
+        order_type: "marketing",
+        business_id: businessId,
+        service_request_id: request.id,
+      },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
 
       if (paymentError) {
         throw paymentError;
