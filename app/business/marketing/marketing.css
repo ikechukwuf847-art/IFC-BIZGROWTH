@@ -1,648 +1,641 @@
-/* ============================================================
-   IFC BIZGROWTH
-   Business Marketing
-   Simple, clear, mobile-first dashboard UI
-   ============================================================ */
-
 .marketing-page {
-  width: 100%;
-  max-width: 1180px;
+  min-height: 100vh;
+  background: #f6f8fc;
+  color: #172033;
+  padding: 36px 0 70px;
+}
+
+.marketing-container {
+  width: min(1180px, calc(100% - 40px));
   margin: 0 auto;
-  padding: 28px 24px 64px;
-  color: #10233f;
 }
 
-/* ============================================================
-   HERO
-   ============================================================ */
-
-.marketing-hero {
+.marketing-header {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: 32px;
-  padding: 34px;
+  gap: 30px;
   margin-bottom: 28px;
-  border: 1px solid #dce8f7;
-  border-radius: 22px;
-  background: linear-gradient(
-    135deg,
-    #f7fbff 0%,
-    #ffffff 65%
-  );
-  box-shadow: 0 8px 30px rgba(15, 55, 100, 0.06);
 }
 
-.marketing-eyebrow,
-.marketing-label {
+.marketing-eyebrow {
   display: inline-block;
-  color: #1769e0;
+  margin-bottom: 8px;
+  color: #2563eb;
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
 }
 
-.marketing-hero h1 {
-  max-width: 690px;
-  margin: 8px 0 12px;
-  color: #0b2342;
-  font-size: clamp(30px, 4vw, 46px);
-  line-height: 1.08;
-  letter-spacing: -0.035em;
-}
-
-.marketing-hero p {
-  max-width: 670px;
+.marketing-header h1 {
   margin: 0;
-  color: #64748b;
-  font-size: 16px;
-  line-height: 1.7;
+  font-size: 34px;
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
-.marketing-rate-card {
-  flex: 0 0 220px;
-  padding: 24px;
-  border: 1px solid #d8e7fa;
-  border-radius: 18px;
-  background: #ffffff;
-  text-align: center;
-  box-shadow: 0 8px 24px rgba(25, 86, 150, 0.07);
+.marketing-header p {
+  margin: 9px 0 0;
+  color: #667085;
+  font-size: 15px;
 }
 
-.marketing-rate-card span,
-.marketing-rate-card small {
-  display: block;
-  color: #6b7c93;
-  font-size: 13px;
+.marketing-back-button {
+  border: 1px solid #d9e0eb;
+  background: #fff;
+  color: #344054;
+  border-radius: 10px;
+  padding: 11px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
-.marketing-rate-card strong {
-  display: block;
-  margin: 7px 0 2px;
-  color: #1265d8;
-  font-size: 30px;
-  line-height: 1;
+.marketing-back-button:hover {
+  background: #f8fafc;
 }
 
-/* ============================================================
-   ALERTS
-   ============================================================ */
+.marketing-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  margin-bottom: 30px;
+  background: #fff;
+  border: 1px solid #e5e9f1;
+  border-radius: 13px;
+  width: fit-content;
+  box-shadow: 0 2px 10px rgba(16, 24, 40, 0.03);
+}
+
+.marketing-tab {
+  position: relative;
+  border: 0;
+  background: transparent;
+  color: #667085;
+  padding: 11px 18px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.marketing-tab:hover {
+  color: #1d4ed8;
+}
+
+.marketing-tab.active {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.marketing-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 7px;
+  padding: 0 5px;
+  border-radius: 20px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
 
 .marketing-alert {
-  margin-bottom: 24px;
+  margin-bottom: 22px;
   padding: 14px 16px;
-  border-radius: 12px;
+  border-radius: 10px;
   font-size: 14px;
-  line-height: 1.5;
+  font-weight: 600;
 }
 
-.marketing-alert--error {
-  border: 1px solid #fecaca;
-  background: #fff5f5;
-  color: #b42318;
+.marketing-alert.error {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #be123c;
 }
 
-.marketing-alert--success {
-  border: 1px solid #b7ebd0;
-  background: #f0fdf4;
-  color: #166534;
-}
-
-/* ============================================================
-   SECTIONS
-   ============================================================ */
-
-.marketing-section {
-  margin-top: 34px;
+.marketing-alert.success {
+  background: #ecfdf3;
+  border: 1px solid #abefc6;
+  color: #067647;
 }
 
 .marketing-section-heading {
+  display: flex;
+  justify-content: space-between;
   margin-bottom: 20px;
 }
 
 .marketing-section-heading h2 {
-  margin: 6px 0 7px;
-  color: #102b4d;
-  font-size: 25px;
-  line-height: 1.2;
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
   letter-spacing: -0.02em;
 }
 
 .marketing-section-heading p {
-  max-width: 650px;
-  margin: 0;
-  color: #6b7c93;
+  margin: 6px 0 0;
+  color: #667085;
   font-size: 14px;
-  line-height: 1.65;
 }
-
-/* ============================================================
-   CAMPAIGN PLANS
-   ============================================================ */
 
 .marketing-plans {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: 18px;
 }
 
 .marketing-plan {
-  position: relative;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  min-height: 390px;
+  min-height: 450px;
   padding: 22px;
-  border: 1.5px solid #dce6f2;
-  border-radius: 18px;
-  background: #ffffff;
-  color: #10233f;
-  text-align: left;
+  background: #fff;
+  border: 1px solid #e5e9f1;
+  border-radius: 16px;
+  box-shadow: 0 3px 15px rgba(16, 24, 40, 0.04);
   cursor: pointer;
   transition:
+    transform 0.18s ease,
     border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    transform 0.18s ease;
+    box-shadow 0.18s ease;
 }
 
 .marketing-plan:hover {
-  border-color: #8bb9f2;
-  box-shadow: 0 10px 28px rgba(19, 87, 158, 0.09);
   transform: translateY(-2px);
+  border-color: #bfd3f7;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.08);
 }
 
-.marketing-plan:focus-visible {
-  outline: 3px solid rgba(23, 105, 224, 0.2);
-  outline-offset: 2px;
+.marketing-plan.selected {
+  border: 2px solid #2563eb;
+  padding: 21px;
+  box-shadow: 0 8px 25px rgba(37, 99, 235, 0.1);
 }
 
-.marketing-plan--selected {
-  border-color: #1769e0;
-  box-shadow:
-    0 0 0 3px rgba(23, 105, 224, 0.08),
-    0 12px 30px rgba(23, 105, 224, 0.1);
-}
-
-.marketing-plan__selected {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  padding: 5px 8px;
-  border-radius: 999px;
-  background: #e8f2ff;
-  color: #1769e0;
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.marketing-plan__duration {
-  margin-bottom: 13px;
-  color: #1769e0;
-  font-size: 14px;
-  font-weight: 800;
-}
-
-.marketing-plan__price {
-  color: #102b4d;
-  font-size: 28px;
-  line-height: 1.1;
-}
-
-.marketing-plan__daily {
-  margin-top: 5px;
-  color: #718096;
-  font-size: 12px;
-}
-
-.marketing-plan__name {
-  margin-top: 20px;
-  color: #1f3b5c;
-  font-size: 15px;
-  font-weight: 800;
-}
-
-.marketing-plan__description {
-  margin-top: 8px;
-  color: #718096;
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.marketing-plan__features {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-  width: 100%;
-  margin-top: 20px;
-  padding-top: 18px;
-  border-top: 1px solid #edf2f7;
-}
-
-.marketing-plan__features span {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  color: #52657d;
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.marketing-plan__features span span {
-  flex: 0 0 auto;
-  color: #16865a;
-  font-weight: 900;
-}
-
-/* ============================================================
-   CREATE CAMPAIGN
-   ============================================================ */
-
-.marketing-create {
-  display: grid;
-  grid-template-columns: minmax(260px, 0.75fr) minmax(0, 1.25fr);
-  gap: 38px;
-  margin-top: 42px;
-  padding: 30px;
-  border: 1px solid #dce8f7;
-  border-radius: 22px;
-  background: #ffffff;
-  box-shadow: 0 8px 28px rgba(15, 55, 100, 0.05);
-}
-
-.marketing-create__intro h2 {
-  margin: 7px 0 10px;
-  color: #102b4d;
-  font-size: 27px;
-  line-height: 1.2;
-}
-
-.marketing-create__intro p {
-  margin: 0;
-  color: #6b7c93;
-  font-size: 14px;
-  line-height: 1.65;
-}
-
-.marketing-create__intro strong {
-  color: #1769e0;
-}
-
-.marketing-form {
-  width: 100%;
-}
-
-.marketing-form__field {
-  margin-bottom: 20px;
-}
-
-.marketing-form__field label {
-  display: block;
-  margin-bottom: 8px;
-  color: #203b5c;
-  font-size: 13px;
-  font-weight: 750;
-}
-
-.marketing-form__field input,
-.marketing-form__field textarea {
-  width: 100%;
-  box-sizing: border-box;
-  border: 1px solid #ccd9e8;
-  border-radius: 11px;
-  background: #ffffff;
-  color: #172f4c;
-  font: inherit;
-  font-size: 14px;
-  outline: none;
-  transition:
-    border-color 0.18s ease,
-    box-shadow 0.18s ease;
-}
-
-.marketing-form__field input {
-  min-height: 46px;
-  padding: 0 13px;
-}
-
-.marketing-form__field textarea {
-  min-height: 130px;
-  padding: 12px 13px;
-  resize: vertical;
-}
-
-.marketing-form__field input::placeholder,
-.marketing-form__field textarea::placeholder {
-  color: #9aa9bb;
-}
-
-.marketing-form__field input:focus,
-.marketing-form__field textarea:focus {
-  border-color: #1769e0;
-  box-shadow: 0 0 0 3px rgba(23, 105, 224, 0.1);
-}
-
-.marketing-form__hint {
-  display: block;
-  margin-top: 7px;
-  color: #7a8ba0;
-  font-size: 12px;
-}
-
-/* ============================================================
-   PRICE SUMMARY
-   ============================================================ */
-
-.marketing-summary {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  margin: 24px 0;
-  overflow: hidden;
-  border: 1px solid #dbe6f2;
-  border-radius: 14px;
-  background: #dbe6f2;
-}
-
-.marketing-summary > div {
-  min-width: 0;
-  padding: 15px;
-  background: #f8fbff;
-}
-
-.marketing-summary span {
-  display: block;
-  margin-bottom: 5px;
-  color: #718096;
-  font-size: 11px;
-}
-
-.marketing-summary strong {
-  display: block;
-  color: #203b5c;
-  font-size: 14px;
-  overflow-wrap: anywhere;
-}
-
-.marketing-summary__total {
-  grid-column: 1 / -1;
-  background: #edf5ff !important;
-}
-
-.marketing-summary__total strong {
-  color: #1265d8;
-  font-size: 22px;
-}
-
-/* ============================================================
-   BUTTONS
-   ============================================================ */
-
-.marketing-primary-button {
-  width: 100%;
-  min-height: 48px;
-  padding: 0 20px;
-  border: 0;
-  border-radius: 11px;
-  background: #1769e0;
-  color: #ffffff;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 800;
-  cursor: pointer;
-  transition:
-    background 0.18s ease,
-    transform 0.18s ease,
-    box-shadow 0.18s ease;
-}
-
-.marketing-primary-button:hover:not(:disabled) {
-  background: #0f58c5;
-  box-shadow: 0 8px 18px rgba(23, 105, 224, 0.18);
-  transform: translateY(-1px);
-}
-
-.marketing-primary-button:focus-visible {
-  outline: 3px solid rgba(23, 105, 224, 0.2);
-  outline-offset: 2px;
-}
-
-.marketing-primary-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.marketing-primary-button--small {
-  width: auto;
-  min-width: 125px;
-  min-height: 42px;
-  padding: 0 16px;
-  font-size: 13px;
-}
-
-/* ============================================================
-   REQUESTS
-   ============================================================ */
-
-.marketing-section--requests {
-  margin-top: 48px;
-}
-
-.marketing-empty {
-  padding: 44px 24px;
-  border: 1px dashed #cbd9e8;
-  border-radius: 18px;
-  background: #f9fbfe;
-  text-align: center;
-}
-
-.marketing-empty__icon {
+.marketing-plan-top {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 52px;
-  height: 52px;
-  margin: 0 auto 13px;
-  border-radius: 50%;
-  background: #eaf3ff;
-  font-size: 22px;
+  justify-content: space-between;
+  gap: 10px;
 }
 
-.marketing-empty h3 {
-  margin: 0 0 7px;
-  color: #243e5c;
-  font-size: 17px;
+.marketing-plan-duration {
+  display: inline-flex;
+  width: fit-content;
+  padding: 6px 9px;
+  border-radius: 7px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
-.marketing-empty p {
-  max-width: 450px;
-  margin: 0 auto;
-  color: #75869a;
+.marketing-selected {
+  color: #067647;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.marketing-plan h3 {
+  margin: 20px 0 8px;
+  font-size: 18px;
+  line-height: 1.3;
+}
+
+.marketing-price {
+  margin-bottom: 12px;
+  color: #111827;
+  font-size: 25px;
+  font-weight: 850;
+  letter-spacing: -0.03em;
+}
+
+.marketing-plan > p {
+  min-height: 65px;
+  margin: 0;
+  color: #667085;
   font-size: 13px;
   line-height: 1.6;
 }
 
-.marketing-requests {
+.marketing-features {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin: 20px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.marketing-features li {
+  display: flex;
+  gap: 8px;
+  color: #475467;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.marketing-features li span {
+  color: #2563eb;
+  font-weight: 900;
+}
+
+.marketing-plan-button {
+  width: 100%;
+  margin-top: auto;
+  padding: 11px 15px;
+  border: 1px solid #d0d5dd;
+  border-radius: 9px;
+  background: #fff;
+  color: #344054;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.marketing-plan.selected .marketing-plan-button {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #fff;
+}
+
+.marketing-selected-bar {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 22px;
+  padding: 17px 20px;
+  background: #fff;
+  border: 1px solid #dbe5f4;
+  border-radius: 13px;
+  box-shadow: 0 4px 15px rgba(16, 24, 40, 0.05);
+}
+
+.marketing-selected-bar > div:first-child {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.marketing-selected-bar span {
+  margin-bottom: 3px;
+  color: #667085;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.marketing-selected-bar strong {
+  font-size: 14px;
+}
+
+.marketing-selected-price {
+  font-size: 17px;
+  font-weight: 850;
+}
+
+.marketing-primary-button,
+.marketing-submit-button {
+  border: 0;
+  border-radius: 9px;
+  background: #2563eb;
+  color: #fff;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.marketing-primary-button:hover,
+.marketing-submit-button:hover {
+  background: #1d4ed8;
+}
+
+.marketing-form-section {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.marketing-form-card {
+  padding: 30px;
+  background: #fff;
+  border: 1px solid #e5e9f1;
+  border-radius: 17px;
+  box-shadow: 0 5px 25px rgba(16, 24, 40, 0.05);
+}
+
+.marketing-form-heading span {
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.marketing-form-heading h2 {
+  margin: 8px 0 7px;
+  font-size: 25px;
+  letter-spacing: -0.02em;
+}
+
+.marketing-form-heading p {
+  margin: 0;
+  color: #667085;
+  font-size: 14px;
+}
+
+.marketing-selected-plan {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 26px 0;
+  padding: 16px;
+  border: 1px solid #dbe5f4;
+  border-radius: 11px;
+  background: #f8fbff;
+}
+
+.marketing-selected-plan div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.marketing-selected-plan span {
+  color: #667085;
+  font-size: 11px;
+}
+
+.marketing-selected-plan strong {
+  font-size: 14px;
+}
+
+.marketing-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.marketing-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #344054;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.marketing-form input,
+.marketing-form select,
+.marketing-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d0d5dd;
+  border-radius: 9px;
+  background: #fff;
+  color: #101828;
+  padding: 12px 13px;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.marketing-form textarea {
+  resize: vertical;
+  min-height: 140px;
+}
+
+.marketing-form input:focus,
+.marketing-form select:focus,
+.marketing-form textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.marketing-form-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 17px 0;
+  border-top: 1px solid #eaecf0;
+  border-bottom: 1px solid #eaecf0;
+}
+
+.marketing-form-summary div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.marketing-form-summary span {
+  color: #667085;
+  font-size: 12px;
+}
+
+.marketing-form-summary strong {
+  color: #101828;
+  font-size: 15px;
+}
+
+.marketing-submit-button {
+  width: 100%;
+  padding: 14px;
+}
+
+.marketing-submit-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.marketing-requests-section {
+  width: 100%;
+}
+
+.marketing-request-list {
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 
-.marketing-request {
-  padding: 21px;
-  border: 1px solid #dce6f2;
-  border-radius: 16px;
-  background: #ffffff;
-  box-shadow: 0 5px 18px rgba(15, 55, 100, 0.04);
-}
-
-.marketing-request__top {
+.marketing-request-card {
   display: flex;
-  align-items: flex-start;
   justify-content: space-between;
-  gap: 20px;
+  gap: 30px;
+  padding: 22px;
+  background: #fff;
+  border: 1px solid #e5e9f1;
+  border-radius: 14px;
+  box-shadow: 0 3px 14px rgba(16, 24, 40, 0.035);
 }
 
-.marketing-request__plan {
-  color: #1769e0;
+.marketing-request-card.active-card {
+  border-left: 4px solid #12b76a;
+}
+
+.marketing-request-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.marketing-request-label {
+  color: #2563eb;
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
-.marketing-request h3 {
-  margin: 5px 0 0;
-  color: #183652;
+.marketing-request-main h3 {
+  margin: 7px 0 7px;
   font-size: 17px;
 }
 
-.marketing-request__description {
-  margin: 12px 0 0;
-  color: #687b91;
+.marketing-request-main p {
+  margin: 0;
+  max-width: 600px;
+  color: #667085;
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.55;
 }
 
-.marketing-status {
-  flex: 0 0 auto;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: #eef3f8;
-  color: #50647a;
-  font-size: 11px;
-  font-weight: 750;
-  white-space: nowrap;
-}
-
-.marketing-status--new {
-  background: #fff7df;
-  color: #946200;
-}
-
-.marketing-status--assigned {
-  background: #edf5ff;
-  color: #1769e0;
-}
-
-.marketing-status--in_progress {
-  background: #eaf3ff;
-  color: #1769e0;
-}
-
-.marketing-status--review {
-  background: #f3edff;
-  color: #6c43b5;
-}
-
-.marketing-status--revision {
-  background: #fff1e8;
-  color: #b64e0d;
-}
-
-.marketing-status--completed {
-  background: #eafaf1;
-  color: #16734a;
-}
-
-.marketing-status--cancelled,
-.marketing-status--rejected {
-  background: #fff0f0;
-  color: #b42318;
-}
-
-.marketing-request__details {
+.marketing-request-meta {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-top: 18px;
-  padding-top: 17px;
-  border-top: 1px solid #edf1f6;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: 15px 28px;
+  min-width: 350px;
 }
 
-.marketing-request__details span {
-  display: block;
-  margin-bottom: 5px;
-  color: #7a8ba0;
+.marketing-request-meta div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.marketing-request-meta span {
+  color: #98a2b3;
   font-size: 11px;
 }
 
-.marketing-request__details strong {
-  color: #2b425d;
+.marketing-request-meta strong {
+  color: #344054;
+  font-size: 13px;
+  text-transform: capitalize;
+}
+
+.status.pending {
+  color: #b54708 !important;
+}
+
+.status.active {
+  color: #067647 !important;
+}
+
+.marketing-empty {
+  padding: 60px 20px;
+  text-align: center;
+  background: #fff;
+  border: 1px dashed #d0d5dd;
+  border-radius: 14px;
+}
+
+.marketing-empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: #f2f4f7;
+  color: #667085;
+  font-weight: 900;
+}
+
+.marketing-empty h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.marketing-empty p {
+  margin: 7px 0 0;
+  color: #667085;
   font-size: 13px;
 }
 
-.marketing-request__actions {
+.marketing-loading {
+  min-height: 70vh;
   display: flex;
-  justify-content: flex-end;
-  margin-top: 17px;
-  padding-top: 15px;
-  border-top: 1px solid #edf1f6;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  color: #667085;
+  font-size: 14px;
 }
 
-/* ============================================================
-   TABLET
-   ============================================================ */
+.marketing-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #dbe5f4;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: marketing-spin 0.8s linear infinite;
+}
 
-@media (max-width: 1000px) {
+@keyframes marketing-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1050px) {
   .marketing-plans {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .marketing-create {
-    grid-template-columns: 1fr;
-    gap: 25px;
+  .marketing-request-card {
+    flex-direction: column;
+  }
+
+  .marketing-request-meta {
+    min-width: 0;
   }
 }
 
-/* ============================================================
-   MOBILE
-   ============================================================ */
-
-@media (max-width: 680px) {
+@media (max-width: 700px) {
   .marketing-page {
-    padding: 18px 14px 45px;
+    padding: 24px 0 50px;
   }
 
-  .marketing-hero {
+  .marketing-container {
+    width: min(100% - 24px, 1180px);
+  }
+
+  .marketing-header {
+    align-items: flex-start;
     flex-direction: column;
-    align-items: stretch;
-    gap: 22px;
-    padding: 24px 20px;
-    border-radius: 17px;
   }
 
-  .marketing-hero h1 {
-    font-size: 31px;
+  .marketing-header h1 {
+    font-size: 28px;
   }
 
-  .marketing-hero p {
-    font-size: 14px;
-  }
-
-  .marketing-rate-card {
-    flex: none;
+  .marketing-tabs {
     width: 100%;
-    box-sizing: border-box;
+    overflow-x: auto;
+  }
+
+  .marketing-tab {
+    flex: 0 0 auto;
   }
 
   .marketing-plans {
@@ -651,89 +644,33 @@
 
   .marketing-plan {
     min-height: auto;
+  }
+
+  .marketing-selected-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .marketing-primary-button {
+    width: 100%;
+  }
+
+  .marketing-form-card {
     padding: 20px;
   }
 
-  .marketing-plan__features {
-    margin-top: 17px;
-  }
-
-  .marketing-create {
-    display: block;
-    margin-top: 30px;
-    padding: 21px 18px;
-    border-radius: 17px;
-  }
-
-  .marketing-create__intro {
-    margin-bottom: 24px;
-  }
-
-  .marketing-create__intro h2 {
-    font-size: 23px;
-  }
-
-  .marketing-summary {
+  .marketing-request-meta {
     grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+}
+
+@media (max-width: 450px) {
+  .marketing-request-meta {
+    grid-template-columns: 1fr;
   }
 
-  .marketing-summary__total {
-    grid-column: 1 / -1;
-  }
-
-  .marketing-request {
-    padding: 17px;
-  }
-
-  .marketing-request__top {
+  .marketing-form-summary {
     flex-direction: column;
-    gap: 11px;
   }
-
-  .marketing-status {
-    white-space: normal;
-  }
-
-  .marketing-request__details {
-    grid-template-columns: 1fr;
-    gap: 13px;
-  }
-
-  .marketing-request__actions {
-    justify-content: stretch;
-  }
-
-  .marketing-primary-button--small {
-    width: 100%;
-  }
-}
-
-/* ============================================================
-   SMALL PHONES
-   ============================================================ */
-
-@media (max-width: 420px) {
-  .marketing-page {
-    padding-inline: 11px;
-  }
-
-  .marketing-hero {
-    padding: 21px 17px;
-  }
-
-  .marketing-hero h1 {
-    font-size: 28px;
-  }
-
-  .marketing-rate-card strong {
-    font-size: 27px;
-  }
-
-  .marketing-summary {
-    grid-template-columns: 1fr;
-  }
-
-  .marketing-summary__total {
-    grid-column: auto;
-  }
-}
+   }
