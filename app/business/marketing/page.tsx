@@ -365,7 +365,7 @@ export default function MarketingPage() {
       data: campaignData,
       error: campaignError,
     } = await supabase.functions.invoke(
-      "create-marketing-campaign",
+      "create-marketing-request",
       {
         body: {
           business_id: businessId,
