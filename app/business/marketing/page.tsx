@@ -305,133 +305,149 @@ export default function MarketingPage() {
   }
 
   async function submitRequest() {
-    if (!businessId) {
-      setError("Business account not found.");
-      return;
+  if (!businessId) {
+    setError("Business account not found.");
+    return;
+  }
+
+  if (!selectedPlan) {
+    setError("Please select a campaign plan.");
+    return;
+  }
+
+  if (!selectedServiceId) {
+    setError("Please select a marketing service.");
+    return;
+  }
+
+  if (!title.trim()) {
+    setError("Please enter a campaign title.");
+    return;
+  }
+
+  if (!description.trim()) {
+    setError("Please describe what you want to achieve.");
+    return;
+  }
+
+  try {
+    setSubmitting(true);
+    setError("");
+    setSuccess("");
+
+    const selectedService = services.find(
+      (service) => service.id === selectedServiceId,
+    );
+
+    if (!selectedService) {
+      throw new Error("Selected service was not found.");
     }
 
-    if (!selectedPlan) {
-      setError("Please select a campaign plan.");
-      return;
-    }
+    const startsAt = new Date();
 
-    if (!selectedServiceId) {
-      setError("Please select a marketing service.");
-      return;
-    }
+    const endsAt = new Date(
+      startsAt.getTime() +
+        selectedPlan.duration_days *
+          24 *
+          60 *
+          60 *
+          1000,
+    );
 
-    if (!title.trim()) {
-      setError("Please enter a campaign title.");
-      return;
-    }
+    const token = await getAccessToken();
 
-    if (!description.trim()) {
-      setError("Please describe what you want to achieve.");
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      setError("");
-      setSuccess("");
-
-      const selectedService = services.find(
-        (service) => service.id === selectedServiceId,
-      );
-
-      if (!selectedService) {
-        throw new Error("Selected service was not found.");
-      }
-
-      /*
-       * The frontend does not trust its own price.
-       * The database plan is used as the source of truth.
-       */
-      const startsAt = new Date();
-
-      const endsAt = new Date(
-        startsAt.getTime() +
-          selectedPlan.duration_days *
-            24 *
-            60 *
-            60 *
-            1000,
-      );
-
-      const { data: request, error: requestError } =
-        await supabase
-          .from("marketing_service_requests")
-          .insert({
-            business_id: businessId,
-            service_id: selectedService.id,
-            title: title.trim(),
-            description: description.trim(),
-            budget: selectedPlan.local_price,
-            currency_code: selectedPlan.local_currency,
-            requested_start_at: startsAt.toISOString(),
-            requested_deadline: endsAt.toISOString(),
-            status: "pending_payment",
-            plan_id: selectedPlan.id,
-            duration_days: selectedPlan.duration_days,
-            daily_rate: selectedPlan.daily_price,
-            starts_at: startsAt.toISOString(),
-            ends_at: endsAt.toISOString(),
-          })
-          .select("*")
-          .single();
-
-      if (requestError) {
-        throw requestError;
-      }
-
-      if (!request) {
-        throw new Error(
-          "Marketing request could not be created.",
-        );
-      }
-
-      /*
-       * Payment is handed to the existing payment system.
-       * No new payment backend is created here.
-       */
-      const token = await getAccessToken();
-
-      const { data: paymentData, error: paymentError } =
-  await supabase.functions.invoke(
-    "create-payment",
-    {
-      body: {
-        order_type: "marketing",
-        business_id: businessId,
-        service_request_id: request.id,
+    /*
+     * STEP 1
+     * Create the marketing request through the
+     * existing create-marketing-campaign Edge Function.
+     */
+    const {
+      data: campaignData,
+      error: campaignError,
+    } = await supabase.functions.invoke(
+      "create-marketing-campaign",
+      {
+        body: {
+          business_id: businessId,
+          service_id: selectedService.id,
+          title: title.trim(),
+          description: description.trim(),
+          budget: selectedPlan.local_price,
+          requested_start_at: startsAt.toISOString(),
+          requested_deadline: endsAt.toISOString(),
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       },
-      headers: {
-        Authorization: `Bearer ${token}`,
+    );
+
+    if (campaignError) {
+      throw new Error(
+        campaignError.message ||
+          "Unable to create marketing campaign.",
+      );
+    }
+
+    if (!campaignData?.success || !campaignData?.request?.id) {
+      throw new Error(
+        campaignData?.error ||
+          "Unable to create marketing campaign.",
+      );
+    }
+
+    const requestId = campaignData.request.id;
+
+    /*
+     * STEP 2
+     * Initialize payment using the existing payment Edge Function.
+     */
+    const {
+      data: paymentData,
+      error: paymentError,
+    } = await supabase.functions.invoke(
+      "create-payment",
+      {
+        body: {
+          order_type: "marketing",
+          business_id: businessId,
+          service_request_id: requestId,
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       },
-    },
-  );
+    );
 
-      if (paymentError) {
-        throw paymentError;
-      }
+    if (paymentError) {
+      throw new Error(
+        paymentError.message ||
+          "Unable to initialize payment.",
+      );
+    }
 
-      if (!paymentData?.authorization_url) {
-        throw new Error(
+    if (!paymentData?.authorization_url) {
+      throw new Error(
+        paymentData?.error ||
           "Payment could not be initialized.",
-        );
-      }
-
-      window.location.href =
-        paymentData.authorization_url;
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to submit marketing request.",
       );
-    } finally {
-      setSubmitting(false);
     }
+
+    /*
+     * STEP 3
+     * Send the business owner to Paystack.
+     */
+    window.location.href =
+      paymentData.authorization_url;
+  } catch (err) {
+    setError(
+      err instanceof Error
+        ? err.message
+        : "Unable to submit marketing request.",
+    );
+  } finally {
+    setSubmitting(false);
+  }
   }
 
   function formatMoney(
