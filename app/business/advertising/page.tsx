@@ -14,6 +14,19 @@ type Package = {
   duration_days: number;
 };
 
+type LocalizedPrice = {
+  type: "ad_package";
+  id: string;
+  name: string;
+  description: string | null;
+  base_price: number;
+  base_currency: string;
+  local_price: number;
+  local_currency: string;
+  exchange_rate: number;
+  rate_direction: "direct" | "inverse" | "same";
+};
+
 type Business = {
   id: string;
   name: string;
@@ -89,7 +102,13 @@ function statusLabel(status: string) {
 
 export default function AdvertisingPage() {
   const [business, setBusiness] = useState<Business | null>(null);
+
   const [packages, setPackages] = useState<Package[]>([]);
+
+  const [localizedPrices, setLocalizedPrices] = useState<
+    Record<string, LocalizedPrice>
+  >({});
+
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [advertisements, setAdvertisements] = useState<
     Advertisement[]
@@ -97,8 +116,11 @@ export default function AdvertisingPage() {
   const [stats, setStats] = useState<Stat[]>([]);
 
   const [tab, setTab] = useState<Tab>("campaigns");
+
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [pricingLoading, setPricingLoading] = useState(false);
+
   const [error, setError] = useState("");
 
   const [selectedPackage, setSelectedPackage] =
@@ -107,13 +129,113 @@ export default function AdvertisingPage() {
   const [campaignName, setCampaignName] = useState("");
   const [objective, setObjective] = useState("visibility");
 
+  /*
+   * Load localized advertising prices.
+   *
+   * IMPORTANT:
+   * The frontend does NOT calculate exchange rates.
+   * It asks the get-localized-pricing Edge Function.
+   */
+  const loadLocalizedPrices = useCallback(
+    async (
+      businessId: string,
+      packageList: Package[],
+      accessToken: string
+    ) => {
+      if (packageList.length === 0) {
+        setLocalizedPrices({});
+        return;
+      }
+
+      setPricingLoading(true);
+
+      try {
+        const supabaseUrl =
+          process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+        if (!supabaseUrl) {
+          throw new Error(
+            "Supabase configuration is missing."
+          );
+        }
+
+        const response = await fetch(
+          `${supabaseUrl}/functions/v1/get-localized-pricing`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+              business_id: businessId,
+              items: packageList.map((item) => ({
+                type: "ad_package",
+                id: item.id,
+              })),
+            }),
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data?.error ||
+              "Unable to load localized advertising prices."
+          );
+        }
+
+        if (!Array.isArray(data?.prices)) {
+          throw new Error(
+            "Invalid pricing response from the server."
+          );
+        }
+
+        const priceMap: Record<string, LocalizedPrice> = {};
+
+        for (const price of data.prices) {
+          if (
+            price?.type === "ad_package" &&
+            price?.id &&
+            typeof price.local_price === "number" &&
+            price.local_currency
+          ) {
+            priceMap[price.id] = price as LocalizedPrice;
+          }
+        }
+
+        /*
+         * Do not allow the page to silently display
+         * base NGN prices when a localized price is missing.
+         */
+        const missingPackage = packageList.find(
+          (item) => !priceMap[item.id]
+        );
+
+        if (missingPackage) {
+          throw new Error(
+            `Unable to calculate the local price for ${missingPackage.name}.`
+          );
+        }
+
+        setLocalizedPrices(priceMap);
+
+        return priceMap;
+      } finally {
+        setPricingLoading(false);
+      }
+    },
+    []
+  );
+
   const loadData = useCallback(async () => {
     setLoading(true);
     setError("");
 
     try {
       /*
-       * 1. Get the currently authenticated user.
+       * 1. Get authenticated user.
        */
       const {
         data: { user },
@@ -129,10 +251,7 @@ export default function AdvertisingPage() {
       }
 
       /*
-       * 2. Load ALL businesses connected to this user.
-       *
-       * Do not use limit(1).
-       * A user can own/manage multiple businesses.
+       * 2. Get all business memberships.
        */
       const { data: memberships, error: membershipError } =
         await supabase
@@ -151,7 +270,7 @@ export default function AdvertisingPage() {
         .filter(Boolean);
 
       /*
-       * 3. Also check businesses where this user is owner_id.
+       * 3. Also get businesses directly owned by user.
        */
       const { data: ownedBusinesses, error: ownerError } =
         await supabase
@@ -170,7 +289,7 @@ export default function AdvertisingPage() {
         .filter(Boolean);
 
       /*
-       * 4. Combine membership and ownership IDs.
+       * 4. Combine business IDs.
        */
       const businessIds = Array.from(
         new Set([
@@ -186,7 +305,7 @@ export default function AdvertisingPage() {
       }
 
       /*
-       * 5. Load all businesses accessible to this user.
+       * 5. Load accessible businesses.
        */
       const {
         data: availableBusinesses,
@@ -214,11 +333,7 @@ export default function AdvertisingPage() {
       }
 
       /*
-       * 6. Select the business to use for advertising.
-       *
-       * Prefer an active public business.
-       * Otherwise use any active business.
-       * Finally fall back to the first accessible business.
+       * 6. Select business.
        */
       const selectedBusiness =
         availableBusinesses.find(
@@ -240,7 +355,7 @@ export default function AdvertisingPage() {
       const businessId = selectedBusiness.id;
 
       /*
-       * 7. Load the business country/currency.
+       * 7. Load business country.
        */
       const { data: countryData, error: countryError } =
         await supabase
@@ -255,18 +370,29 @@ export default function AdvertisingPage() {
         );
       }
 
+      if (!countryData?.currency_code) {
+        throw new Error(
+          "The business local currency is not configured."
+        );
+      }
+
       setBusiness({
         id: selectedBusiness.id,
         name: selectedBusiness.name,
         email: selectedBusiness.email,
         country_code: selectedBusiness.country_code,
-        countries: countryData
-          ? [{ currency_code: countryData.currency_code }]
-          : [],
+        countries: [
+          {
+            currency_code: countryData.currency_code,
+          },
+        ],
       });
 
       /*
        * 8. Load active advertising packages.
+       *
+       * These are BASE prices.
+       * They are NOT displayed directly to the customer.
        */
       const {
         data: packagesData,
@@ -287,12 +413,27 @@ export default function AdvertisingPage() {
         );
       }
 
-      const loadedPackages = (packagesData || []) as Package[];
+      const loadedPackages =
+        (packagesData || []) as Package[];
 
       setPackages(loadedPackages);
 
       /*
-       * 9. Load this business's campaigns.
+       * 9. Convert every package to the business's
+       * actual local currency.
+       */
+      await loadLocalizedPrices(
+        businessId,
+        loadedPackages,
+        user.id
+          ? (
+              await supabase.auth.getSession()
+            ).data.session?.access_token || ""
+          : ""
+      );
+
+      /*
+       * 10. Load this business's campaigns.
        */
       const {
         data: campaignsData,
@@ -314,8 +455,7 @@ export default function AdvertisingPage() {
       }
 
       /*
-       * Attach package information manually.
-       * This avoids Supabase relationship/type issues.
+       * 11. Attach package information manually.
        */
       const campaignsWithPackages: Campaign[] =
         (campaignsData || []).map((campaign) => {
@@ -334,8 +474,7 @@ export default function AdvertisingPage() {
       setCampaigns(campaignsWithPackages);
 
       /*
-       * 10. If there are no campaigns, there cannot be
-       * advertisements or statistics.
+       * 12. Load advertisements.
        */
       const campaignIds = campaignsWithPackages.map(
         (campaign) => campaign.id
@@ -347,9 +486,6 @@ export default function AdvertisingPage() {
         return;
       }
 
-      /*
-       * 11. Load advertisements belonging to campaigns.
-       */
       const {
         data: advertisementsData,
         error: advertisementsError,
@@ -372,7 +508,7 @@ export default function AdvertisingPage() {
       setAdvertisements(loadedAdvertisements);
 
       /*
-       * 12. Load statistics for those advertisements.
+       * 13. Load statistics.
        */
       const advertisementIds = loadedAdvertisements.map(
         (advertisement) => advertisement.id
@@ -410,7 +546,7 @@ export default function AdvertisingPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadLocalizedPrices]);
 
   useEffect(() => {
     loadData();
@@ -452,6 +588,15 @@ export default function AdvertisingPage() {
   );
 
   /*
+   * Get localized price for a package.
+   */
+  const getPackagePrice = (
+    packageId: string
+  ): LocalizedPrice | null => {
+    return localizedPrices[packageId] || null;
+  };
+
+  /*
    * Create advertising campaign and initialize payment.
    */
   const createCampaign = async () => {
@@ -462,6 +607,13 @@ export default function AdvertisingPage() {
 
     if (!selectedPackage) {
       setError("Select an advertising package first.");
+      return;
+    }
+
+    if (!localizedPrices[selectedPackage.id]) {
+      setError(
+        "The local price for this package is unavailable."
+      );
       return;
     }
 
@@ -495,6 +647,9 @@ export default function AdvertisingPage() {
 
       /*
        * Create campaign.
+       *
+       * Only the package ID is sent.
+       * The backend gets the real base price itself.
        */
       const campaignResponse = await fetch(
         `${supabaseUrl}/functions/v1/create-ad-campaign`,
@@ -533,7 +688,10 @@ export default function AdvertisingPage() {
       }
 
       /*
-       * Initialize Paystack payment.
+       * Initialize payment.
+       *
+       * create-payment performs the server-side
+       * payment calculation.
        */
       const paymentResponse = await fetch(
         `${supabaseUrl}/functions/v1/create-payment`,
@@ -690,7 +848,16 @@ export default function AdvertisingPage() {
             </div>
           </div>
 
-          {packages.length === 0 ? (
+          {pricingLoading ? (
+            <div className="empty-state">
+              <h3>Calculating local prices</h3>
+
+              <p>
+                We are calculating advertising prices
+                for your business location.
+              </p>
+            </div>
+          ) : packages.length === 0 ? (
             <div className="empty-state">
               <h3>
                 No advertising packages available
@@ -703,156 +870,176 @@ export default function AdvertisingPage() {
             </div>
           ) : (
             <div className="package-grid">
-              {packages.map((item) => (
-                <article
-                  key={item.id}
-                  className={`package-card ${
-                    selectedPackage?.id === item.id
-                      ? "selected"
-                      : ""
-                  }`}
-                  onClick={() =>
-                    setSelectedPackage(item)
-                  }
-                >
-                  <div className="package-duration">
-                    {item.duration_days}{" "}
-                    {item.duration_days === 1
-                      ? "day"
-                      : "days"}
-                  </div>
+              {packages.map((item) => {
+                const localized =
+                  getPackagePrice(item.id);
 
-                  <h3>{item.name}</h3>
-
-                  {item.description && (
-                    <p>{item.description}</p>
-                  )}
-
-                  <strong className="package-price">
-                    {formatMoney(
-                      Number(item.price),
-                      item.currency_code
-                    )}
-                  </strong>
-
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setSelectedPackage(item);
-                    }}
+                return (
+                  <article
+                    key={item.id}
+                    className={`package-card ${
+                      selectedPackage?.id === item.id
+                        ? "selected"
+                        : ""
+                    }`}
+                    onClick={() =>
+                      localized &&
+                      setSelectedPackage(item)
+                    }
                   >
-                    {selectedPackage?.id === item.id
-                      ? "Selected"
-                      : "Select"}
-                  </button>
-                </article>
-              ))}
+                    <div className="package-duration">
+                      {item.duration_days}{" "}
+                      {item.duration_days === 1
+                        ? "day"
+                        : "days"}
+                    </div>
+
+                    <h3>{item.name}</h3>
+
+                    {item.description && (
+                      <p>{item.description}</p>
+                    )}
+
+                    <strong className="package-price">
+                      {localized
+                        ? formatMoney(
+                            localized.local_price,
+                            localized.local_currency
+                          )
+                        : "Price unavailable"}
+                    </strong>
+
+                    <button
+                      type="button"
+                      disabled={!localized}
+                      onClick={(event) => {
+                        event.stopPropagation();
+
+                        if (localized) {
+                          setSelectedPackage(item);
+                        }
+                      }}
+                    >
+                      {selectedPackage?.id === item.id
+                        ? "Selected"
+                        : localized
+                          ? "Select"
+                          : "Unavailable"}
+                    </button>
+                  </article>
+                );
+              })}
             </div>
           )}
 
-          {selectedPackage && (
-            <section className="campaign-form-card">
-              <div className="section-heading">
-                <div>
-                  <h2>Create campaign</h2>
+          {selectedPackage &&
+            localizedPrices[selectedPackage.id] && (
+              <section className="campaign-form-card">
+                <div className="section-heading">
+                  <div>
+                    <h2>Create campaign</h2>
 
-                  <p>
-                    Your campaign will be activated
-                    automatically after successful
-                    payment.
-                  </p>
-                </div>
-              </div>
-
-              <div className="form-grid">
-                <label>
-                  Campaign name
-
-                  <input
-                    type="text"
-                    value={campaignName}
-                    onChange={(event) =>
-                      setCampaignName(
-                        event.target.value
-                      )
-                    }
-                    placeholder="e.g. October Business Promotion"
-                    maxLength={120}
-                  />
-                </label>
-
-                <label>
-                  Objective
-
-                  <select
-                    value={objective}
-                    onChange={(event) =>
-                      setObjective(
-                        event.target.value
-                      )
-                    }
-                  >
-                    <option value="visibility">
-                      Brand visibility
-                    </option>
-
-                    <option value="customer_acquisition">
-                      Customer acquisition
-                    </option>
-
-                    <option value="website_traffic">
-                      Website traffic
-                    </option>
-
-                    <option value="promotion">
-                      Promote an offer
-                    </option>
-                  </select>
-                </label>
-              </div>
-
-              <div className="campaign-summary">
-                <div>
-                  <span>Package</span>
-
-                  <strong>
-                    {selectedPackage.name}
-                  </strong>
+                    <p>
+                      Your campaign will be activated
+                      automatically after successful
+                      payment.
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <span>Duration</span>
+                <div className="form-grid">
+                  <label>
+                    Campaign name
 
-                  <strong>
-                    {selectedPackage.duration_days} days
-                  </strong>
+                    <input
+                      type="text"
+                      value={campaignName}
+                      onChange={(event) =>
+                        setCampaignName(
+                          event.target.value
+                        )
+                      }
+                      placeholder="e.g. October Business Promotion"
+                      maxLength={120}
+                    />
+                  </label>
+
+                  <label>
+                    Objective
+
+                    <select
+                      value={objective}
+                      onChange={(event) =>
+                        setObjective(
+                          event.target.value
+                        )
+                      }
+                    >
+                      <option value="visibility">
+                        Brand visibility
+                      </option>
+
+                      <option value="customer_acquisition">
+                        Customer acquisition
+                      </option>
+
+                      <option value="website_traffic">
+                        Website traffic
+                      </option>
+
+                      <option value="promotion">
+                        Promote an offer
+                      </option>
+                    </select>
+                  </label>
                 </div>
 
-                <div>
-                  <span>Price</span>
+                <div className="campaign-summary">
+                  <div>
+                    <span>Package</span>
 
-                  <strong>
-                    {formatMoney(
-                      Number(selectedPackage.price),
-                      selectedPackage.currency_code
-                    )}
-                  </strong>
+                    <strong>
+                      {selectedPackage.name}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Duration</span>
+
+                    <strong>
+                      {selectedPackage.duration_days}{" "}
+                      days
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Price</span>
+
+                    <strong>
+                      {formatMoney(
+                        localizedPrices[
+                          selectedPackage.id
+                        ].local_price,
+                        localizedPrices[
+                          selectedPackage.id
+                        ].local_currency
+                      )}
+                    </strong>
+                  </div>
                 </div>
-              </div>
 
-              <button
-                type="button"
-                className="primary-button"
-                disabled={creating}
-                onClick={createCampaign}
-              >
-                {creating
-                  ? "Preparing payment..."
-                  : "Continue to payment"}
-              </button>
-            </section>
-          )}
+                <button
+                  type="button"
+                  className="primary-button"
+                  disabled={creating}
+                  onClick={createCampaign}
+                >
+                  {creating
+                    ? "Preparing payment..."
+                    : "Continue to payment"}
+                </button>
+              </section>
+            )}
 
           <section className="campaign-history">
             <div className="section-heading">
@@ -877,40 +1064,61 @@ export default function AdvertisingPage() {
               </div>
             ) : (
               <div className="campaign-list">
-                {campaigns.map((campaign) => (
-                  <article
-                    className="campaign-row"
-                    key={campaign.id}
-                  >
-                    <div>
-                      <h3>{campaign.name}</h3>
+                {campaigns.map((campaign) => {
+                  const campaignPackage =
+                    campaign.ad_packages?.[0];
 
-                      <p>
-                        {campaign.ad_packages?.[0]
-                          ?.name ||
-                          `${campaign.budget} ${campaign.currency_code}`}
-                      </p>
-                    </div>
+                  const localized =
+                    campaignPackage
+                      ? getPackagePrice(
+                          campaignPackage.id
+                        )
+                      : null;
 
-                    <div className="campaign-row-date">
-                      <span>Created</span>
-
-                      <strong>
-                        {formatDate(
-                          campaign.created_at
-                        )}
-                      </strong>
-                    </div>
-
-                    <span
-                      className={`campaign-status status-${campaign.status}`}
+                  return (
+                    <article
+                      className="campaign-row"
+                      key={campaign.id}
                     >
-                      {statusLabel(
-                        campaign.status
-                      )}
-                    </span>
-                  </article>
-                ))}
+                      <div>
+                        <h3>{campaign.name}</h3>
+
+                        <p>
+                          {campaignPackage
+                            ? campaignPackage.name
+                            : `${campaign.budget} ${campaign.currency_code}`}
+                        </p>
+
+                        {localized && (
+                          <small>
+                            {formatMoney(
+                              localized.local_price,
+                              localized.local_currency
+                            )}
+                          </small>
+                        )}
+                      </div>
+
+                      <div className="campaign-row-date">
+                        <span>Created</span>
+
+                        <strong>
+                          {formatDate(
+                            campaign.created_at
+                          )}
+                        </strong>
+                      </div>
+
+                      <span
+                        className={`campaign-status status-${campaign.status}`}
+                      >
+                        {statusLabel(
+                          campaign.status
+                        )}
+                      </span>
+                    </article>
+                  );
+                })}
               </div>
             )}
           </section>
@@ -1152,4 +1360,4 @@ export default function AdvertisingPage() {
       )}
     </main>
   );
-}
+  }
