@@ -383,10 +383,14 @@ export default function MarketingPage() {
     );
 
     if (campaignError) {
-      throw new Error(
-        campaignError.message ||
-          "Unable to create marketing campaign.",
-      );
+  console.error("CREATE MARKETING REQUEST ERROR:", campaignError);
+  console.error("CREATE MARKETING REQUEST DATA:", campaignData);
+
+  throw new Error(
+    campaignData?.error ||
+      campaignError.message ||
+      "Unable to create marketing campaign.",
+  );
     }
 
     if (!campaignData?.success || !campaignData?.request?.id) {
