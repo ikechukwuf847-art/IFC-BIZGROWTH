@@ -799,7 +799,7 @@ export default async function BusinessDashboardPage() {
             </Link>
 
             <Link
-              href="/app/business/campaign"
+              href="/business/campaign"
               className="dashboard-nav-link"
             >
               <span>◈</span>
@@ -823,7 +823,7 @@ export default async function BusinessDashboardPage() {
             </Link>
 
             <Link
-              href="/app/business/products"
+              href="/business/products"
               className="dashboard-nav-link"
             >
               <span>□</span>
@@ -839,7 +839,7 @@ export default async function BusinessDashboardPage() {
             </Link>
 
             <Link
-              href="/business/promotions"
+              href="/business/advertising"
               className="dashboard-nav-link"
             >
               <span>✦</span>
@@ -930,7 +930,7 @@ export default async function BusinessDashboardPage() {
                 </Link>
 
                 <Link
-                  href="/app/business/products"
+                  href="/business/products"
                   className="dashboard-primary-button"
                 >
                   Add product
@@ -1293,7 +1293,7 @@ export default async function BusinessDashboardPage() {
 
                 <div className="dashboard-tools">
                   <Link
-                    href="/app/business/products"
+                    href="/business/products"
                     className="dashboard-tool"
                   >
                     <span className="dashboard-tool-icon">
@@ -1335,7 +1335,7 @@ export default async function BusinessDashboardPage() {
                   </Link>
 
                   <Link
-                    href="/app/business/campaign"
+                    href="/business/advertising"
                     className="dashboard-tool"
                   >
                     <span className="dashboard-tool-icon">
@@ -1621,7 +1621,7 @@ export default async function BusinessDashboardPage() {
         </Link>
 
         <Link
-          href="/app/business/campaign"
+          href="/business/campaign"
           className="dashboard-mobile-nav__item"
         >
           <span>◈</span>
@@ -1629,11 +1629,11 @@ export default async function BusinessDashboardPage() {
         </Link>
 
         <Link
-          href="/app/business/products"
+          href="/business/analytics"
           className="dashboard-mobile-nav__item"
         >
-          <span>□</span>
-          <small>Products</small>
+          <span>▥</span>
+          <small>Analytics</small>
         </Link>
 
         <Link
