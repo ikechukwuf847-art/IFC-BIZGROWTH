@@ -839,7 +839,7 @@ export default async function BusinessDashboardPage() {
             </Link>
 
             <Link
-              href="/business/advertising"
+              href="/business/promotions"
               className="dashboard-nav-link"
             >
               <span>✦</span>
@@ -1354,6 +1354,27 @@ export default async function BusinessDashboardPage() {
 
                     <b>→</b>
                   </Link>
+
+                  <Link
+  href="/business/promotions"
+  className="dashboard-tool"
+>
+  <span className="dashboard-tool-icon">
+    ✦
+  </span>
+
+  <span>
+    <strong>
+      Promotions
+    </strong>
+
+    <small>
+      Promote your offers
+    </small>
+  </span>
+
+  <b>→</b>
+</Link>
 
                   <Link
                     href="/business/marketing"
