@@ -478,13 +478,37 @@
   line-height: 1.5;
 }
 
+/* =========================================================
+   VERIFICATION BUTTON
+========================================================= */
+
 .dashboard-notice-link {
   margin-left: auto;
-  color: #0769dc;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 9px;
+  background: #0769dc;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   text-decoration: none;
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.dashboard-notice-link:hover {
+  background: #0758c7;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow:
+    0 6px 15px rgba(7, 105, 220, 0.2);
 }
 
 /* =========================================================
@@ -1365,7 +1389,15 @@
   }
 
   .dashboard-notice-link {
+    min-height: 30px;
+    padding: 0 10px;
+    border-radius: 8px;
     font-size: 8px;
+    gap: 4px;
+  }
+
+  .dashboard-notice-link:hover {
+    transform: none;
   }
 
   /* -------------------------------------------------------
@@ -1775,6 +1807,12 @@
   .dashboard-mobile-nav {
     height: 64px;
   }
+
+  .dashboard-notice-link {
+    min-height: 28px;
+    padding: 0 9px;
+    font-size: 8px;
+  }
 }
 
 /* =========================================================
@@ -1798,7 +1836,8 @@
 .dashboard-tool:focus-visible,
 .dashboard-panel-button:focus-visible,
 .dashboard-mobile-nav__item:focus-visible,
-.dashboard-icon-button:focus-visible {
+.dashboard-icon-button:focus-visible,
+.dashboard-notice-link:focus-visible {
   outline: 3px solid rgba(8, 119, 235, 0.28);
   outline-offset: 2px;
 }
@@ -1811,7 +1850,8 @@
   .dashboard-nav-link,
   .dashboard-primary-button,
   .dashboard-secondary-button,
-  .dashboard-tool {
+  .dashboard-tool,
+  .dashboard-notice-link {
     transition: none;
   }
-}
+   }
