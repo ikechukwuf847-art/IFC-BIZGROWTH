@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import DiscoverClient from "./discover-client";
+import LocationLabel from "./location-label";
 import styles from "./discover.module.css";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +29,8 @@ type Category = {
 };
 
 export default async function DiscoverPage() {
-  const supabase = await createSupabaseServerClient();
+  const supabase =
+    await createSupabaseServerClient();
 
   const [
     featuredResult,
@@ -133,6 +135,7 @@ export default async function DiscoverPage() {
 
           <span>
             <strong>IFC BIZGROWTH</strong>
+
             <small>
               Business Advisory & Discovery Platform
             </small>
@@ -171,7 +174,9 @@ export default async function DiscoverPage() {
             className={styles.locationButton}
           >
             <span>●</span>
-            <span>Abuja</span>
+
+            <LocationLabel />
+
             <span>⌄</span>
           </Link>
 
@@ -192,7 +197,11 @@ export default async function DiscoverPage() {
             method="GET"
             className={styles.searchForm}
           >
-            <span className={styles.searchFormIcon}>
+            <span
+              className={
+                styles.searchFormIcon
+              }
+            >
               ⌕
             </span>
 
@@ -203,12 +212,6 @@ export default async function DiscoverPage() {
               aria-label="Search businesses"
             />
 
-            <input
-              type="hidden"
-              name="location"
-              value="Abuja"
-            />
-
             <button type="submit">
               Search
             </button>
@@ -216,24 +219,40 @@ export default async function DiscoverPage() {
 
           <Link
             href="/locations"
-            className={styles.mobileLocation}
+            className={
+              styles.mobileLocation
+            }
           >
             <span>●</span>
-            Abuja
+
+            <LocationLabel />
+
             <span>⌄</span>
           </Link>
         </div>
       </section>
 
-      <section className={styles.categoryShortcuts}>
+      <section
+        className={
+          styles.categoryShortcuts
+        }
+      >
         <Link
           href="/categories"
-          className={styles.categoryShortcut}
+          className={
+            styles.categoryShortcut
+          }
         >
-          <span className={styles.categoryShortcutIcon}>
+          <span
+            className={
+              styles.categoryShortcutIcon
+            }
+          >
             ▦
           </span>
+
           <span>All</span>
+
           <span>Categories</span>
         </Link>
 
@@ -243,10 +262,18 @@ export default async function DiscoverPage() {
             <Link
               key={category.id}
               href={`/categories/${category.slug}`}
-              className={styles.categoryShortcut}
+              className={
+                styles.categoryShortcut
+              }
             >
-              <span className={styles.categoryShortcutIcon}>
-                {getCategoryIcon(category.slug)}
+              <span
+                className={
+                  styles.categoryShortcutIcon
+                }
+              >
+                {getCategoryIcon(
+                  category.slug
+                )}
               </span>
 
               <span>
@@ -259,18 +286,31 @@ export default async function DiscoverPage() {
 
         <Link
           href="/categories"
-          className={styles.categoryShortcut}
+          className={
+            styles.categoryShortcut
+          }
         >
-          <span className={styles.categoryShortcutIcon}>
+          <span
+            className={
+              styles.categoryShortcutIcon
+            }
+          >
             ⋯
           </span>
+
           <span>See All</span>
         </Link>
       </section>
 
       {featuredBusinesses.length > 0 && (
-        <section className={styles.section}>
-          <div className={styles.sectionHeader}>
+        <section
+          className={styles.section}
+        >
+          <div
+            className={
+              styles.sectionHeader
+            }
+          >
             <h2>
               <span>★</span>
               Featured Businesses
@@ -281,7 +321,11 @@ export default async function DiscoverPage() {
             </Link>
           </div>
 
-          <div className={styles.businessScroller}>
+          <div
+            className={
+              styles.businessScroller
+            }
+          >
             {featuredBusinesses.map(
               (business) => (
                 <BusinessCard
@@ -295,8 +339,14 @@ export default async function DiscoverPage() {
         </section>
       )}
 
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
+      <section
+        className={styles.section}
+      >
+        <div
+          className={
+            styles.sectionHeader
+          }
+        >
           <h2>
             <span>▦</span>
             Popular Categories
@@ -307,16 +357,26 @@ export default async function DiscoverPage() {
           </Link>
         </div>
 
-        <div className={styles.popularCategories}>
+        <div
+          className={
+            styles.popularCategories
+          }
+        >
           {categories
             .slice(0, 5)
             .map((category) => (
               <Link
                 key={category.id}
                 href={`/categories/${category.slug}`}
-                className={styles.popularCategory}
+                className={
+                  styles.popularCategory
+                }
               >
-                <div className={styles.popularCategoryImage}>
+                <div
+                  className={
+                    styles.popularCategoryImage
+                  }
+                >
                   <span>
                     {getCategoryIcon(
                       category.slug
@@ -336,7 +396,11 @@ export default async function DiscoverPage() {
             href="/categories"
             className={`${styles.popularCategory} ${styles.moreCategory}`}
           >
-            <div className={styles.popularCategoryImage}>
+            <div
+              className={
+                styles.popularCategoryImage
+              }
+            >
               <span>•••</span>
             </div>
 
@@ -349,7 +413,9 @@ export default async function DiscoverPage() {
         businesses={businesses}
       />
 
-      <section className={styles.ownerCta}>
+      <section
+        className={styles.ownerCta}
+      >
         <div className={styles.ownerIcon}>
           ▣
         </div>
@@ -374,12 +440,22 @@ export default async function DiscoverPage() {
         </Link>
       </section>
 
-      <div className={styles.mobileBottomSpace} />
+      <div
+        className={
+          styles.mobileBottomSpace
+        }
+      />
 
-      <nav className={styles.mobileBottomNav}>
+      <nav
+        className={
+          styles.mobileBottomNav
+        }
+      >
         <Link
           href="/discover"
-          className={styles.activeNav}
+          className={
+            styles.activeNav
+          }
         >
           <span>⌂</span>
           <small>Home</small>
@@ -436,7 +512,11 @@ function BusinessCard({
           : ""
       }`}
     >
-      <div className={styles.businessImage}>
+      <div
+        className={
+          styles.businessImage
+        }
+      >
         {business.logo_url ? (
           <img
             src={business.logo_url}
@@ -444,7 +524,9 @@ function BusinessCard({
           />
         ) : (
           <span>
-            {getInitials(business.name)}
+            {getInitials(
+              business.name
+            )}
           </span>
         )}
 
@@ -460,31 +542,52 @@ function BusinessCard({
         )}
       </div>
 
-      <div className={styles.businessContent}>
+      <div
+        className={
+          styles.businessContent
+        }
+      >
         <h3>{business.name}</h3>
 
-        <p className={styles.businessDescription}>
+        <p
+          className={
+            styles.businessDescription
+          }
+        >
           {business.description ||
             "Business information available on IFC BIZGROWTH."}
         </p>
 
-        <p className={styles.businessLocation}>
+        <p
+          className={
+            styles.businessLocation
+          }
+        >
           <span>●</span>
+
           {location ||
             business.country_code}
         </p>
 
-        <div className={styles.cardActions}>
+        <div
+          className={
+            styles.cardActions
+          }
+        >
           <Link
             href={`/businesses/${business.slug}`}
-            className={styles.viewButton}
+            className={
+              styles.viewButton
+            }
           >
             View Business
           </Link>
 
           <Link
             href={`/businesses/${business.slug}`}
-            className={styles.cardIconButton}
+            className={
+              styles.cardIconButton
+            }
             aria-label="Business contact"
           >
             ⌕
@@ -520,41 +623,69 @@ function getInitials(name: string) {
 function getShortCategoryName(
   name: string
 ) {
-  const names: Record<string, string> = {
+  const names: Record<
+    string,
+    string
+  > = {
     "Food & Restaurants":
       "Restaurants",
+
     "Fashion & Beauty":
       "Fashion & Beauty",
+
     "Furniture & Interior":
       "Furniture",
+
     "Real Estate":
       "Real Estate",
+
     "Construction & Engineering":
       "Construction",
-    Education: "Education",
+
+    Education:
+      "Education",
+
     "Health & Wellness":
       "Health",
-    Technology: "Technology",
+
+    Technology:
+      "Technology",
+
     "Professional Services":
       "Services",
+
     "Retail & Shopping":
       "Retail",
-    Automotive: "Automotive",
-    Agriculture: "Agriculture",
+
+    Automotive:
+      "Automotive",
+
+    Agriculture:
+      "Agriculture",
+
     "Finance & Business":
       "Finance",
+
     "Hospitality & Travel":
       "Hotels",
+
     "Media & Entertainment":
       "Media",
+
     "Events & Recreation":
       "Events",
+
     "Logistics & Transportation":
       "Logistics",
-    Manufacturing: "Manufacturing",
+
+    Manufacturing:
+      "Manufacturing",
+
     "Home & Building":
       "Home",
-    Other: "Other",
+
+    Other:
+      "Other",
   };
 
   return names[name] || name;
@@ -563,16 +694,21 @@ function getShortCategoryName(
 function getCategoryIcon(
   slug: string
 ) {
-  const icons: Record<string, string> = {
+  const icons: Record<
+    string,
+    string
+  > = {
     "food-restaurants": "🍴",
     "fashion-beauty": "♧",
     "furniture-interior": "▰",
     "real-estate": "⌂",
-    "construction-engineering": "▱",
+    "construction-engineering":
+      "▱",
     education: "▤",
     "health-wellness": "✚",
     technology: "⌘",
-    "professional-services": "▣",
+    "professional-services":
+      "▣",
     "retail-shopping": "◇",
     automotive: "▰",
     agriculture: "♧",
@@ -580,7 +716,8 @@ function getCategoryIcon(
     "hospitality-travel": "⌂",
     "media-entertainment": "▶",
     "events-recreation": "☆",
-    "logistics-transportation": "▰",
+    "logistics-transportation":
+      "▰",
     manufacturing: "⚙",
     "home-building": "⌂",
     other: "•••",
