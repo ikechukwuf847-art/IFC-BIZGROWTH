@@ -32,55 +32,80 @@ export default function DiscoverClient({
   const [position, setPosition] =
     useState<Coordinates | null>(null);
 
+  const [locationStatus, setLocationStatus] =
+    useState<
+      "loading" | "granted" | "denied" | "unavailable"
+    >("loading");
+
   useEffect(() => {
-    if (!navigator.geolocation) {
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.geolocation
+    ) {
+      setLocationStatus("unavailable");
       return;
     }
 
     navigator.geolocation.getCurrentPosition(
       (location) => {
+        const latitude =
+          Number(location.coords.latitude);
+
+        const longitude =
+          Number(location.coords.longitude);
+
+        if (
+          !Number.isFinite(latitude) ||
+          !Number.isFinite(longitude)
+        ) {
+          setLocationStatus("unavailable");
+          return;
+        }
+
         setPosition({
-          latitude:
-            location.coords.latitude,
-          longitude:
-            location.coords.longitude,
+          latitude,
+          longitude,
         });
+
+        setLocationStatus("granted");
       },
       () => {
         setPosition(null);
+        setLocationStatus("denied");
       },
       {
-        enableHighAccuracy: false,
-        timeout: 8000,
-        maximumAge: 300000,
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 60000,
       }
     );
   }, []);
 
   const nearbyBusinesses = useMemo(() => {
+    const businessesWithCoordinates =
+      businesses.filter(
+        (business) =>
+          Number.isFinite(
+            Number(business.latitude)
+          ) &&
+          Number.isFinite(
+            Number(business.longitude)
+          )
+      );
+
     if (!position) {
-      return businesses
-        .filter(
-          (business) =>
-            business.latitude !== null &&
-            business.longitude !== null
-        )
+      return businessesWithCoordinates
         .slice(0, 6);
     }
 
-    return businesses
-      .filter(
-        (business) =>
-          business.latitude !== null &&
-          business.longitude !== null
-      )
+    return businessesWithCoordinates
       .map((business) => ({
         business,
         distance: calculateDistance(
           position.latitude,
           position.longitude,
-          business.latitude!,
-          business.longitude!
+          Number(business.latitude),
+          Number(business.longitude)
         ),
       }))
       .sort(
@@ -196,6 +221,7 @@ function BusinessCard({
           <Link
             href={`/businesses/${business.slug}`}
             className={styles.cardIconButton}
+            aria-label="Business contact"
           >
             ⌕
           </Link>
@@ -261,4 +287,4 @@ function toRadians(value: number) {
   return (
     (value * Math.PI) / 180
   );
-      }
+  }
