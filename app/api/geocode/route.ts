@@ -4,15 +4,18 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
 
-    const address = searchParams.get("address")?.trim();
-    const city = searchParams.get("city")?.trim();
-    const state = searchParams.get("state")?.trim();
-    const country = searchParams.get("country")?.trim();
-    const countryCode = searchParams.get("countryCode")?.trim();
+    const address = searchParams.get("address")?.trim() || "";
+    const city = searchParams.get("city")?.trim() || "";
+    const state = searchParams.get("state")?.trim() || "";
+    const country = searchParams.get("country")?.trim() || "";
+    const countryCode = searchParams.get("countryCode")?.trim() || "";
 
     if (!address && !city && !state && !country) {
       return NextResponse.json(
-        { error: "At least one address field is required." },
+        {
+          success: false,
+          error: "At least one location field is required.",
+        },
         { status: 400 }
       );
     }
@@ -20,35 +23,24 @@ export async function GET(request: NextRequest) {
     const token = process.env.MAPBOX_ACCESS_TOKEN;
 
     if (!token) {
+      console.error("MAPBOX_ACCESS_TOKEN is missing.");
+
       return NextResponse.json(
-        { error: "Mapbox access token is not configured." },
+        {
+          success: false,
+          error: "Mapbox access token is not configured.",
+        },
         { status: 500 }
       );
     }
 
+    const query = [address, city, state, country]
+      .filter(Boolean)
+      .join(", ");
+
     /*
-     * Build the search query from the business's actual location.
-     *
-     * IMPORTANT:
-     * Do NOT hardcode country=ng.
-     * IFC BIZGROWTH supports businesses across Africa.
+     * Mapbox v6 Search API
      */
-    const queryParts = [
-      address,
-      city,
-      state,
-      country,
-    ].filter(Boolean);
-
-    const query = queryParts.join(", ");
-
-    if (!query) {
-      return NextResponse.json(
-        { error: "A valid location could not be created from the supplied fields." },
-        { status: 400 }
-      );
-    }
-
     const url = new URL(
       "https://api.mapbox.com/search/geocode/v6/forward"
     );
@@ -59,17 +51,23 @@ export async function GET(request: NextRequest) {
     url.searchParams.set("language", "en");
 
     /*
-     * Only send Mapbox's country restriction when we actually have
-     * a valid country code.
+     * IMPORTANT:
+     * Do not restrict every search to Nigeria.
      *
-     * Example:
-     * NG → Nigeria
-     * GH → Ghana
-     * KE → Kenya
+     * If a country code is supplied, use that country.
      */
     if (countryCode) {
-      url.searchParams.set("country", countryCode.toLowerCase());
+      url.searchParams.set(
+        "country",
+        countryCode.toLowerCase()
+      );
     }
+
+    console.log("Geocoding query:", query);
+    console.log(
+      "Geocoding country:",
+      countryCode || "not restricted"
+    );
 
     const response = await fetch(url.toString(), {
       method: "GET",
@@ -79,22 +77,58 @@ export async function GET(request: NextRequest) {
       cache: "no-store",
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
+    const responseText = await response.text();
 
-      console.error("Mapbox geocoding error:", errorText);
+    if (!response.ok) {
+      console.error(
+        "Mapbox HTTP error:",
+        response.status,
+        responseText
+      );
 
       return NextResponse.json(
-        { error: "Geocoding service request failed." },
+        {
+          success: false,
+          error: "Mapbox geocoding request failed.",
+          details: responseText,
+        },
         { status: 502 }
       );
     }
 
-    const data = await response.json();
+    let data: any;
 
-    if (!data.features || data.features.length === 0) {
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      console.error(
+        "Mapbox returned non-JSON response:",
+        responseText
+      );
+
       return NextResponse.json(
         {
+          success: false,
+          error: "Mapbox returned an invalid response.",
+          details: responseText,
+        },
+        { status: 502 }
+      );
+    }
+
+    if (
+      !data ||
+      !Array.isArray(data.features) ||
+      data.features.length === 0
+    ) {
+      console.error(
+        "No Mapbox results:",
+        JSON.stringify(data)
+      );
+
+      return NextResponse.json(
+        {
+          success: false,
           error: "Location could not be found.",
           query,
         },
@@ -104,55 +138,83 @@ export async function GET(request: NextRequest) {
 
     const feature = data.features[0];
 
-    /*
-     * Mapbox coordinates are:
-     *
-     * [longitude, latitude]
-     */
-    const coordinates = feature.geometry?.coordinates;
+    const coordinates =
+      feature?.geometry?.coordinates;
 
     if (
       !Array.isArray(coordinates) ||
-      coordinates.length < 2 ||
-      typeof coordinates[0] !== "number" ||
-      typeof coordinates[1] !== "number"
+      coordinates.length < 2
     ) {
+      console.error(
+        "Invalid Mapbox coordinates:",
+        JSON.stringify(feature)
+      );
+
       return NextResponse.json(
-        { error: "Geocoding returned invalid coordinates." },
+        {
+          success: false,
+          error: "Mapbox returned invalid coordinates.",
+        },
         { status: 502 }
       );
     }
 
-    const longitude = coordinates[0];
-    const latitude = coordinates[1];
-
     /*
-     * Basic coordinate validation.
+     * Mapbox always returns:
+     *
+     * [longitude, latitude]
      */
+    const longitude = Number(coordinates[0]);
+    const latitude = Number(coordinates[1]);
+
     if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
       latitude < -90 ||
       latitude > 90 ||
       longitude < -180 ||
       longitude > 180
     ) {
+      console.error(
+        "Invalid coordinate values:",
+        coordinates
+      );
+
       return NextResponse.json(
-        { error: "Geocoding returned invalid coordinate values." },
+        {
+          success: false,
+          error: "Mapbox returned invalid coordinate values.",
+        },
         { status: 502 }
       );
     }
 
     return NextResponse.json({
       success: true,
+
+      /*
+       * Database order:
+       * latitude
+       * longitude
+       */
       latitude: Number(latitude.toFixed(7)),
       longitude: Number(longitude.toFixed(7)),
-      place_name: feature.properties?.full_address ?? feature.place_name ?? null,
+
+      place_name:
+        feature?.properties?.full_address ||
+        feature?.place_name ||
+        null,
+
       query,
     });
   } catch (error) {
     console.error("Geocoding route error:", error);
 
     return NextResponse.json(
-      { error: "An unexpected geocoding error occurred." },
+      {
+        success: false,
+        error: "An unexpected geocoding error occurred.",
+      },
       { status: 500 }
     );
   }
