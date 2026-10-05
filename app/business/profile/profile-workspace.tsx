@@ -765,232 +765,239 @@ export default function ProfileWorkspace({
   ].filter(Boolean);
 
   if (addressParts.length === 0) {
-    return {
-      latitude: null,
-      longitude: null,
-    };
+    throw new Error(
+      "Please enter the business address before saving."
+    );
   }
+
+  const response = await fetch("/api/geocode", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      address: addressParts.join(", "),
+    }),
+    cache: "no-store",
+  });
+
+  let data: {
+    latitude?: unknown;
+    longitude?: unknown;
+    error?: unknown;
+  } = {};
 
   try {
-    const response = await fetch("/api/geocode", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        address: addressParts.join(", "),
-      }),
-    });
-
-    if (!response.ok) {
-      return {
-        latitude: null,
-        longitude: null,
-      };
-    }
-
-    const data = await response.json();
-
-    const latitude = Number(data.latitude);
-    const longitude = Number(data.longitude);
-
-    if (
-      !Number.isFinite(latitude) ||
-      latitude < -90 ||
-      latitude > 90
-    ) {
-      return {
-        latitude: null,
-        longitude: null,
-      };
-    }
-
-    if (
-      !Number.isFinite(longitude) ||
-      longitude < -180 ||
-      longitude > 180
-    ) {
-      return {
-        latitude: null,
-        longitude: null,
-      };
-    }
-
-    return {
-      latitude: Number(latitude.toFixed(7)),
-      longitude: Number(longitude.toFixed(7)),
-    };
+    data = await response.json();
   } catch {
-    return {
-      latitude: null,
-      longitude: null,
-    };
+    throw new Error(
+      "The location service returned an invalid response. Please try again."
+    );
   }
-        }
 
-  async function saveLocation(
-    event: FormEvent
+  if (!response.ok) {
+    const errorMessage =
+      typeof data.error === "string"
+        ? data.error
+        : "Unable to determine the business location.";
+
+    throw new Error(errorMessage);
+  }
+
+  const latitude = Number(data.latitude);
+  const longitude = Number(data.longitude);
+
+  if (
+    !Number.isFinite(latitude) ||
+    latitude < -90 ||
+    latitude > 90
   ) {
-    event.preventDefault();
+    throw new Error(
+      "The business latitude could not be determined. Please check the address and try again."
+    );
+  }
 
-    setSavingLocation(true);
-    setMessage("");
-    setError("");
+  if (
+    !Number.isFinite(longitude) ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
+    throw new Error(
+      "The business longitude could not be determined. Please check the address and try again."
+    );
+  }
 
-    try {
-      if (!business.country_code) {
-        throw new Error(
-          "Business country is not configured."
-        );
-      }
+  return {
+    latitude: Number(latitude.toFixed(7)),
+    longitude: Number(longitude.toFixed(7)),
+  };
+    }
 
-      if (!address1.trim()) {
-        throw new Error(
-          "Please enter the business address."
-        );
-      }
+  async function saveLocation(event: FormEvent) {
+  event.preventDefault();
 
-      if (!city.trim()) {
-        throw new Error(
-          "Please enter the city."
-        );
-      }
+  setSavingLocation(true);
+  setMessage("");
+  setError("");
 
-      if (!stateRegion.trim()) {
-        throw new Error(
-          "Please enter the state or region."
-        );
-      }
+  try {
+    if (!business.country_code) {
+      throw new Error(
+        "Business country is not configured."
+      );
+    }
+
+    if (!address1.trim()) {
+      throw new Error(
+        "Please enter the business address."
+      );
+    }
+
+    if (!city.trim()) {
+      throw new Error(
+        "Please enter the city."
+      );
+    }
+
+    if (!stateRegion.trim()) {
+      throw new Error(
+        "Please enter the state or region."
+      );
+    }
+
+    /*
+     * Find the country record.
+     */
+    const {
+      data: countryRecord,
+      error: countryError,
+    } = await supabase
+      .from("countries")
+      .select("id, code, name")
+      .eq("code", business.country_code)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (countryError) {
+      throw new Error(
+        countryError.message
+      );
+    }
+
+    if (!countryRecord) {
+      throw new Error(
+        "The business country could not be found."
+      );
+    }
+
+    /*
+     * Convert the business address into
+     * real latitude and longitude.
+     *
+     * This must succeed before we write
+     * the location to the database.
+     */
+    const coordinates =
+      await geocodeBusinessAddress();
+
+    /*
+     * Extra protection:
+     * Never allow NULL/invalid coordinates
+     * to be written for a location that is
+     * supposed to appear in Businesses Near Me.
+     */
+    if (
+      !Number.isFinite(coordinates.latitude) ||
+      !Number.isFinite(coordinates.longitude)
+    ) {
+      throw new Error(
+        "The business coordinates could not be determined. Please check the address and try again."
+      );
+    }
+
+    /*
+     * Prepare the location payload.
+     */
+    const payload = {
+      business_id: business.id,
+      country_id: countryRecord.id,
+      country_code: countryRecord.code,
+
+      city: city.trim(),
+      state_region: stateRegion.trim(),
+
+      address: address1.trim() || null,
+      address_line_1: address1.trim() || null,
+      address_line_2:
+        address2.trim() || null,
+      postal_code:
+        postalCode.trim() || null,
 
       /*
-       * Resolve country_id from the real
-       * countries table.
+       * IMPORTANT:
+       * These are now guaranteed to contain
+       * valid coordinates before database write.
+       */
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
+
+      is_primary: true,
+      is_active: true,
+      is_public: true,
+
+      updated_at: new Date().toISOString(),
+    };
+
+    /*
+     * UPDATE existing primary location.
+     */
+    if (location?.id) {
+      const {
+        error: updateError,
+      } = await supabase
+        .from("business_locations")
+        .update(payload)
+        .eq("id", location.id)
+        .eq("business_id", business.id);
+
+      if (updateError) {
+        throw new Error(
+          updateError.message
+        );
+      }
+    } else {
+      /*
+       * INSERT first business location.
        */
       const {
-        data: countryRecord,
-        error: countryError,
+        error: insertError,
       } = await supabase
-        .from("countries")
-        .select(
-          "id, code, name"
-        )
-        .eq(
-          "code",
-          business.country_code
-        )
-        .eq("is_active", true)
-        .maybeSingle();
+        .from("business_locations")
+        .insert(payload);
 
-      if (countryError) {
+      if (insertError) {
         throw new Error(
-          countryError.message
+          insertError.message
         );
       }
-
-      if (!countryRecord) {
-        throw new Error(
-          "The business country could not be found."
-        );
-      }
-
-      /*
-       * Coordinates are obtained from
-       * the device automatically.
-       * There are NO latitude/longitude
-       * input fields for businesses.
-       */
-      const coordinates = await geocodeBusinessAddress();
-
-      const payload = {
-        business_id: business.id,
-
-        country_id:
-          countryRecord.id,
-
-        country_code:
-          countryRecord.code,
-
-        city: city.trim(),
-
-        state_region:
-          stateRegion.trim(),
-
-        address:
-          address1.trim() || null,
-
-        address_line_1:
-          address1.trim() || null,
-
-        address_line_2:
-          address2.trim() || null,
-
-        postal_code:
-          postalCode.trim() || null,
-
-        latitude:
-          coordinates.latitude,
-
-        longitude:
-          coordinates.longitude,
-
-        is_primary: true,
-        is_active: true,
-        is_public: true,
-
-        updated_at:
-          new Date().toISOString(),
-      };
-
-      if (location?.id) {
-        const {
-          error: updateError,
-        } = await supabase
-          .from("business_locations")
-          .update(payload)
-          .eq(
-            "id",
-            location.id
-          )
-          .eq(
-            "business_id",
-            business.id
-          );
-
-        if (updateError) {
-          throw new Error(
-            updateError.message
-          );
-        }
-      } else {
-        const {
-          error: insertError,
-        } = await supabase
-          .from("business_locations")
-          .insert(payload);
-
-        if (insertError) {
-          throw new Error(
-            insertError.message
-          );
-        }
-      }
-
-      setMessage(
-        coordinates.latitude !== null &&
-          coordinates.longitude !== null
-          ? "Business location saved and location coordinates recorded."
-          : "Business location saved. Allow location access to enable Businesses Near Me."
-      );
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to save business location."
-      );
-    } finally {
-      setSavingLocation(false);
     }
+
+    /*
+     * Success.
+     */
+    setMessage(
+      "Business location saved successfully. Your business coordinates have been recorded."
+    );
+  } catch (err) {
+    setError(
+      err instanceof Error
+        ? err.message
+        : "Unable to save business location."
+    );
+  } finally {
+    setSavingLocation(false);
   }
+                               }
 
   async function saveSocials(
     event: FormEvent
