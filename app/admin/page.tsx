@@ -1,43 +1,85 @@
-import { redirect } from "next/navigation";
+import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import "./admin.css";
 
 export const dynamic = "force-dynamic";
+
+type Verification = {
+  id: string;
+  business_name: string;
+  status: string;
+  created_at: string;
+};
+
+type Report = {
+  id: string;
+  target_type: string;
+  reason: string;
+  status: string;
+  created_at: string;
+};
+
+type SupportTicket = {
+  id: string;
+  subject: string;
+  category: string;
+  priority: string;
+  status: string;
+  created_at: string;
+};
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+function statusClass(status: string) {
+  const normalized = status.toLowerCase();
+
+  if (normalized === "pending") {
+    return "admin-status admin-status-pending";
+  }
+
+  if (normalized === "open" || normalized === "new") {
+    return "admin-status admin-status-open";
+  }
+
+  if (
+    normalized === "approved" ||
+    normalized === "resolved" ||
+    normalized === "completed"
+  ) {
+    return "admin-status admin-status-approved";
+  }
+
+  if (
+    normalized === "rejected" ||
+    normalized === "closed" ||
+    normalized === "failed"
+  ) {
+    return "admin-status admin-status-rejected";
+  }
+
+  return "admin-status admin-status-default";
+}
 
 export default async function AdminDashboardPage() {
   const supabase = await createSupabaseServerClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/admin/login");
-  }
-
-  const { data: admin } = await supabase
-    .from("admin_users")
-    .select("id, is_active")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!admin || !admin.is_active) {
-    await supabase.auth.signOut();
-    redirect("/admin/login");
-  }
-
   const [
-    businessesResult,
+    adminUsersResult,
     verificationResult,
-    campaignsResult,
-    paymentOrdersResult,
-    marketingRequestsResult,
     reportsResult,
     supportResult,
+    recentVerificationResult,
+    recentReportsResult,
+    recentSupportResult,
   ] = await Promise.all([
     supabase
-      .from("businesses")
-      .select("id", { count: "exact", head: true }),
+      .from("admin_users")
+      .select("id", { count: "exact", head: true })
+      .eq("is_active", true),
 
     supabase
       .from("business_verifications")
@@ -45,276 +87,246 @@ export default async function AdminDashboardPage() {
       .eq("status", "pending"),
 
     supabase
-      .from("ad_campaigns")
-      .select("id", { count: "exact", head: true }),
-
-    supabase
-      .from("payment_orders")
-      .select("id", { count: "exact", head: true }),
-
-    supabase
-      .from("marketing_service_requests")
-      .select("id", { count: "exact", head: true }),
-
-    supabase
       .from("reports")
-      .select("id", { count: "exact", head: true }),
+      .select("id", { count: "exact", head: true })
+      .eq("status", "open"),
 
     supabase
       .from("support_tickets")
-      .select("id", { count: "exact", head: true }),
+      .select("id", { count: "exact", head: true })
+      .eq("status", "open"),
+
+    supabase
+      .from("business_verifications")
+      .select("id, business_name, status, created_at")
+      .order("created_at", { ascending: false })
+      .limit(5),
+
+    supabase
+      .from("reports")
+      .select("id, target_type, reason, status, created_at")
+      .order("created_at", { ascending: false })
+      .limit(5),
+
+    supabase
+      .from("support_tickets")
+      .select("id, subject, category, priority, status, created_at")
+      .order("created_at", { ascending: false })
+      .limit(5),
   ]);
 
-  const stats = [
-    {
-      label: "Businesses",
-      value: businessesResult.count ?? 0,
-      href: "/admin/businesses",
-    },
-    {
-      label: "Pending Verification",
-      value: verificationResult.count ?? 0,
-      href: "/admin/businesses?tab=verification",
-    },
-    {
-      label: "Advertising Campaigns",
-      value: campaignsResult.count ?? 0,
-      href: "/admin/advertising",
-    },
-    {
-      label: "Payment Orders",
-      value: paymentOrdersResult.count ?? 0,
-      href: "/admin/payments",
-    },
-    {
-      label: "Marketing Requests",
-      value: marketingRequestsResult.count ?? 0,
-      href: "/admin/marketing",
-    },
-    {
-      label: "Reports",
-      value: reportsResult.count ?? 0,
-      href: "/admin?section=reports",
-    },
-    {
-      label: "Support Tickets",
-      value: supportResult.count ?? 0,
-      href: "/admin?section=support",
-    },
-  ];
+  const activeAdmins = adminUsersResult.count ?? 0;
+  const pendingVerifications = verificationResult.count ?? 0;
+  const openReports = reportsResult.count ?? 0;
+  const openSupportTickets = supportResult.count ?? 0;
+
+  const verifications =
+    (recentVerificationResult.data as Verification[] | null) ?? [];
+
+  const reports = (recentReportsResult.data as Report[] | null) ?? [];
+
+  const supportTickets =
+    (recentSupportResult.data as SupportTicket[] | null) ?? [];
 
   return (
-    <main className="admin-page">
-      <aside className="admin-sidebar">
-        <div className="admin-brand">
-          <div className="admin-brand-logo">IFC</div>
+    <>
+      <header className="admin-page-header">
+        <h1>Dashboard</h1>
+        <p>
+          Monitor the areas of IFC BIZGROWTH currently available to
+          administrators.
+        </p>
+      </header>
 
-          <div>
-            <strong>IFC BIZGROWTH</strong>
-            <span>Administration</span>
+      <section className="admin-stat-grid">
+        <article className="admin-stat-card">
+          <div className="admin-stat-label">Active administrators</div>
+          <div className="admin-stat-value">{activeAdmins}</div>
+          <div className="admin-stat-note">
+            Active records in admin_users
           </div>
-        </div>
+        </article>
 
-        <nav className="admin-nav">
-          <a href="/admin" className="admin-nav-item active">
-            Dashboard
-          </a>
-
-          <a href="/admin/businesses" className="admin-nav-item">
-            Businesses
-          </a>
-
-          <a href="/admin/advertising" className="admin-nav-item">
-            Advertising
-          </a>
-
-          <a href="/admin/payments" className="admin-nav-item">
-            Payments
-          </a>
-
-          <a href="/admin/marketing" className="admin-nav-item">
-            Marketing
-          </a>
-
-          <div className="admin-nav-divider" />
-
-          <a href="/admin?section=reports" className="admin-nav-item">
-            Reports
-          </a>
-
-          <a href="/admin?section=support" className="admin-nav-item">
-            Support
-          </a>
-
-          <a href="/admin?section=admin-users" className="admin-nav-item">
-            Admin Users
-          </a>
-
-          <a href="/admin?section=audit-logs" className="admin-nav-item">
-            Audit Logs
-          </a>
-
-          <a href="/admin?section=settings" className="admin-nav-item">
-            Settings
-          </a>
-
-          <a href="/admin?section=content" className="admin-nav-item">
-            Content
-          </a>
-        </nav>
-      </aside>
-
-      <section className="admin-main">
-        <header className="admin-header">
-          <div>
-            <p className="admin-eyebrow">ADMINISTRATION</p>
-            <h1>Dashboard</h1>
-            <p className="admin-subtitle">
-              Overview of IFC BIZGROWTH activity.
-            </p>
+        <article className="admin-stat-card">
+          <div className="admin-stat-label">Pending verifications</div>
+          <div className="admin-stat-value">{pendingVerifications}</div>
+          <div className="admin-stat-note">
+            Business verification requests awaiting review
           </div>
+        </article>
 
-          <div className="admin-user">
-            <span className="admin-user-email">{user.email}</span>
-            <span className="admin-user-role">Administrator</span>
+        <article className="admin-stat-card">
+          <div className="admin-stat-label">Open reports</div>
+          <div className="admin-stat-value">{openReports}</div>
+          <div className="admin-stat-note">
+            Reports currently marked open
           </div>
-        </header>
+        </article>
 
-        <section className="admin-stats">
-          {stats.map((stat) => (
-            <a
-              href={stat.href}
-              className="admin-stat-card"
-              key={stat.label}
-            >
-              <span>{stat.label}</span>
-              <strong>{stat.value}</strong>
-            </a>
-          ))}
-        </section>
-
-        <section className="admin-dashboard-grid">
-          <div className="admin-panel">
-            <div className="admin-panel-header">
-              <div>
-                <h2>Business Management</h2>
-                <p>
-                  Manage businesses, verification and members.
-                </p>
-              </div>
-
-              <a href="/admin/businesses">Open</a>
-            </div>
-
-            <div className="admin-panel-links">
-              <a href="/admin/businesses">
-                <strong>All Businesses</strong>
-                <span>View and manage businesses</span>
-              </a>
-
-              <a href="/admin/businesses?tab=verification">
-                <strong>Verification</strong>
-                <span>Review business verification</span>
-              </a>
-
-              <a href="/admin/businesses?tab=members">
-                <strong>Members</strong>
-                <span>Manage business members</span>
-              </a>
-            </div>
+        <article className="admin-stat-card">
+          <div className="admin-stat-label">Open support tickets</div>
+          <div className="admin-stat-value">{openSupportTickets}</div>
+          <div className="admin-stat-note">
+            Support tickets currently marked open
           </div>
-
-          <div className="admin-panel">
-            <div className="admin-panel-header">
-              <div>
-                <h2>Advertising</h2>
-                <p>
-                  Manage the business advertising system.
-                </p>
-              </div>
-
-              <a href="/admin/advertising">Open</a>
-            </div>
-
-            <div className="admin-panel-links">
-              <a href="/admin/advertising?tab=campaigns">
-                <strong>Campaigns</strong>
-                <span>Advertising campaigns</span>
-              </a>
-
-              <a href="/admin/advertising?tab=advertisements">
-                <strong>Advertisements</strong>
-                <span>Manage advertisements</span>
-              </a>
-
-              <a href="/admin/advertising?tab=statistics">
-                <strong>Statistics</strong>
-                <span>Advertising performance</span>
-              </a>
-            </div>
-          </div>
-
-          <div className="admin-panel">
-            <div className="admin-panel-header">
-              <div>
-                <h2>Payments</h2>
-                <p>
-                  Monitor orders, payments, invoices and refunds.
-                </p>
-              </div>
-
-              <a href="/admin/payments">Open</a>
-            </div>
-
-            <div className="admin-panel-links">
-              <a href="/admin/payments?tab=orders">
-                <strong>Orders</strong>
-                <span>Payment orders</span>
-              </a>
-
-              <a href="/admin/payments?tab=payments">
-                <strong>Payments</strong>
-                <span>Completed payments</span>
-              </a>
-
-              <a href="/admin/payments?tab=refunds">
-                <strong>Refunds</strong>
-                <span>Refund management</span>
-              </a>
-            </div>
-          </div>
-
-          <div className="admin-panel admin-panel-marketing">
-            <div className="admin-panel-header">
-              <div>
-                <h2>Marketing</h2>
-                <p>
-                  Manage IFC BIZGROWTH marketing services and requests.
-                </p>
-              </div>
-
-              <a href="/admin/marketing">Open</a>
-            </div>
-
-            <div className="admin-panel-links">
-              <a href="/admin/marketing?tab=services">
-                <strong>Services</strong>
-                <span>Marketing services</span>
-              </a>
-
-              <a href="/admin/marketing?tab=plans">
-                <strong>Plans</strong>
-                <span>Marketing campaign plans</span>
-              </a>
-
-              <a href="/admin/marketing?tab=requests">
-                <strong>Requests</strong>
-                <span>Business marketing requests</span>
-              </a>
-            </div>
-          </div>
-        </section>
+        </article>
       </section>
-    </main>
+
+      <section className="admin-dashboard-grid">
+        <article className="admin-panel">
+          <div className="admin-panel-header">
+            <h2>Recent verification requests</h2>
+            <Link href="/admin/businesses/verification">
+              View all
+            </Link>
+          </div>
+
+          <div className="admin-panel-body">
+            {verifications.length === 0 ? (
+              <div className="admin-empty">
+                No verification requests found.
+              </div>
+            ) : (
+              <div className="admin-list">
+                {verifications.map((verification) => (
+                  <div
+                    className="admin-list-item"
+                    key={verification.id}
+                  >
+                    <div className="admin-list-title">
+                      {verification.business_name}
+                    </div>
+
+                    <div className="admin-list-meta">
+                      {formatDate(verification.created_at)}
+                    </div>
+
+                    <div style={{ marginTop: 7 }}>
+                      <span
+                        className={statusClass(verification.status)}
+                      >
+                        {verification.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </article>
+
+        <article className="admin-panel">
+          <div className="admin-panel-header">
+            <h2>Recent reports</h2>
+            <Link href="/admin/reports">View all</Link>
+          </div>
+
+          <div className="admin-panel-body">
+            {reports.length === 0 ? (
+              <div className="admin-empty">
+                No reports found.
+              </div>
+            ) : (
+              <div className="admin-list">
+                {reports.map((report) => (
+                  <div className="admin-list-item" key={report.id}>
+                    <div className="admin-list-title">
+                      {report.reason}
+                    </div>
+
+                    <div className="admin-list-meta">
+                      {report.target_type} ·{" "}
+                      {formatDate(report.created_at)}
+                    </div>
+
+                    <div style={{ marginTop: 7 }}>
+                      <span className={statusClass(report.status)}>
+                        {report.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </article>
+
+        <article className="admin-panel">
+          <div className="admin-panel-header">
+            <h2>Recent support tickets</h2>
+            <Link href="/admin/support">View all</Link>
+          </div>
+
+          <div className="admin-panel-body">
+            {supportTickets.length === 0 ? (
+              <div className="admin-empty">
+                No support tickets found.
+              </div>
+            ) : (
+              <div className="admin-list">
+                {supportTickets.map((ticket) => (
+                  <div
+                    className="admin-list-item"
+                    key={ticket.id}
+                  >
+                    <div className="admin-list-title">
+                      {ticket.subject}
+                    </div>
+
+                    <div className="admin-list-meta">
+                      {ticket.category} · {ticket.priority} ·{" "}
+                      {formatDate(ticket.created_at)}
+                    </div>
+
+                    <div style={{ marginTop: 7 }}>
+                      <span className={statusClass(ticket.status)}>
+                        {ticket.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </article>
+
+        <article className="admin-panel">
+          <div className="admin-panel-header">
+            <h2>Administration</h2>
+          </div>
+
+          <div className="admin-panel-body">
+            <div className="admin-list">
+              <div className="admin-list-item">
+                <div className="admin-list-title">
+                  Business verification
+                </div>
+                <div className="admin-list-meta">
+                  Review submitted business verification requests.
+                </div>
+              </div>
+
+              <div className="admin-list-item">
+                <div className="admin-list-title">
+                  Reports
+                </div>
+                <div className="admin-list-meta">
+                  Review platform reports and their resolution status.
+                </div>
+              </div>
+
+              <div className="admin-list-item">
+                <div className="admin-list-title">
+                  Support
+                </div>
+                <div className="admin-list-meta">
+                  Manage incoming support tickets and assignments.
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+    </>
   );
-    }
+  }
