@@ -1,0 +1,108 @@
+.suspend-page {
+  min-height: 60vh;
+  display: grid;
+  place-items: center;
+  padding: 30px;
+}
+
+.suspend-card {
+  width: min(100%, 500px);
+  background: #ffffff;
+  border: 1px solid #e7ebf2;
+  border-radius: 14px;
+  padding: 30px;
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(20, 35, 60, 0.06);
+}
+
+.suspend-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fff0f0;
+  color: #b22f2f;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.suspend-card h1 {
+  margin: 0;
+  font-size: 24px;
+  color: #202b3f;
+}
+
+.suspend-card p {
+  margin: 12px 0 0;
+  color: #687386;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.suspend-warning {
+  margin-top: 18px !important;
+  padding: 13px;
+  background: #fff8e8;
+  border: 1px solid #f3dfad;
+  border-radius: 9px;
+  color: #765a13 !important;
+  font-size: 12px !important;
+}
+
+.suspend-actions {
+  margin-top: 25px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.suspend-cancel,
+.suspend-confirm {
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.suspend-cancel {
+  border: 1px solid #dfe5ee;
+  color: #566174;
+  background: #ffffff;
+}
+
+.suspend-confirm {
+  border: 0;
+  background: #c93636;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.suspend-confirm:hover {
+  background: #ae2929;
+}
+
+@media (max-width: 520px) {
+  .suspend-page {
+    padding: 16px;
+  }
+
+  .suspend-card {
+    padding: 22px;
+  }
+
+  .suspend-actions {
+    flex-direction: column-reverse;
+  }
+
+  .suspend-cancel,
+  .suspend-confirm {
+    width: 100%;
+  }
+  }
