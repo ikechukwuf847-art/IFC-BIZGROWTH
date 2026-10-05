@@ -51,7 +51,7 @@ type Category = {
 
 const supabase = createClient();
 
-const STORAGE_BUCKET = "business-media";
+const STORAGE_BUCKET = "business-logos";
 
 const DEFAULT_CITY = "Abuja";
 
