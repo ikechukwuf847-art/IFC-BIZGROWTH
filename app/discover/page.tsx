@@ -1,11 +1,16 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  FormEvent,
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import Link from "next/link";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { supabase } from "@/lib/supabase/browser";
 import "./discover.css";
-
-const supabase = createSupabaseBrowserClient();
 
 const STORAGE_BUCKET = "business-logos";
 
@@ -58,17 +63,11 @@ type Category = {
   sort_order: number | null;
 };
 
-type DirectoryLocation = {
+type BusinessLocation = {
   country_code: string;
   city: string | null;
   state_region: string | null;
   business_count: number;
-};
-
-type SelectedLocation = {
-  country_code: string | null;
-  city: string | null;
-  state_region: string | null;
 };
 
 function getInitials(name: string) {
@@ -98,56 +97,10 @@ function getStorageUrl(storagePath: string | null) {
   return data.publicUrl || null;
 }
 
-function formatLocation(business: DirectoryBusiness) {
-  const parts = [
-    business.city,
-    business.state_region,
-    business.country_code,
-  ].filter(Boolean);
-
-  return parts.join(", ");
-}
-
-function formatDistance(distance: number | null) {
-  if (distance === null || distance === undefined) return null;
-
-  if (distance < 1) {
-    return `${Math.round(distance * 1000)} m away`;
-  }
-
-  return `${distance.toFixed(1)} km away`;
-}
-
-function formatRating(rating: number | null) {
-  if (!rating) return "New";
-  return Number(rating).toFixed(1);
-}
-
-function LocationLabel({
-  location,
-}: {
-  location: SelectedLocation;
-}) {
-  if (!location.country_code && !location.city) {
-    return <>All locations</>;
-  }
-
-  return (
-    <>
-      {location.city ||
-        location.state_region ||
-        location.country_code ||
-        "All locations"}
-    </>
-  );
-}
-
-function BusinessLogo({
+const BusinessLogo = memo(function BusinessLogo({
   business,
-  size = "medium",
 }: {
   business: DirectoryBusiness;
-  size?: "small" | "medium" | "large";
 }) {
   const [failed, setFailed] = useState(false);
 
@@ -158,7 +111,7 @@ function BusinessLogo({
 
   if (!logoUrl || failed) {
     return (
-      <div className={`business-logo-fallback ${size}`}>
+      <div className="business-logo-fallback">
         {getInitials(business.business_name)}
       </div>
     );
@@ -168,23 +121,11 @@ function BusinessLogo({
     <img
       src={logoUrl}
       alt={`${business.business_name} logo`}
-      className={`business-logo ${size}`}
+      className="business-logo"
       onError={() => setFailed(true)}
     />
   );
-}
-
-function VerificationBadge() {
-  return (
-    <span
-      className="verification-badge"
-      title="Verified business"
-      aria-label="Verified business"
-    >
-      ✓
-    </span>
-  );
-}
+});
 
 function BusinessCard({
   business,
@@ -208,12 +149,11 @@ function BusinessCard({
             src={coverUrl}
             alt=""
             className="business-cover-image"
-            onError={(event) => {
-              event.currentTarget.style.display = "none";
-            }}
           />
         ) : (
-          <div className="business-cover-placeholder" />
+          <div className="business-cover-placeholder">
+            <BusinessLogo business={business} />
+          </div>
         )}
 
         {business.is_featured && (
@@ -221,7 +161,7 @@ function BusinessCard({
         )}
 
         <div className="business-card-logo">
-          <BusinessLogo business={business} size="medium" />
+          <BusinessLogo business={business} />
         </div>
       </div>
 
@@ -230,7 +170,13 @@ function BusinessCard({
           <h3>{business.business_name}</h3>
 
           {business.verification_status === "approved" && (
-            <VerificationBadge />
+            <span
+              className="verification-badge"
+              title="Verified business"
+              aria-label="Verified business"
+            >
+              ✓
+            </span>
           )}
         </div>
 
@@ -241,30 +187,39 @@ function BusinessCard({
         )}
 
         <div className="business-location">
-          <span className="location-icon">⌖</span>
-          <span>{formatLocation(business) || "Location available"}</span>
+          <span>📍</span>
+
+          <span>
+            {[
+              business.city,
+              business.state_region,
+              business.country_code,
+            ]
+              .filter(Boolean)
+              .join(", ")}
+          </span>
         </div>
 
         <div className="business-rating-row">
-          <span className="rating-star">★</span>
-          <span className="rating-number">
-            {formatRating(business.average_rating)}
+          <span>⭐</span>
+
+          <span>
+            {business.average_rating !== null
+              ? Number(business.average_rating).toFixed(1)
+              : "New"}
           </span>
 
-          {business.review_count !== null &&
-            business.review_count > 0 && (
-              <span className="review-count">
-                ({business.review_count})
-              </span>
-            )}
+          {business.review_count &&
+          Number(business.review_count) > 0 ? (
+            <span className="review-count">
+              ({business.review_count})
+            </span>
+          ) : null}
 
           {business.distance_km !== null && (
-            <>
-              <span className="rating-separator">•</span>
-              <span className="distance">
-                {formatDistance(business.distance_km)}
-              </span>
-            </>
+            <span className="distance">
+              • {Number(business.distance_km).toFixed(1)} km
+            </span>
           )}
         </div>
 
@@ -275,8 +230,7 @@ function BusinessCard({
         )}
 
         <span className="view-business">
-          View business
-          <span>→</span>
+          View business →
         </span>
       </div>
     </Link>
@@ -299,242 +253,387 @@ function BusinessCardSkeleton() {
 }
 
 export default function DiscoverPage() {
-  const [businesses, setBusinesses] = useState<DirectoryBusiness[]>([]);
-  const [featuredBusinesses, setFeaturedBusinesses] = useState<
+  const [businesses, setBusinesses] = useState<
     DirectoryBusiness[]
   >([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [locations, setLocations] = useState<DirectoryLocation[]>([]);
+
+  const [featuredBusinesses, setFeaturedBusinesses] =
+    useState<DirectoryBusiness[]>([]);
+
+  const [categories, setCategories] = useState<Category[]>(
+    []
+  );
+
+  const [locations, setLocations] = useState<
+    BusinessLocation[]
+  >([]);
+
   const [media, setMedia] = useState<BusinessMedia[]>([]);
 
-  const [searchInput, setSearchInput] = useState("");
-  const [activeSearch, setActiveSearch] = useState("");
+  const [search, setSearch] = useState("");
 
   const [selectedLocation, setSelectedLocation] =
-    useState<SelectedLocation>({
-      country_code: null,
-      city: null,
-      state_region: null,
-    });
+    useState("");
 
-  const [locationOpen, setLocationOpen] = useState(false);
+  const [locationMode, setLocationMode] = useState<
+    "backend" | "nearby"
+  >("backend");
+
   const [loading, setLoading] = useState(true);
-  const [featuredLoading, setFeaturedLoading] = useState(true);
-  const [locationLoading, setLocationLoading] = useState(true);
+  const [featuredLoading, setFeaturedLoading] =
+    useState(true);
+
+  const [locationLoading, setLocationLoading] =
+    useState(false);
+
   const [error, setError] = useState("");
 
-  const [userCoordinates, setUserCoordinates] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
+  const [userCoordinates, setUserCoordinates] =
+    useState<{
+      latitude: number;
+      longitude: number;
+    } | null>(null);
 
+  /*
+   * Categories
+   */
   const loadCategories = useCallback(async () => {
-    const { data, error: categoriesError } = await supabase
-      .from("business_categories")
-      .select(
-        "id, name, slug, description, is_active, sort_order"
-      )
-      .eq("is_active", true)
-      .order("sort_order", {
-        ascending: true,
-        nullsFirst: false,
-      })
-      .order("name", {
-        ascending: true,
-      });
+    const { data, error: categoriesError } =
+      await supabase
+        .from("business_categories")
+        .select(
+          "id, name, slug, description, is_active, sort_order"
+        )
+        .eq("is_active", true)
+        .order("sort_order", {
+          ascending: true,
+          nullsFirst: false,
+        })
+        .order("name", {
+          ascending: true,
+        });
 
     if (categoriesError) {
-      console.error("Category loading error:", categoriesError);
+      console.error(
+        "Unable to load categories:",
+        categoriesError
+      );
       return;
     }
 
     setCategories((data || []) as Category[]);
   }, []);
 
+  /*
+   * Locations
+   *
+   * These come from the backend RPC:
+   * get_public_business_locations
+   */
   const loadLocations = useCallback(async () => {
-    setLocationLoading(true);
-
-    const { data, error: locationsError } = await supabase.rpc(
-      "get_public_business_locations"
-    );
+    const { data, error: locationsError } =
+      await supabase.rpc(
+        "get_public_business_locations"
+      );
 
     if (locationsError) {
-      console.error("Location loading error:", locationsError);
-      setLocationLoading(false);
+      console.error(
+        "Unable to load locations:",
+        locationsError
+      );
       return;
     }
 
     setLocations(
-      ((data || []) as DirectoryLocation[]).map((item) => ({
-        ...item,
-        business_count: Number(item.business_count || 0),
-      }))
+      (data || []) as BusinessLocation[]
     );
-
-    setLocationLoading(false);
   }, []);
 
-  const loadFeaturedBusinesses = useCallback(async () => {
-    setFeaturedLoading(true);
-
-    const { data, error: featuredError } = await supabase.rpc(
-      "get_public_business_directory",
-      {
-        p_search: activeSearch || null,
-        p_country_code: selectedLocation.country_code,
-        p_city: selectedLocation.city,
-        p_category_id: null,
-        p_subcategory_id: null,
-        p_latitude: null,
-        p_longitude: null,
-        p_radius_km: null,
-        p_featured_only: true,
-        p_limit: 8,
-        p_offset: 0,
-      }
-    );
-
-    if (featuredError) {
-      console.error("Featured businesses error:", featuredError);
-      setFeaturedBusinesses([]);
-    } else {
-      setFeaturedBusinesses(
-        (data || []) as DirectoryBusiness[]
-      );
-    }
-
-    setFeaturedLoading(false);
-  }, [
-    activeSearch,
-    selectedLocation.country_code,
-    selectedLocation.city,
-  ]);
-
+  /*
+   * Normal directory businesses
+   */
   const loadBusinesses = useCallback(async () => {
     setLoading(true);
     setError("");
 
-    const { data, error: businessesError } = await supabase.rpc(
-      "get_public_business_directory",
-      {
-        p_search: activeSearch || null,
-        p_country_code: selectedLocation.country_code,
-        p_city: selectedLocation.city,
-        p_category_id: null,
-        p_subcategory_id: null,
-        p_latitude: userCoordinates?.latitude ?? null,
-        p_longitude: userCoordinates?.longitude ?? null,
-        p_radius_km: userCoordinates ? 25 : null,
-        p_featured_only: false,
-        p_limit: 100,
-        p_offset: 0,
-      }
-    );
+    const locationParts =
+      locationMode === "backend" &&
+      selectedLocation
+        ? selectedLocation.split("|")
+        : null;
+
+    const selectedCountry =
+      locationParts?.[0] || null;
+
+    const selectedCity =
+      locationParts?.[1] || null;
+
+    const { data, error: businessesError } =
+      await supabase.rpc(
+        "get_public_business_directory",
+        {
+          p_search: search.trim() || null,
+
+          p_country_code: selectedCountry,
+
+          p_city: selectedCity,
+
+          p_category_id: null,
+
+          p_subcategory_id: null,
+
+          p_latitude:
+            locationMode === "nearby"
+              ? userCoordinates?.latitude ?? null
+              : null,
+
+          p_longitude:
+            locationMode === "nearby"
+              ? userCoordinates?.longitude ?? null
+              : null,
+
+          p_radius_km:
+            locationMode === "nearby"
+              ? 25
+              : null,
+
+          p_featured_only: false,
+
+          p_limit: 100,
+
+          p_offset: 0,
+        }
+      );
 
     if (businessesError) {
-      console.error("Businesses loading error:", businessesError);
-      setBusinesses([]);
-      setError(
-        "We couldn't load businesses right now. Please try again."
+      console.error(
+        "Unable to load businesses:",
+        businessesError
       );
+
+      setError("Unable to load businesses.");
+      setBusinesses([]);
       setLoading(false);
+
       return;
     }
 
-    setBusinesses((data || []) as DirectoryBusiness[]);
+    setBusinesses(
+      (data || []) as DirectoryBusiness[]
+    );
+
     setLoading(false);
   }, [
-    activeSearch,
-    selectedLocation.country_code,
-    selectedLocation.city,
+    search,
+    selectedLocation,
+    locationMode,
     userCoordinates,
   ]);
 
-  const loadMedia = useCallback(
-    async (businessList: DirectoryBusiness[]) => {
-      const ids = businessList.map(
-        (business) => business.business_id
+  /*
+   * Featured businesses
+   *
+   * IMPORTANT:
+   * This is a separate backend request.
+   *
+   * We do NOT take popular businesses and
+   * pretend they are featured.
+   */
+  const loadFeaturedBusinesses =
+    useCallback(async () => {
+      setFeaturedLoading(true);
+
+      const locationParts =
+        locationMode === "backend" &&
+        selectedLocation
+          ? selectedLocation.split("|")
+          : null;
+
+      const selectedCountry =
+        locationParts?.[0] || null;
+
+      const selectedCity =
+        locationParts?.[1] || null;
+
+      const { data, error: featuredError } =
+        await supabase.rpc(
+          "get_public_business_directory",
+          {
+            p_search: null,
+
+            p_country_code: selectedCountry,
+
+            p_city: selectedCity,
+
+            p_category_id: null,
+
+            p_subcategory_id: null,
+
+            p_latitude:
+              locationMode === "nearby"
+                ? userCoordinates?.latitude ?? null
+                : null,
+
+            p_longitude:
+              locationMode === "nearby"
+                ? userCoordinates?.longitude ?? null
+                : null,
+
+            p_radius_km:
+              locationMode === "nearby"
+                ? 25
+                : null,
+
+            p_featured_only: true,
+
+            p_limit: 8,
+
+            p_offset: 0,
+          }
+        );
+
+      if (featuredError) {
+        console.error(
+          "Unable to load featured businesses:",
+          featuredError
+        );
+
+        setFeaturedBusinesses([]);
+        setFeaturedLoading(false);
+
+        return;
+      }
+
+      setFeaturedBusinesses(
+        (data || []) as DirectoryBusiness[]
       );
 
-      if (!ids.length) {
+      setFeaturedLoading(false);
+    }, [
+      selectedLocation,
+      locationMode,
+      userCoordinates,
+    ]);
+
+  /*
+   * Business media
+   */
+  const loadMedia = useCallback(
+    async (businessIds: string[]) => {
+      if (!businessIds.length) {
         setMedia([]);
         return;
       }
 
-      const { data, error: mediaError } = await supabase
-        .from("business_media")
-        .select(
-          "id, business_id, storage_path, media_type, title, description, sort_order, is_featured, is_active"
-        )
-        .in("business_id", ids)
-        .eq("is_active", true)
-        .order("is_featured", {
-          ascending: false,
-        })
-        .order("sort_order", {
-          ascending: true,
-          nullsFirst: false,
-        });
+      const { data, error: mediaError } =
+        await supabase
+          .from("business_media")
+          .select(
+            "id, business_id, storage_path, media_type, title, description, sort_order, is_featured, is_active"
+          )
+          .in("business_id", businessIds)
+          .eq("is_active", true)
+          .order("sort_order", {
+            ascending: true,
+            nullsFirst: false,
+          });
 
       if (mediaError) {
-        console.error("Business media error:", mediaError);
-        setMedia([]);
+        console.error(
+          "Unable to load business media:",
+          mediaError
+        );
         return;
       }
 
-      setMedia((data || []) as BusinessMedia[]);
+      setMedia(
+        (data || []) as BusinessMedia[]
+      );
     },
     []
   );
 
+  /*
+   * Initial backend data
+   */
   useEffect(() => {
     loadCategories();
     loadLocations();
-  }, [loadCategories, loadLocations]);
+  }, [
+    loadCategories,
+    loadLocations,
+  ]);
 
+  /*
+   * Reload businesses when filters change
+   */
   useEffect(() => {
     loadBusinesses();
   }, [loadBusinesses]);
 
+  /*
+   * Reload featured businesses when
+   * location changes.
+   */
   useEffect(() => {
     loadFeaturedBusinesses();
   }, [loadFeaturedBusinesses]);
 
+  /*
+   * Load media for visible businesses.
+   */
   useEffect(() => {
-    const combined = [
-      ...featuredBusinesses,
-      ...businesses,
+    const allIds = [
+      ...businesses.map(
+        (business) => business.business_id
+      ),
+      ...featuredBusinesses.map(
+        (business) => business.business_id
+      ),
     ];
 
-    const uniqueBusinesses = Array.from(
-      new Map(
-        combined.map((business) => [
-          business.business_id,
-          business,
-        ])
-      ).values()
+    const uniqueIds = Array.from(
+      new Set(allIds)
     );
 
-    loadMedia(uniqueBusinesses);
-  }, [businesses, featuredBusinesses, loadMedia]);
+    loadMedia(uniqueIds);
+  }, [
+    businesses,
+    featuredBusinesses,
+    loadMedia,
+  ]);
 
+  /*
+   * Map media by business
+   */
   const mediaByBusiness = useMemo(() => {
-    const map = new Map<string, BusinessMedia>();
+    const map = new Map<
+      string,
+      BusinessMedia
+    >();
 
-    for (const item of media) {
+    media.forEach((item) => {
       if (!map.has(item.business_id)) {
         map.set(item.business_id, item);
       }
-    }
+    });
 
     return map;
   }, [media]);
 
+  /*
+   * Popular businesses
+   */
   const popularBusinesses = useMemo(() => {
     return [...businesses]
       .sort((a, b) => {
-        const ratingA = Number(a.average_rating || 0);
-        const ratingB = Number(b.average_rating || 0);
+        const ratingA = Number(
+          a.average_rating || 0
+        );
+
+        const ratingB = Number(
+          b.average_rating || 0
+        );
 
         if (ratingB !== ratingA) {
           return ratingB - ratingA;
@@ -548,94 +647,88 @@ export default function DiscoverPage() {
       .slice(0, 8);
   }, [businesses]);
 
+  /*
+   * Nearby businesses
+   */
   const nearbyBusinesses = useMemo(() => {
-    if (userCoordinates) {
-      return [...businesses]
-        .filter(
-          (business) =>
-            business.distance_km !== null &&
-            business.distance_km !== undefined
-        )
-        .sort(
-          (a, b) =>
-            Number(a.distance_km || 999999) -
-            Number(b.distance_km || 999999)
-        )
-        .slice(0, 8);
+    if (!userCoordinates) {
+      return [];
     }
 
-    if (selectedLocation.city) {
-      return businesses.slice(0, 8);
-    }
+    return [...businesses]
+      .filter(
+        (business) =>
+          business.distance_km !== null
+      )
+      .sort(
+        (a, b) =>
+          Number(a.distance_km || 999999) -
+          Number(b.distance_km || 999999)
+      )
+      .slice(0, 8);
+  }, [businesses, userCoordinates]);
 
-    return [];
-  }, [businesses, selectedLocation.city, userCoordinates]);
-
-  const popularCategories = useMemo(() => {
-    return categories
-      .map((category) => {
-        const count = businesses.filter(
-          (business) =>
-            business.category_id === category.id
-        ).length;
-
-        return {
-          ...category,
-          count,
-        };
-      })
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 6);
-  }, [categories, businesses]);
-
-  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
+  /*
+   * Search
+   */
+  const handleSearch = (
+    event: FormEvent
+  ) => {
     event.preventDefault();
 
-    setActiveSearch(searchInput.trim());
+    loadBusinesses();
   };
 
-  const handleClearSearch = () => {
-    setSearchInput("");
-    setActiveSearch("");
-  };
-
-  const handleLocationSelect = (
-    location: SelectedLocation
+  /*
+   * Backend location selection
+   */
+  const handleLocationChange = (
+    value: string
   ) => {
-    setSelectedLocation(location);
+    setLocationMode("backend");
     setUserCoordinates(null);
-    setLocationOpen(false);
+    setSelectedLocation(value);
   };
 
+  /*
+   * Device location
+   */
   const handleUseLocation = () => {
     if (!navigator.geolocation) {
       setError(
-        "Location services are not supported on this device."
+        "Location is not supported on this device."
       );
+
       return;
     }
+
+    setLocationLoading(true);
+    setError("");
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setUserCoordinates({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
+          latitude:
+            position.coords.latitude,
+
+          longitude:
+            position.coords.longitude,
         });
 
-        setSelectedLocation({
-          country_code: null,
-          city: null,
-          state_region: null,
-        });
+        setLocationMode("nearby");
+        setSelectedLocation("");
 
-        setLocationOpen(false);
-        setError("");
+        setLocationLoading(false);
       },
+
       () => {
         setError(
-          "We couldn't access your location. Please select a location instead."
+          "Unable to get your location. Please select a location instead."
         );
+
+        setLocationLoading(false);
       },
+
       {
         enableHighAccuracy: true,
         timeout: 10000,
@@ -644,40 +737,79 @@ export default function DiscoverPage() {
     );
   };
 
-  const clearLocation = () => {
-    setSelectedLocation({
-      country_code: null,
-      city: null,
-      state_region: null,
-    });
+  /*
+   * Human-readable location label
+   */
+  const selectedLocationLabel = useMemo(() => {
+    if (locationMode === "nearby") {
+      return "Near me";
+    }
 
-    setUserCoordinates(null);
-    setLocationOpen(false);
-  };
+    if (!selectedLocation) {
+      return "Select location";
+    }
+
+    const parts =
+      selectedLocation.split("|");
+
+    const country = parts[0];
+    const city = parts[1];
+
+    return [city, country]
+      .filter(Boolean)
+      .join(", ");
+  }, [
+    selectedLocation,
+    locationMode,
+  ]);
 
   return (
     <main className="discover-page">
-      {/* HEADER */}
+
+      {/* Header */}
       <header className="discover-header">
         <div className="discover-header-inner">
-          <Link href="/" className="discover-brand">
-            <span className="brand-mark">IFC</span>
+
+          <Link
+            href="/"
+            className="discover-brand"
+          >
+            <span className="brand-mark">
+              IFC
+            </span>
+
             <span className="brand-text">
               <strong>BIZGROWTH</strong>
-              <small>African Business Growth</small>
+
+              <small>
+                African Business Growth
+              </small>
             </span>
           </Link>
 
           <nav className="desktop-nav">
-            <Link href="/discover" className="active">
+            <Link
+              href="/discover"
+              className="active"
+            >
               Discover
             </Link>
-            <Link href="/categories">Categories</Link>
-            <Link href="/about">About</Link>
-            <Link href="/contact">Contact</Link>
+
+            <Link href="/categories">
+              Categories
+            </Link>
+
+            <Link href="/about">
+              About
+            </Link>
+
+            <Link href="/contact">
+              Contact
+            </Link>
           </nav>
 
           <div className="header-actions">
+
             <Link
               href="/business/register"
               className="header-business-link"
@@ -691,85 +823,121 @@ export default function DiscoverPage() {
             >
               Login
             </Link>
+
           </div>
         </div>
       </header>
 
-      {/* HERO */}
+      {/* Hero */}
       <section className="discover-hero">
-        <div className="hero-background-shape hero-shape-one" />
-        <div className="hero-background-shape hero-shape-two" />
 
         <div className="discover-container hero-content">
+
           <span className="hero-eyebrow">
             Discover businesses across Africa
           </span>
 
           <h1>
-            Find businesses.
+            Discover businesses.
             <br />
-            <span>Discover opportunities.</span>
+            <span>
+              Grow with Africa.
+            </span>
           </h1>
 
           <p className="hero-description">
-            Explore businesses, services and brands around you
-            and across Africa.
+            Find businesses, services and
+            brands around you and across
+            Africa.
           </p>
 
           <form
             className="discover-search"
             onSubmit={handleSearch}
           >
+
             <div className="search-main">
-              <span className="search-icon">⌕</span>
+
+              <span className="search-icon">
+                ⌕
+              </span>
 
               <input
                 type="search"
-                value={searchInput}
+                value={search}
                 onChange={(event) =>
-                  setSearchInput(event.target.value)
+                  setSearch(
+                    event.target.value
+                  )
                 }
-                placeholder="Search businesses, services or brands"
-                aria-label="Search businesses"
+                placeholder="Search businesses, services..."
               />
 
-              {searchInput && (
-                <button
-                  type="button"
-                  className="search-clear"
-                  onClick={handleClearSearch}
-                  aria-label="Clear search"
-                >
-                  ×
-                </button>
-              )}
             </div>
 
             <div className="search-divider" />
 
+            <select
+              className="discover-search-location"
+              value={
+                locationMode === "nearby"
+                  ? ""
+                  : selectedLocation
+              }
+              onChange={(event) =>
+                handleLocationChange(
+                  event.target.value
+                )
+              }
+              disabled={locationLoading}
+            >
+
+              <option value="">
+                {selectedLocationLabel}
+              </option>
+
+              {locations.map(
+                (location, index) => {
+
+                  const value =
+                    `${location.country_code}|${
+                      location.city || ""
+                    }`;
+
+                  const label =
+                    [
+                      location.city,
+                      location.state_region,
+                      location.country_code,
+                    ]
+                      .filter(Boolean)
+                      .join(", ");
+
+                  return (
+                    <option
+                      value={value}
+                      key={`${value}-${index}`}
+                    >
+                      {label} (
+                      {location.business_count}
+                      )
+                    </option>
+                  );
+                }
+              )}
+
+            </select>
+
             <button
               type="button"
-              className="search-location"
-              onClick={() =>
-                setLocationOpen((current) => !current)
-              }
+              className="location-nearby-button"
+              onClick={handleUseLocation}
+              disabled={locationLoading}
+              title="Use my current location"
             >
-              <span className="location-pin">⌖</span>
-
-              <span className="search-location-text">
-                <small>Location</small>
-                <strong>
-                  {userCoordinates ? (
-                    "Near me"
-                  ) : (
-                    <LocationLabel
-                      location={selectedLocation}
-                    />
-                  )}
-                </strong>
-              </span>
-
-              <span className="location-chevron">⌄</span>
+              {locationLoading
+                ? "..."
+                : "📍"}
             </button>
 
             <button
@@ -778,518 +946,393 @@ export default function DiscoverPage() {
             >
               Search
             </button>
+
           </form>
 
-          {/* LOCATION MENU */}
-          {locationOpen && (
-            <div className="location-menu">
-              <div className="location-menu-header">
-                <div>
-                  <strong>Choose a location</strong>
-                  <span>
-                    Locations are based on businesses listed
-                    on IFC BIZGROWTH.
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setLocationOpen(false)}
-                >
-                  ×
-                </button>
-              </div>
-
-              <button
-                type="button"
-                className="location-option use-location-option"
-                onClick={handleUseLocation}
-              >
-                <span className="location-option-icon">
-                  ◎
-                </span>
-
-                <span>
-                  <strong>Use my location</strong>
-                  <small>
-                    Find businesses closest to you
-                  </small>
-                </span>
-              </button>
-
-              <button
-                type="button"
-                className="location-option"
-                onClick={clearLocation}
-              >
-                <span className="location-option-icon">
-                  ◌
-                </span>
-
-                <span>
-                  <strong>All locations</strong>
-                  <small>
-                    Browse businesses across Africa
-                  </small>
-                </span>
-              </button>
-
-              <div className="location-list">
-                {locationLoading ? (
-                  <div className="location-loading">
-                    Loading available locations...
-                  </div>
-                ) : locations.length === 0 ? (
-                  <div className="location-loading">
-                    No business locations are available yet.
-                  </div>
-                ) : (
-                  locations.map((item, index) => (
-                    <button
-                      type="button"
-                      className="location-option"
-                      key={`${item.country_code}-${item.city}-${item.state_region}-${index}`}
-                      onClick={() =>
-                        handleLocationSelect({
-                          country_code:
-                            item.country_code,
-                          city: item.city,
-                          state_region:
-                            item.state_region,
-                        })
-                      }
-                    >
-                      <span className="location-option-icon">
-                        📍
-                      </span>
-
-                      <span>
-                        <strong>
-                          {item.city ||
-                            item.state_region ||
-                            item.country_code}
-                        </strong>
-
-                        <small>
-                          {[
-                            item.state_region,
-                            item.country_code,
-                          ]
-                            .filter(Boolean)
-                            .join(", ")}
-                          {" • "}
-                          {item.business_count}{" "}
-                          {item.business_count === 1
-                            ? "business"
-                            : "businesses"}
-                        </small>
-                      </span>
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </section>
 
-      {/* MAIN */}
+      {/* Main */}
       <div className="discover-container discover-main">
+
         {error && (
           <div className="discover-error">
-            <span>!</span>
-            <p>{error}</p>
-
-            <button
-              type="button"
-              onClick={() => {
-                setError("");
-                loadBusinesses();
-                loadFeaturedBusinesses();
-              }}
-            >
-              Try again
-            </button>
+            {error}
           </div>
         )}
 
-        {/* CATEGORIES */}
-        <section className="discover-section categories-section">
+        {/* Categories */}
+        <section className="discover-section">
+
           <div className="section-heading">
+
             <div>
               <span className="section-kicker">
                 Explore
               </span>
-              <h2>Browse by category</h2>
+
+              <h2>
+                Browse by category
+              </h2>
             </div>
 
-            <Link href="/categories" className="view-all">
-              View all
-              <span>→</span>
+            <Link
+              href="/categories"
+              className="view-all"
+            >
+              View all →
             </Link>
+
           </div>
 
           <div className="category-scroll">
-            {categories.length === 0 ? (
-              <div className="category-loading">
-                Loading categories...
-              </div>
-            ) : (
-              categories.slice(0, 8).map((category) => (
+
+            {categories
+              .slice(0, 8)
+              .map((category) => (
                 <Link
                   href={`/categories/${category.slug}`}
                   key={category.id}
                   className="category-chip"
                 >
-                  <span className="category-chip-icon">
-                    {getCategoryIcon(category.name)}
-                  </span>
-
-                  <span>{category.name}</span>
+                  {category.name}
                 </Link>
-              ))
-            )}
+              ))}
+
           </div>
+
         </section>
 
-        {/* FEATURED */}
+        {/* Featured */}
         <section className="discover-section">
+
           <div className="section-heading">
+
             <div>
               <span className="section-kicker">
-                Handpicked for you
+                Featured
               </span>
-              <h2>Featured Businesses</h2>
+
+              <h2>
+                Featured Businesses
+              </h2>
             </div>
 
-            <span className="section-context">
-              {selectedLocation.city ||
-                selectedLocation.country_code ||
-                "Across Africa"}
-            </span>
           </div>
 
           {featuredLoading ? (
             <div className="business-grid">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <BusinessCardSkeleton key={index} />
+
+              {Array.from({
+                length: 4,
+              }).map((_, index) => (
+                <BusinessCardSkeleton
+                  key={index}
+                />
               ))}
+
             </div>
-          ) : featuredBusinesses.length === 0 ? (
+          ) : featuredBusinesses.length ===
+            0 ? (
             <div className="empty-section">
-              <div className="empty-icon">★</div>
-              <h3>No featured businesses here yet</h3>
-              <p>
-                Featured businesses will appear here when
-                businesses are selected for promotion.
-              </p>
+              No featured businesses available
+              yet.
             </div>
           ) : (
             <div className="business-grid">
-              {featuredBusinesses.map((business) => (
-                <BusinessCard
-                  key={business.business_id}
-                  business={business}
-                  media={mediaByBusiness.get(
-                    business.business_id
-                  )}
-                />
-              ))}
+
+              {featuredBusinesses.map(
+                (business) => (
+                  <BusinessCard
+                    key={
+                      business.business_id
+                    }
+                    business={business}
+                    media={mediaByBusiness.get(
+                      business.business_id
+                    )}
+                  />
+                )
+              )}
+
             </div>
           )}
+
         </section>
 
-        {/* POPULAR */}
+        {/* Popular */}
         <section className="discover-section">
+
           <div className="section-heading">
+
             <div>
               <span className="section-kicker">
-                Popular right now
+                Popular
               </span>
-              <h2>Popular Businesses</h2>
+
+              <h2>
+                Popular Businesses
+              </h2>
             </div>
 
-            <span className="section-context">
-              Based on ratings and reviews
-            </span>
           </div>
 
           {loading ? (
             <div className="business-grid">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <BusinessCardSkeleton key={index} />
+
+              {Array.from({
+                length: 4,
+              }).map((_, index) => (
+                <BusinessCardSkeleton
+                  key={index}
+                />
               ))}
+
             </div>
-          ) : popularBusinesses.length === 0 ? (
+          ) : popularBusinesses.length ===
+            0 ? (
             <div className="empty-section">
-              <div className="empty-icon">⌕</div>
-              <h3>No businesses found</h3>
-              <p>
-                Try another search or choose a different
-                location.
-              </p>
+              No businesses found.
             </div>
           ) : (
             <div className="business-grid">
-              {popularBusinesses.map((business) => (
-                <BusinessCard
-                  key={business.business_id}
-                  business={business}
-                  media={mediaByBusiness.get(
-                    business.business_id
-                  )}
-                />
-              ))}
+
+              {popularBusinesses.map(
+                (business) => (
+                  <BusinessCard
+                    key={
+                      business.business_id
+                    }
+                    business={business}
+                    media={mediaByBusiness.get(
+                      business.business_id
+                    )}
+                  />
+                )
+              )}
+
             </div>
           )}
+
         </section>
 
-        {/* NEARBY */}
-        <section className="discover-section nearby-section">
+        {/* Nearby */}
+        <section className="discover-section">
+
           <div className="section-heading">
+
             <div>
               <span className="section-kicker">
                 Around you
               </span>
-              <h2>Businesses Near You</h2>
+
+              <h2>
+                Businesses Near You
+              </h2>
             </div>
 
             <button
               type="button"
-              className="location-heading-button"
-              onClick={() => setLocationOpen(true)}
+              className="view-all location-button"
+              onClick={handleUseLocation}
             >
-              <span>⌖</span>
-              {userCoordinates
-                ? "Using your location"
-                : selectedLocation.city
-                  ? selectedLocation.city
-                  : "Choose location"}
+              📍{" "}
+              {locationMode === "nearby"
+                ? "Near me"
+                : "Find nearby"}
             </button>
+
           </div>
 
-          {!userCoordinates && !selectedLocation.city ? (
-            <div className="nearby-prompt">
-              <div className="nearby-prompt-icon">⌖</div>
-
-              <div>
-                <h3>Find businesses near you</h3>
-                <p>
-                  Choose a location or allow location access
-                  to discover nearby businesses.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setLocationOpen(true)}
-              >
-                Choose location
-              </button>
-            </div>
-          ) : nearbyBusinesses.length === 0 ? (
+          {!userCoordinates ? (
             <div className="empty-section">
-              <div className="empty-icon">⌖</div>
-              <h3>No nearby businesses found</h3>
-              <p>
-                There are no public businesses matching this
-                location yet.
-              </p>
+              Use your location to discover
+              businesses near you.
+            </div>
+          ) : nearbyBusinesses.length ===
+            0 ? (
+            <div className="empty-section">
+              No businesses found near you.
             </div>
           ) : (
             <div className="business-grid">
-              {nearbyBusinesses.map((business) => (
-                <BusinessCard
-                  key={business.business_id}
-                  business={business}
-                  media={mediaByBusiness.get(
-                    business.business_id
-                  )}
-                />
-              ))}
+
+              {nearbyBusinesses.map(
+                (business) => (
+                  <BusinessCard
+                    key={
+                      business.business_id
+                    }
+                    business={business}
+                    media={mediaByBusiness.get(
+                      business.business_id
+                    )}
+                  />
+                )
+              )}
+
             </div>
           )}
+
         </section>
 
-        {/* POPULAR CATEGORIES */}
-        <section className="discover-section popular-categories-section">
+        {/* Popular Categories */}
+        <section className="discover-section">
+
           <div className="section-heading">
+
             <div>
               <span className="section-kicker">
-                Find what you need
+                Explore more
               </span>
-              <h2>Popular Categories</h2>
+
+              <h2>
+                Popular Categories
+              </h2>
             </div>
 
-            <Link href="/categories" className="view-all">
-              All categories
-              <span>→</span>
-            </Link>
           </div>
 
           <div className="popular-category-grid">
-            {popularCategories.map((category) => (
-              <Link
-                href={`/categories/${category.slug}`}
-                key={category.id}
-                className="popular-category-card"
-              >
-                <span className="popular-category-icon">
-                  {getCategoryIcon(category.name)}
-                </span>
 
-                <span className="popular-category-content">
-                  <strong>{category.name}</strong>
-                  <small>
-                    {category.count}{" "}
-                    {category.count === 1
-                      ? "business"
-                      : "businesses"}
-                  </small>
-                </span>
+            {categories
+              .slice(0, 6)
+              .map((category) => (
+                <Link
+                  href={`/categories/${category.slug}`}
+                  key={category.id}
+                  className="popular-category-card"
+                >
+                  <strong>
+                    {category.name}
+                  </strong>
 
-                <span className="popular-category-arrow">
-                  →
-                </span>
-              </Link>
-            ))}
+                  <span>
+                    Explore →
+                  </span>
+                </Link>
+              ))}
+
           </div>
+
         </section>
 
         {/* CTA */}
         <section className="business-cta">
-          <div className="cta-decoration cta-decoration-one" />
-          <div className="cta-decoration cta-decoration-two" />
 
-          <div className="cta-content">
+          <div>
+
             <span className="section-kicker">
               Grow your business
             </span>
 
             <h2>
-              Put your business in front of more customers.
+              Put your business in front of
+              more customers.
             </h2>
 
             <p>
-              Create your business profile and let customers
-              discover what you offer.
+              Create your business profile
+              and let customers discover your
+              brand.
             </p>
 
             <Link
               href="/business/register"
               className="cta-button"
             >
-              List your business
-              <span>→</span>
+              List your business →
             </Link>
+
           </div>
+
         </section>
+
       </div>
 
-      {/* FOOTER */}
+      {/* Footer */}
       <footer className="discover-footer">
+
         <div className="discover-container footer-inner">
+
           <div className="footer-brand">
-            <Link href="/" className="discover-brand">
-              <span className="brand-mark">IFC</span>
+
+            <Link
+              href="/"
+              className="discover-brand"
+            >
+              <span className="brand-mark">
+                IFC
+              </span>
+
               <span className="brand-text">
-                <strong>BIZGROWTH</strong>
-                <small>African Business Growth</small>
+                <strong>
+                  BIZGROWTH
+                </strong>
+
+                <small>
+                  African Business Growth
+                </small>
               </span>
             </Link>
 
             <p>
-              Helping African businesses become more visible,
-              discoverable and connected to customers.
+              Helping African businesses
+              become more visible,
+              discoverable and connected to
+              customers.
             </p>
+
           </div>
 
           <div className="footer-links">
-            <div>
-              <strong>Explore</strong>
-              <Link href="/discover">Discover</Link>
-              <Link href="/categories">Categories</Link>
-              <Link href="/about">About us</Link>
-            </div>
 
-            <div>
-              <strong>Businesses</strong>
-              <Link href="/business/register">
-                List your business
-              </Link>
-              <Link href="/login">Business login</Link>
-              <Link href="/contact">Contact</Link>
-            </div>
+            <Link href="/discover">
+              Discover
+            </Link>
+
+            <Link href="/categories">
+              Categories
+            </Link>
+
+            <Link href="/about">
+              About
+            </Link>
+
+            <Link href="/contact">
+              Contact
+            </Link>
+
           </div>
+
         </div>
 
-        <div className="footer-bottom discover-container">
-          <span>
-            © {new Date().getFullYear()} IFC BIZGROWTH. All
-            rights reserved.
-          </span>
-
-          <span>
-            An IFC Bridge Lab company
-          </span>
-        </div>
       </footer>
 
-      {/* MOBILE NAV */}
+      {/* Mobile navigation */}
       <nav className="mobile-bottom-nav">
-        <Link href="/discover" className="mobile-nav-item active">
-          <span>⌂</span>
-          <small>Discover</small>
-        </Link>
-
-        <Link href="/categories" className="mobile-nav-item">
-          <span>◫</span>
-          <small>Categories</small>
-        </Link>
 
         <Link
-          href="/business/register"
-          className="mobile-nav-item mobile-nav-add"
+          href="/discover"
+          className="active"
         >
-          <span>+</span>
+          Discover
         </Link>
 
-        <Link href="/about" className="mobile-nav-item">
-          <span>◎</span>
-          <small>About</small>
+        <Link href="/categories">
+          Categories
         </Link>
 
-        <Link href="/login" className="mobile-nav-item">
-          <span>◯</span>
-          <small>Account</small>
+        <Link href="/business/register">
+          List Business
         </Link>
+
+        <Link href="/login">
+          Account
+        </Link>
+
       </nav>
+
     </main>
   );
-}
-
-function getCategoryIcon(name: string) {
-  const normalized = name.toLowerCase();
-
-  if (normalized.includes("food")) return "🍽";
-  if (normalized.includes("fashion")) return "✦";
-  if (normalized.includes("furniture")) return "⌂";
-  if (normalized.includes("real estate")) return "▦";
-  if (normalized.includes("construction")) return "⌂";
-  if (normalized.includes("education")) return "▤";
-  if (normalized.includes("health")) return "♡";
-  if (normalized.includes("technology")) return "◈";
-  if (normalized.includes("professional")) return "◉";
-  if (normalized.includes("retail")) return "◫";
-  if (normalized.includes("automotive")) return "◌";
-  if (normalized.includes("agriculture")) return "♧";
-  if (normalized.includes("finance")) return "₦";
-  if (normalized.includes("hospitality")) return "⌁";
-  if (normalized.includes("media")) return "▶";
-  if (normalized.includes("events")) return "★";
-  if (normalized.includes("logistics")) return "⇢";
-  if (normalized.includes("manufacturing")) return "⚙";
-  if (normalized.includes("home")) return "⌂";
-
-  return "✦";
   }
