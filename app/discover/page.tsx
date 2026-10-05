@@ -1,16 +1,11 @@
 "use client";
 
-import {
-  FormEvent,
-  memo,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase/browser";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import "./discover.css";
+
+const supabase = createSupabaseBrowserClient();
 
 const STORAGE_BUCKET = "business-logos";
 
