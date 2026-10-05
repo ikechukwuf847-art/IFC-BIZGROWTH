@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import "./discover.css";
+
+const STORAGE_BUCKET = "business-logos";
 
 type DirectoryBusiness = {
   business_id: string;
@@ -34,62 +36,47 @@ type DirectoryBusiness = {
 };
 
 type BusinessMedia = {
+  id: string;
   business_id: string;
   storage_path: string;
   media_type: string | null;
-  is_featured: boolean;
+  title: string | null;
+  description: string | null;
   sort_order: number | null;
+  is_featured: boolean | null;
+  is_active: boolean | null;
 };
 
 type Category = {
   id: string;
   name: string;
   slug: string;
+  description: string | null;
   is_active: boolean;
-  sort_order: number;
+  sort_order: number | null;
 };
 
-const supabase = createClient();
+type DirectoryLocation = {
+  country_code: string;
+  city: string | null;
+  state_region: string | null;
+  business_count: number;
+};
 
-const STORAGE_BUCKET = "business-logos";
-
-const DEFAULT_CITY = "Abuja";
-
-const FALLBACK_CATEGORY_ICONS: Record<string, string> = {
-  "food-restaurants": "🍽",
-  "fashion-beauty": "✂",
-  furniture: "🛋",
-  "real-estate": "⌂",
-  education: "🎓",
-  "health-wellness": "✚",
-  technology: "▣",
-  "professional-services": "▤",
-  "retail-shopping": "🛍",
-  automotive: "🚗",
-  agriculture: "♨",
-  "finance-business": "₦",
-  "hospitality-travel": "▰",
-  "media-entertainment": "▶",
-  "events-recreation": "★",
-  logistics: "▣",
-  manufacturing: "⚙",
-  "home-building": "⌂",
-  construction: "⌂",
+type SelectedLocation = {
+  country_code: string | null;
+  city: string | null;
+  state_region: string | null;
 };
 
 function getInitials(name: string) {
-  const words = name
+  return name
     .trim()
     .split(/\s+/)
-    .filter(Boolean);
-
-  if (!words.length) return "B";
-
-  if (words.length === 1) {
-    return words[0].slice(0, 2).toUpperCase();
-  }
-
-  return `${words[0][0]}${words[1][0]}`.toUpperCase();
+    .slice(0, 2)
+    .map((word) => word.charAt(0))
+    .join("")
+    .toUpperCase();
 }
 
 function getStorageUrl(storagePath: string | null) {
@@ -109,23 +96,14 @@ function getStorageUrl(storagePath: string | null) {
   return data.publicUrl || null;
 }
 
-function getCategoryIcon(category: Category) {
-  return FALLBACK_CATEGORY_ICONS[category.slug] || "▦";
-}
+function formatLocation(business: DirectoryBusiness) {
+  const parts = [
+    business.city,
+    business.state_region,
+    business.country_code,
+  ].filter(Boolean);
 
-function formatRating(rating: number | null) {
-  if (!rating || rating <= 0) return "New";
-  return Number(rating).toFixed(1);
-}
-
-function formatReviewCount(count: number | null) {
-  if (!count || count <= 0) return "No reviews";
-
-  if (count >= 1000) {
-    return `${(count / 1000).toFixed(1)}k reviews`;
-  }
-
-  return `${count} review${count === 1 ? "" : "s"}`;
+  return parts.join(", ");
 }
 
 function formatDistance(distance: number | null) {
@@ -138,260 +116,36 @@ function formatDistance(distance: number | null) {
   return `${distance.toFixed(1)} km away`;
 }
 
-function getWhatsAppUrl(phone: string | null) {
-  if (!phone) return null;
-
-  const cleaned = phone.replace(/[^\d+]/g, "");
-
-  if (!cleaned) return null;
-
-  const normalized = cleaned.startsWith("+")
-    ? cleaned.slice(1)
-    : cleaned.startsWith("0")
-      ? `234${cleaned.slice(1)}`
-      : cleaned;
-
-  return `https://wa.me/${normalized}`;
+function formatRating(rating: number | null) {
+  if (!rating) return "New";
+  return Number(rating).toFixed(1);
 }
 
-function Icon({
-  name,
-  size = 18,
+function LocationLabel({
+  location,
 }: {
-  name:
-    | "search"
-    | "location"
-    | "user"
-    | "grid"
-    | "star"
-    | "arrow"
-    | "nearby"
-    | "phone"
-    | "whatsapp"
-    | "chevron"
-    | "home"
-    | "categories"
-    | "more"
-    | "verified"
-    | "briefcase"
-    | "store"
-    | "filter";
-  size?: number;
+  location: SelectedLocation;
 }) {
-  const common = {
-    width: size,
-    height: size,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    xmlns: "http://www.w3.org/2000/svg",
-    "aria-hidden": true,
-  };
-
-  switch (name) {
-    case "search":
-      return (
-        <svg {...common}>
-          <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="2" />
-          <path d="M16 16L21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-      );
-
-    case "location":
-      return (
-        <svg {...common}>
-          <path
-            d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Z"
-            stroke="currentColor"
-            strokeWidth="1.8"
-          />
-          <circle cx="12" cy="9" r="2.3" stroke="currentColor" strokeWidth="1.8" />
-        </svg>
-      );
-
-    case "user":
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.8" />
-          <path
-            d="M5.5 20c.8-3.4 3-5 6.5-5s5.7 1.6 6.5 5"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-          />
-        </svg>
-      );
-
-    case "grid":
-      return (
-        <svg {...common}>
-          <rect x="4" y="4" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.8" />
-          <rect x="14" y="4" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.8" />
-          <rect x="4" y="14" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.8" />
-          <rect x="14" y="14" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.8" />
-        </svg>
-      );
-
-    case "star":
-      return (
-        <svg {...common}>
-          <path
-            d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z"
-            fill="currentColor"
-          />
-        </svg>
-      );
-
-    case "arrow":
-      return (
-        <svg {...common}>
-          <path d="M5 12h13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="m13 6 6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      );
-
-    case "nearby":
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="12" r="7" stroke="currentColor" strokeWidth="1.8" />
-          <circle cx="12" cy="12" r="2" fill="currentColor" />
-          <path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" strokeWidth="1.5" />
-        </svg>
-      );
-
-    case "phone":
-      return (
-        <svg {...common}>
-          <path
-            d="M6.5 3.5 9 3l2 4-2 1.5a14 14 0 0 0 6 6L16.5 12l4 2 .5 2.5c.2 1.2-.8 2.3-2 2.3C10.5 18.8 5.2 13.5 4.2 5c-.1-1.2 1-2.2 2.3-1.5Z"
-            stroke="currentColor"
-            strokeWidth="1.7"
-            strokeLinejoin="round"
-          />
-        </svg>
-      );
-
-    case "whatsapp":
-      return (
-        <svg {...common}>
-          <path
-            d="M20 11.5a8 8 0 0 1-11.8 7L4 20l1.5-4.1A8 8 0 1 1 20 11.5Z"
-            stroke="currentColor"
-            strokeWidth="1.7"
-          />
-          <path
-            d="M9 8.5c.3-.4.7-.4 1-.1l1 1.4c.2.3.2.6-.1.9l-.6.5c.6 1.1 1.5 2 2.6 2.6l.5-.6c.2-.3.6-.3.9-.1l1.4 1c.3.2.3.7 0 1-.5.6-1.2.9-1.9.7-2.2-.6-4.8-3.2-5.4-5.4-.2-.7.1-1.4.6-1.9Z"
-            fill="currentColor"
-          />
-        </svg>
-      );
-
-    case "chevron":
-      return (
-        <svg {...common}>
-          <path d="m9 5 7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      );
-
-    case "home":
-      return (
-        <svg {...common}>
-          <path d="m4 10 8-6 8 6v9H4v-9Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-          <path d="M9 19v-5h6v5" stroke="currentColor" strokeWidth="1.8" />
-        </svg>
-      );
-
-    case "categories":
-      return <Icon name="grid" size={size} />;
-
-    case "more":
-      return (
-        <svg {...common}>
-          <circle cx="5" cy="12" r="1.5" fill="currentColor" />
-          <circle cx="12" cy="12" r="1.5" fill="currentColor" />
-          <circle cx="19" cy="12" r="1.5" fill="currentColor" />
-        </svg>
-      );
-
-    case "verified":
-      return (
-        <svg {...common}>
-          <path
-            d="M12 2.8 14 4l2.3-.1 1.2 1.9 2.1 1 .1 2.3 1.2 2-1.2 2 .1 2.3-2.1 1-1.2 1.9-2.3-.1-2 1.2-2-1.2-2.3.1-1.2-1.9-2.1-1 .1-2.3-1.2-2 1.2-2-.1-2.3 2.1-1L7.7 3.9 10 4l2-1.2Z"
-            fill="currentColor"
-          />
-          <path
-            d="m8.5 12 2.1 2.1 4.9-5"
-            stroke="white"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      );
-
-    case "briefcase":
-      return (
-        <svg {...common}>
-          <rect x="4" y="7" width="16" height="12" rx="2" stroke="currentColor" strokeWidth="1.8" />
-          <path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7" stroke="currentColor" strokeWidth="1.8" />
-          <path d="M4 11h16" stroke="currentColor" strokeWidth="1.8" />
-        </svg>
-      );
-
-    case "store":
-      return (
-        <svg {...common}>
-          <path d="M4 10h16l-1-5H5l-1 5Z" stroke="currentColor" strokeWidth="1.7" />
-          <path d="M5 10v9h14v-9M9 19v-5h6v5" stroke="currentColor" strokeWidth="1.7" />
-        </svg>
-      );
-
-    case "filter":
-      return (
-        <svg {...common}>
-          <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-      );
-
-    default:
-      return null;
+  if (!location.country_code && !location.city) {
+    return <>All locations</>;
   }
-}
 
-function SectionHeader({
-  icon,
-  title,
-  href,
-}: {
-  icon: "star" | "grid" | "nearby";
-  title: string;
-  href?: string;
-}) {
   return (
-    <div className="discover-section-header">
-      <div className="discover-section-title">
-        <span className="discover-section-icon">
-          <Icon name={icon} size={16} />
-        </span>
-        <h2>{title}</h2>
-      </div>
-
-      {href && (
-        <Link href={href} className="discover-see-all">
-          See All
-          <Icon name="chevron" size={13} />
-        </Link>
-      )}
-    </div>
+    <>
+      {location.city ||
+        location.state_region ||
+        location.country_code ||
+        "All locations"}
+    </>
   );
 }
 
 function BusinessLogo({
   business,
-  className = "",
+  size = "medium",
 }: {
   business: DirectoryBusiness;
-  className?: string;
+  size?: "small" | "medium" | "large";
 }) {
   const [failed, setFailed] = useState(false);
 
@@ -400,21 +154,21 @@ function BusinessLogo({
     [business.logo_url]
   );
 
-  if (logoUrl && !failed) {
+  if (!logoUrl || failed) {
     return (
-      <img
-        src={logoUrl}
-        alt={`${business.business_name} logo`}
-        className={`business-logo-image ${className}`}
-        onError={() => setFailed(true)}
-      />
+      <div className={`business-logo-fallback ${size}`}>
+        {getInitials(business.business_name)}
+      </div>
     );
   }
 
   return (
-    <div className={`business-logo-fallback ${className}`}>
-      {getInitials(business.business_name)}
-    </div>
+    <img
+      src={logoUrl}
+      alt={`${business.business_name} logo`}
+      className={`business-logo ${size}`}
+      onError={() => setFailed(true)}
+    />
   );
 }
 
@@ -422,136 +176,150 @@ function VerificationBadge() {
   return (
     <span
       className="verification-badge"
-      title="Verified Business"
-      aria-label="Verified Business"
+      title="Verified business"
+      aria-label="Verified business"
     >
-      <Icon name="verified" size={13} />
+      ✓
     </span>
   );
 }
 
 function BusinessCard({
   business,
-  coverUrl,
+  media,
 }: {
   business: DirectoryBusiness;
-  coverUrl: string | null;
+  media?: BusinessMedia;
 }) {
-  const whatsappUrl = getWhatsAppUrl(business.phone);
+  const coverUrl = media?.storage_path
+    ? getStorageUrl(media.storage_path)
+    : null;
 
   return (
-    <article className="business-card">
-      <Link
-        href={`/businesses/${business.business_slug}`}
-        className="business-card-main-link"
-        aria-label={`View ${business.business_name}`}
-      >
-        <div className="business-card-image">
-          {coverUrl ? (
-            <img
-              src={coverUrl}
-              alt={business.business_name}
-              loading="lazy"
-            />
-          ) : (
-            <div className="business-card-image-fallback">
-              <BusinessLogo business={business} />
-            </div>
-          )}
+    <Link
+      href={`/businesses/${business.business_slug}`}
+      className="business-card"
+    >
+      <div className="business-card-cover">
+        {coverUrl ? (
+          <img
+            src={coverUrl}
+            alt=""
+            className="business-cover-image"
+            onError={(event) => {
+              event.currentTarget.style.display = "none";
+            }}
+          />
+        ) : (
+          <div className="business-cover-placeholder" />
+        )}
 
-          {business.verification_status === "approved" && (
-            <span className="card-verified">
-              <Icon name="verified" size={10} />
-              Verified
-            </span>
-          )}
+        {business.is_featured && (
+          <span className="featured-label">Featured</span>
+        )}
 
-          <div className="business-card-logo">
-            <BusinessLogo business={business} />
-          </div>
+        <div className="business-card-logo">
+          <BusinessLogo business={business} size="medium" />
         </div>
-      </Link>
+      </div>
 
       <div className="business-card-content">
-        <div className="business-card-name-row">
-          <Link
-            href={`/businesses/${business.business_slug}`}
-            className="business-card-name"
-          >
-            {business.business_name}
-          </Link>
+        <div className="business-title-row">
+          <h3>{business.business_name}</h3>
 
           {business.verification_status === "approved" && (
             <VerificationBadge />
           )}
         </div>
 
-        <p className="business-card-category">
-          {business.subcategory_name ||
-            business.category_name ||
-            "Business"}
-        </p>
-
-        <div className="business-card-location">
-          <Icon name="location" size={12} />
-          <span>
-            {business.city || business.state_region || "Africa"}
-            {business.state_region &&
-            business.city &&
-            business.state_region !== business.city
-              ? `, ${business.state_region}`
-              : ""}
-          </span>
-        </div>
-
-        <div className="business-card-rating">
-          <span className="rating-star">★</span>
-          <strong>{formatRating(business.average_rating)}</strong>
-          <span>{formatReviewCount(business.review_count)}</span>
-        </div>
-
-        {business.distance_km !== null && (
-          <div className="business-distance">
-            <Icon name="nearby" size={12} />
-            {formatDistance(business.distance_km)}
-          </div>
+        {business.category_name && (
+          <p className="business-category">
+            {business.category_name}
+          </p>
         )}
 
-        <div className="business-card-actions">
-          <Link
-            href={`/businesses/${business.business_slug}`}
-            className="view-business-btn"
-          >
-            View Business
-          </Link>
+        <div className="business-location">
+          <span className="location-icon">⌖</span>
+          <span>{formatLocation(business) || "Location available"}</span>
+        </div>
 
-          {whatsappUrl && (
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="card-whatsapp-btn"
-              aria-label={`WhatsApp ${business.business_name}`}
-            >
-              <Icon name="whatsapp" size={16} />
-            </a>
+        <div className="business-rating-row">
+          <span className="rating-star">★</span>
+          <span className="rating-number">
+            {formatRating(business.average_rating)}
+          </span>
+
+          {business.review_count !== null &&
+            business.review_count > 0 && (
+              <span className="review-count">
+                ({business.review_count})
+              </span>
+            )}
+
+          {business.distance_km !== null && (
+            <>
+              <span className="rating-separator">•</span>
+              <span className="distance">
+                {formatDistance(business.distance_km)}
+              </span>
+            </>
           )}
         </div>
+
+        {business.description && (
+          <p className="business-description">
+            {business.description}
+          </p>
+        )}
+
+        <span className="view-business">
+          View business
+          <span>→</span>
+        </span>
       </div>
-    </article>
+    </Link>
+  );
+}
+
+function BusinessCardSkeleton() {
+  return (
+    <div className="business-card skeleton-card">
+      <div className="skeleton-cover" />
+
+      <div className="skeleton-card-content">
+        <div className="skeleton-line skeleton-title" />
+        <div className="skeleton-line skeleton-small" />
+        <div className="skeleton-line skeleton-medium" />
+        <div className="skeleton-line skeleton-long" />
+      </div>
+    </div>
   );
 }
 
 export default function DiscoverPage() {
   const [businesses, setBusinesses] = useState<DirectoryBusiness[]>([]);
+  const [featuredBusinesses, setFeaturedBusinesses] = useState<
+    DirectoryBusiness[]
+  >([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [locations, setLocations] = useState<DirectoryLocation[]>([]);
   const [media, setMedia] = useState<BusinessMedia[]>([]);
 
-  const [search, setSearch] = useState("");
-  const [location, setLocation] = useState(DEFAULT_CITY);
+  const [searchInput, setSearchInput] = useState("");
+  const [activeSearch, setActiveSearch] = useState("");
+
+  const [selectedLocation, setSelectedLocation] =
+    useState<SelectedLocation>({
+      country_code: null,
+      city: null,
+      state_region: null,
+    });
+
+  const [locationOpen, setLocationOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [locationLoading, setLocationLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [featuredLoading, setFeaturedLoading] = useState(true);
+  const [locationLoading, setLocationLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const [userCoordinates, setUserCoordinates] = useState<{
     latitude: number;
@@ -559,31 +327,97 @@ export default function DiscoverPage() {
   } | null>(null);
 
   const loadCategories = useCallback(async () => {
-    const { data, error: categoryError } = await supabase
+    const { data, error: categoriesError } = await supabase
       .from("business_categories")
-      .select("id,name,slug,is_active,sort_order")
+      .select(
+        "id, name, slug, description, is_active, sort_order"
+      )
       .eq("is_active", true)
-      .order("sort_order", { ascending: true })
-      .order("name", { ascending: true });
+      .order("sort_order", {
+        ascending: true,
+        nullsFirst: false,
+      })
+      .order("name", {
+        ascending: true,
+      });
 
-    if (categoryError) {
-      console.error("Category loading error:", categoryError);
+    if (categoriesError) {
+      console.error("Category loading error:", categoriesError);
       return;
     }
 
     setCategories((data || []) as Category[]);
   }, []);
 
-  const loadBusinesses = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const loadLocations = useCallback(async () => {
+    setLocationLoading(true);
 
-    const { data, error: rpcError } = await supabase.rpc(
+    const { data, error: locationsError } = await supabase.rpc(
+      "get_public_business_locations"
+    );
+
+    if (locationsError) {
+      console.error("Location loading error:", locationsError);
+      setLocationLoading(false);
+      return;
+    }
+
+    setLocations(
+      ((data || []) as DirectoryLocation[]).map((item) => ({
+        ...item,
+        business_count: Number(item.business_count || 0),
+      }))
+    );
+
+    setLocationLoading(false);
+  }, []);
+
+  const loadFeaturedBusinesses = useCallback(async () => {
+    setFeaturedLoading(true);
+
+    const { data, error: featuredError } = await supabase.rpc(
       "get_public_business_directory",
       {
-        p_search: search.trim() || null,
-        p_country_code: null,
-        p_city: location || null,
+        p_search: activeSearch || null,
+        p_country_code: selectedLocation.country_code,
+        p_city: selectedLocation.city,
+        p_category_id: null,
+        p_subcategory_id: null,
+        p_latitude: null,
+        p_longitude: null,
+        p_radius_km: null,
+        p_featured_only: true,
+        p_limit: 8,
+        p_offset: 0,
+      }
+    );
+
+    if (featuredError) {
+      console.error("Featured businesses error:", featuredError);
+      setFeaturedBusinesses([]);
+    } else {
+      setFeaturedBusinesses(
+        (data || []) as DirectoryBusiness[]
+      );
+    }
+
+    setFeaturedLoading(false);
+  }, [
+    activeSearch,
+    selectedLocation.country_code,
+    selectedLocation.city,
+  ]);
+
+  const loadBusinesses = useCallback(async () => {
+    setLoading(true);
+    setError("");
+
+    const { data, error: businessesError } = await supabase.rpc(
+      "get_public_business_directory",
+      {
+        p_search: activeSearch || null,
+        p_country_code: selectedLocation.country_code,
+        p_city: selectedLocation.city,
         p_category_id: null,
         p_subcategory_id: null,
         p_latitude: userCoordinates?.latitude ?? null,
@@ -595,41 +429,54 @@ export default function DiscoverPage() {
       }
     );
 
-    if (rpcError) {
-      console.error("Directory RPC error:", rpcError);
+    if (businessesError) {
+      console.error("Businesses loading error:", businessesError);
+      setBusinesses([]);
       setError(
         "We couldn't load businesses right now. Please try again."
       );
-      setBusinesses([]);
       setLoading(false);
       return;
     }
 
     setBusinesses((data || []) as DirectoryBusiness[]);
     setLoading(false);
-  }, [location, search, userCoordinates]);
+  }, [
+    activeSearch,
+    selectedLocation.country_code,
+    selectedLocation.city,
+    userCoordinates,
+  ]);
 
   const loadMedia = useCallback(
-    async (businessRows: DirectoryBusiness[]) => {
-      if (!businessRows.length) {
+    async (businessList: DirectoryBusiness[]) => {
+      const ids = businessList.map(
+        (business) => business.business_id
+      );
+
+      if (!ids.length) {
         setMedia([]);
         return;
       }
 
-      const ids = businessRows.map((business) => business.business_id);
-
       const { data, error: mediaError } = await supabase
         .from("business_media")
         .select(
-          "business_id,storage_path,media_type,is_featured,sort_order"
+          "id, business_id, storage_path, media_type, title, description, sort_order, is_featured, is_active"
         )
         .in("business_id", ids)
         .eq("is_active", true)
-        .order("is_featured", { ascending: false })
-        .order("sort_order", { ascending: true });
+        .order("is_featured", {
+          ascending: false,
+        })
+        .order("sort_order", {
+          ascending: true,
+          nullsFirst: false,
+        });
 
       if (mediaError) {
         console.error("Business media error:", mediaError);
+        setMedia([]);
         return;
       }
 
@@ -640,19 +487,34 @@ export default function DiscoverPage() {
 
   useEffect(() => {
     loadCategories();
-  }, [loadCategories]);
+    loadLocations();
+  }, [loadCategories, loadLocations]);
 
   useEffect(() => {
     loadBusinesses();
   }, [loadBusinesses]);
 
   useEffect(() => {
-    if (businesses.length) {
-      loadMedia(businesses);
-    } else {
-      setMedia([]);
-    }
-  }, [businesses, loadMedia]);
+    loadFeaturedBusinesses();
+  }, [loadFeaturedBusinesses]);
+
+  useEffect(() => {
+    const combined = [
+      ...featuredBusinesses,
+      ...businesses,
+    ];
+
+    const uniqueBusinesses = Array.from(
+      new Map(
+        combined.map((business) => [
+          business.business_id,
+          business,
+        ])
+      ).values()
+    );
+
+    loadMedia(uniqueBusinesses);
+  }, [businesses, featuredBusinesses, loadMedia]);
 
   const mediaByBusiness = useMemo(() => {
     const map = new Map<string, BusinessMedia>();
@@ -666,14 +528,6 @@ export default function DiscoverPage() {
     return map;
   }, [media]);
 
-  const featuredBusinesses = useMemo(
-    () =>
-      businesses
-        .filter((business) => business.is_featured)
-        .slice(0, 8),
-    [businesses]
-  );
-
   const popularBusinesses = useMemo(() => {
     return [...businesses]
       .sort((a, b) => {
@@ -684,7 +538,10 @@ export default function DiscoverPage() {
           return ratingB - ratingA;
         }
 
-        return Number(b.review_count || 0) - Number(a.review_count || 0);
+        return (
+          Number(b.review_count || 0) -
+          Number(a.review_count || 0)
+        );
       })
       .slice(0, 8);
   }, [businesses]);
@@ -692,7 +549,11 @@ export default function DiscoverPage() {
   const nearbyBusinesses = useMemo(() => {
     if (userCoordinates) {
       return [...businesses]
-        .filter((business) => business.distance_km !== null)
+        .filter(
+          (business) =>
+            business.distance_km !== null &&
+            business.distance_km !== undefined
+        )
         .sort(
           (a, b) =>
             Number(a.distance_km || 999999) -
@@ -701,31 +562,56 @@ export default function DiscoverPage() {
         .slice(0, 8);
     }
 
-    return businesses.slice(0, 8);
-  }, [businesses, userCoordinates]);
+    if (selectedLocation.city) {
+      return businesses.slice(0, 8);
+    }
 
-  const displayFeatured =
-    featuredBusinesses.length > 0
-      ? featuredBusinesses
-      : popularBusinesses.slice(0, 4);
+    return [];
+  }, [businesses, selectedLocation.city, userCoordinates]);
 
-  const displayPopular =
-    popularBusinesses.length > 0
-      ? popularBusinesses
-      : businesses.slice(0, 8);
+  const popularCategories = useMemo(() => {
+    return categories
+      .map((category) => {
+        const count = businesses.filter(
+          (business) =>
+            business.category_id === category.id
+        ).length;
 
-  const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
+        return {
+          ...category,
+          count,
+        };
+      })
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+  }, [categories, businesses]);
+
+  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    loadBusinesses();
+
+    setActiveSearch(searchInput.trim());
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput("");
+    setActiveSearch("");
+  };
+
+  const handleLocationSelect = (
+    location: SelectedLocation
+  ) => {
+    setSelectedLocation(location);
+    setUserCoordinates(null);
+    setLocationOpen(false);
   };
 
   const handleUseLocation = () => {
     if (!navigator.geolocation) {
-      setError("Location is not supported by your browser.");
+      setError(
+        "Location services are not supported on this device."
+      );
       return;
     }
-
-    setLocationLoading(true);
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -734,13 +620,18 @@ export default function DiscoverPage() {
           longitude: position.coords.longitude,
         });
 
-        setLocation("Near me");
-        setLocationLoading(false);
+        setSelectedLocation({
+          country_code: null,
+          city: null,
+          state_region: null,
+        });
+
+        setLocationOpen(false);
+        setError("");
       },
       () => {
-        setLocationLoading(false);
         setError(
-          "We couldn't access your location. Please allow location access or choose a city."
+          "We couldn't access your location. Please select a location instead."
         );
       },
       {
@@ -751,62 +642,52 @@ export default function DiscoverPage() {
     );
   };
 
-  const visibleCategories = categories.slice(0, 5);
+  const clearLocation = () => {
+    setSelectedLocation({
+      country_code: null,
+      city: null,
+      state_region: null,
+    });
+
+    setUserCoordinates(null);
+    setLocationOpen(false);
+  };
 
   return (
     <main className="discover-page">
       {/* HEADER */}
       <header className="discover-header">
         <div className="discover-header-inner">
-          <Link href="/discover" className="discover-brand">
-            <div className="discover-brand-mark">
-              <span className="brand-chart-line" />
-              <span className="brand-chart-bar brand-bar-one" />
-              <span className="brand-chart-bar brand-bar-two" />
-              <span className="brand-chart-bar brand-bar-three" />
-            </div>
-
-            <div>
-              <div className="discover-brand-name">
-                IFC BIZGROWTH
-              </div>
-              <div className="discover-brand-subtitle">
-                Business Advertising &amp; Discovery Platform
-              </div>
-            </div>
+          <Link href="/" className="discover-brand">
+            <span className="brand-mark">IFC</span>
+            <span className="brand-text">
+              <strong>BIZGROWTH</strong>
+              <small>African Business Growth</small>
+            </span>
           </Link>
 
-          <div className="discover-header-actions">
-            <button
-              type="button"
-              className="header-search-button"
-              aria-label="Search businesses"
-              onClick={() =>
-                document
-                  .getElementById("discover-search")
-                  ?.scrollIntoView({ behavior: "smooth" })
-              }
-            >
-              <Icon name="search" size={20} />
-            </button>
+          <nav className="desktop-nav">
+            <Link href="/discover" className="active">
+              Discover
+            </Link>
+            <Link href="/categories">Categories</Link>
+            <Link href="/about">About</Link>
+            <Link href="/contact">Contact</Link>
+          </nav>
 
-            <button
-              type="button"
-              className="header-location-button"
-              onClick={handleUseLocation}
-              title="Use my location"
+          <div className="header-actions">
+            <Link
+              href="/business/register"
+              className="header-business-link"
             >
-              <Icon name="location" size={15} />
-              <span>{location}</span>
-              <span className="location-chevron">⌄</span>
-            </button>
+              List your business
+            </Link>
 
             <Link
               href="/login"
-              className="header-account-button"
-              aria-label="Account"
+              className="header-login-button"
             >
-              <Icon name="user" size={21} />
+              Login
             </Link>
           </div>
         </div>
@@ -814,370 +695,599 @@ export default function DiscoverPage() {
 
       {/* HERO */}
       <section className="discover-hero">
-        <div className="discover-hero-overlay" />
+        <div className="hero-background-shape hero-shape-one" />
+        <div className="hero-background-shape hero-shape-two" />
 
-        <div className="discover-hero-content">
-          <div className="discover-hero-copy">
-            <h1>
-              Discover Amazing
-              <br />
-              Businesses <span>Across Africa</span>
-            </h1>
+        <div className="discover-container hero-content">
+          <span className="hero-eyebrow">
+            Discover businesses across Africa
+          </span>
 
-            <p>
-              Find trusted businesses near you. Support local.
-              <br />
-              Grow together.
-            </p>
-          </div>
+          <h1>
+            Find businesses.
+            <br />
+            <span>Discover opportunities.</span>
+          </h1>
 
-          <div className="discover-hero-slogan">
-            <strong>More Visibility.</strong>
-            <strong>More Customers.</strong>
-            <strong>More Growth.</strong>
-          </div>
-        </div>
-      </section>
+          <p className="hero-description">
+            Explore businesses, services and brands around you
+            and across Africa.
+          </p>
 
-      {/* SEARCH */}
-      <section className="discover-search-wrap" id="discover-search">
-        <form
-          className="discover-search-box"
-          onSubmit={handleSearch}
-        >
-          <div className="discover-search-input-wrap">
-            <Icon name="search" size={18} />
-
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="What business are you looking for?"
-              aria-label="Search businesses"
-            />
-          </div>
-
-          <button
-            type="button"
-            className="discover-search-location"
-            onClick={handleUseLocation}
-            disabled={locationLoading}
+          <form
+            className="discover-search"
+            onSubmit={handleSearch}
           >
-            <Icon name="location" size={17} />
-            <span>
-              {locationLoading ? "Locating..." : location}
-            </span>
-            <span>⌄</span>
-          </button>
+            <div className="search-main">
+              <span className="search-icon">⌕</span>
 
-          <button
-            type="submit"
-            className="discover-search-submit"
-          >
-            Search
-          </button>
-        </form>
-      </section>
+              <input
+                type="search"
+                value={searchInput}
+                onChange={(event) =>
+                  setSearchInput(event.target.value)
+                }
+                placeholder="Search businesses, services or brands"
+                aria-label="Search businesses"
+              />
 
-      {error && (
-        <div className="discover-error" role="alert">
-          {error}
-          <button type="button" onClick={() => setError(null)}>
-            ×
-          </button>
-        </div>
-      )}
+              {searchInput && (
+                <button
+                  type="button"
+                  className="search-clear"
+                  onClick={handleClearSearch}
+                  aria-label="Clear search"
+                >
+                  ×
+                </button>
+              )}
+            </div>
 
-      {/* CATEGORIES */}
-      <section className="discover-container discover-category-section">
-        <div className="discover-category-strip">
-          <Link
-            href="/categories"
-            className="category-tile category-tile-all"
-          >
-            <span className="category-icon">
-              <Icon name="grid" size={22} />
-            </span>
-            <span>All Categories</span>
-          </Link>
+            <div className="search-divider" />
 
-          {visibleCategories.map((category) => (
-            <Link
-              key={category.id}
-              href={`/categories/${category.slug}`}
-              className="category-tile"
+            <button
+              type="button"
+              className="search-location"
+              onClick={() =>
+                setLocationOpen((current) => !current)
+              }
             >
-              <span className="category-icon category-emoji">
-                {getCategoryIcon(category)}
-              </span>
-              <span>{category.name}</span>
-            </Link>
-          ))}
+              <span className="location-pin">⌖</span>
 
-          <Link
-            href="/categories"
-            className="category-tile category-tile-see-all"
-          >
-            <span className="category-more-dots">•••</span>
-            <span>See All</span>
-            <Icon name="chevron" size={12} />
-          </Link>
+              <span className="search-location-text">
+                <small>Location</small>
+                <strong>
+                  {userCoordinates ? (
+                    "Near me"
+                  ) : (
+                    <LocationLabel
+                      location={selectedLocation}
+                    />
+                  )}
+                </strong>
+              </span>
+
+              <span className="location-chevron">⌄</span>
+            </button>
+
+            <button
+              type="submit"
+              className="search-button"
+            >
+              Search
+            </button>
+          </form>
+
+          {/* LOCATION MENU */}
+          {locationOpen && (
+            <div className="location-menu">
+              <div className="location-menu-header">
+                <div>
+                  <strong>Choose a location</strong>
+                  <span>
+                    Locations are based on businesses listed
+                    on IFC BIZGROWTH.
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setLocationOpen(false)}
+                >
+                  ×
+                </button>
+              </div>
+
+              <button
+                type="button"
+                className="location-option use-location-option"
+                onClick={handleUseLocation}
+              >
+                <span className="location-option-icon">
+                  ◎
+                </span>
+
+                <span>
+                  <strong>Use my location</strong>
+                  <small>
+                    Find businesses closest to you
+                  </small>
+                </span>
+              </button>
+
+              <button
+                type="button"
+                className="location-option"
+                onClick={clearLocation}
+              >
+                <span className="location-option-icon">
+                  ◌
+                </span>
+
+                <span>
+                  <strong>All locations</strong>
+                  <small>
+                    Browse businesses across Africa
+                  </small>
+                </span>
+              </button>
+
+              <div className="location-list">
+                {locationLoading ? (
+                  <div className="location-loading">
+                    Loading available locations...
+                  </div>
+                ) : locations.length === 0 ? (
+                  <div className="location-loading">
+                    No business locations are available yet.
+                  </div>
+                ) : (
+                  locations.map((item, index) => (
+                    <button
+                      type="button"
+                      className="location-option"
+                      key={`${item.country_code}-${item.city}-${item.state_region}-${index}`}
+                      onClick={() =>
+                        handleLocationSelect({
+                          country_code:
+                            item.country_code,
+                          city: item.city,
+                          state_region:
+                            item.state_region,
+                        })
+                      }
+                    >
+                      <span className="location-option-icon">
+                        📍
+                      </span>
+
+                      <span>
+                        <strong>
+                          {item.city ||
+                            item.state_region ||
+                            item.country_code}
+                        </strong>
+
+                        <small>
+                          {[
+                            item.state_region,
+                            item.country_code,
+                          ]
+                            .filter(Boolean)
+                            .join(", ")}
+                          {" • "}
+                          {item.business_count}{" "}
+                          {item.business_count === 1
+                            ? "business"
+                            : "businesses"}
+                        </small>
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* FEATURED */}
-      <section className="discover-container discover-section">
-        <SectionHeader
-          icon="star"
-          title="Featured Businesses"
-          href="/businesses?featured=true"
-        />
+      {/* MAIN */}
+      <div className="discover-container discover-main">
+        {error && (
+          <div className="discover-error">
+            <span>!</span>
+            <p>{error}</p>
 
-        {loading ? (
-          <div className="business-grid">
-            {[1, 2, 3, 4].map((item) => (
-              <div className="business-card skeleton-card" key={item}>
-                <div className="skeleton skeleton-image" />
-                <div className="skeleton-content">
-                  <div className="skeleton skeleton-line large" />
-                  <div className="skeleton skeleton-line" />
-                  <div className="skeleton skeleton-line short" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : displayFeatured.length > 0 ? (
-          <div className="business-grid">
-            {displayFeatured.map((business) => {
-              const mediaItem = mediaByBusiness.get(
-                business.business_id
-              );
-
-              return (
-                <BusinessCard
-                  key={`featured-${business.business_id}`}
-                  business={business}
-                  coverUrl={
-                    mediaItem
-                      ? getStorageUrl(mediaItem.storage_path)
-                      : null
-                  }
-                />
-              );
-            })}
-          </div>
-        ) : (
-          <div className="empty-directory-state">
-            <Icon name="store" size={30} />
-            <h3>No featured businesses yet</h3>
-            <p>
-              Businesses will appear here as they become
-              featured.
-            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setError("");
+                loadBusinesses();
+                loadFeaturedBusinesses();
+              }}
+            >
+              Try again
+            </button>
           </div>
         )}
-      </section>
 
-      {/* POPULAR CATEGORIES */}
-      <section className="discover-container discover-section">
-        <SectionHeader
-          icon="grid"
-          title="Popular Categories"
-          href="/categories"
-        />
+        {/* CATEGORIES */}
+        <section className="discover-section categories-section">
+          <div className="section-heading">
+            <div>
+              <span className="section-kicker">
+                Explore
+              </span>
+              <h2>Browse by category</h2>
+            </div>
 
-        <div className="popular-category-grid">
-          {categories.slice(0, 5).map((category) => {
-            const count = businesses.filter(
-              (business) => business.category_id === category.id
-            ).length;
+            <Link href="/categories" className="view-all">
+              View all
+              <span>→</span>
+            </Link>
+          </div>
 
-            const categoryBusiness =
-              businesses.find(
-                (business) =>
-                  business.category_id === category.id
-              );
+          <div className="category-scroll">
+            {categories.length === 0 ? (
+              <div className="category-loading">
+                Loading categories...
+              </div>
+            ) : (
+              categories.slice(0, 8).map((category) => (
+                <Link
+                  href={`/categories/${category.slug}`}
+                  key={category.id}
+                  className="category-chip"
+                >
+                  <span className="category-chip-icon">
+                    {getCategoryIcon(category.name)}
+                  </span>
 
-            const categoryMedia = categoryBusiness
-              ? mediaByBusiness.get(
-                  categoryBusiness.business_id
-                )
-              : null;
+                  <span>{category.name}</span>
+                </Link>
+              ))
+            )}
+          </div>
+        </section>
 
-            const imageUrl = categoryMedia
-              ? getStorageUrl(categoryMedia.storage_path)
-              : categoryBusiness
-                ? getStorageUrl(categoryBusiness.logo_url)
-                : null;
+        {/* FEATURED */}
+        <section className="discover-section">
+          <div className="section-heading">
+            <div>
+              <span className="section-kicker">
+                Handpicked for you
+              </span>
+              <h2>Featured Businesses</h2>
+            </div>
 
-            return (
+            <span className="section-context">
+              {selectedLocation.city ||
+                selectedLocation.country_code ||
+                "Across Africa"}
+            </span>
+          </div>
+
+          {featuredLoading ? (
+            <div className="business-grid">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <BusinessCardSkeleton key={index} />
+              ))}
+            </div>
+          ) : featuredBusinesses.length === 0 ? (
+            <div className="empty-section">
+              <div className="empty-icon">★</div>
+              <h3>No featured businesses here yet</h3>
+              <p>
+                Featured businesses will appear here when
+                businesses are selected for promotion.
+              </p>
+            </div>
+          ) : (
+            <div className="business-grid">
+              {featuredBusinesses.map((business) => (
+                <BusinessCard
+                  key={business.business_id}
+                  business={business}
+                  media={mediaByBusiness.get(
+                    business.business_id
+                  )}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* POPULAR */}
+        <section className="discover-section">
+          <div className="section-heading">
+            <div>
+              <span className="section-kicker">
+                Popular right now
+              </span>
+              <h2>Popular Businesses</h2>
+            </div>
+
+            <span className="section-context">
+              Based on ratings and reviews
+            </span>
+          </div>
+
+          {loading ? (
+            <div className="business-grid">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <BusinessCardSkeleton key={index} />
+              ))}
+            </div>
+          ) : popularBusinesses.length === 0 ? (
+            <div className="empty-section">
+              <div className="empty-icon">⌕</div>
+              <h3>No businesses found</h3>
+              <p>
+                Try another search or choose a different
+                location.
+              </p>
+            </div>
+          ) : (
+            <div className="business-grid">
+              {popularBusinesses.map((business) => (
+                <BusinessCard
+                  key={business.business_id}
+                  business={business}
+                  media={mediaByBusiness.get(
+                    business.business_id
+                  )}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* NEARBY */}
+        <section className="discover-section nearby-section">
+          <div className="section-heading">
+            <div>
+              <span className="section-kicker">
+                Around you
+              </span>
+              <h2>Businesses Near You</h2>
+            </div>
+
+            <button
+              type="button"
+              className="location-heading-button"
+              onClick={() => setLocationOpen(true)}
+            >
+              <span>⌖</span>
+              {userCoordinates
+                ? "Using your location"
+                : selectedLocation.city
+                  ? selectedLocation.city
+                  : "Choose location"}
+            </button>
+          </div>
+
+          {!userCoordinates && !selectedLocation.city ? (
+            <div className="nearby-prompt">
+              <div className="nearby-prompt-icon">⌖</div>
+
+              <div>
+                <h3>Find businesses near you</h3>
+                <p>
+                  Choose a location or allow location access
+                  to discover nearby businesses.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setLocationOpen(true)}
+              >
+                Choose location
+              </button>
+            </div>
+          ) : nearbyBusinesses.length === 0 ? (
+            <div className="empty-section">
+              <div className="empty-icon">⌖</div>
+              <h3>No nearby businesses found</h3>
+              <p>
+                There are no public businesses matching this
+                location yet.
+              </p>
+            </div>
+          ) : (
+            <div className="business-grid">
+              {nearbyBusinesses.map((business) => (
+                <BusinessCard
+                  key={business.business_id}
+                  business={business}
+                  media={mediaByBusiness.get(
+                    business.business_id
+                  )}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* POPULAR CATEGORIES */}
+        <section className="discover-section popular-categories-section">
+          <div className="section-heading">
+            <div>
+              <span className="section-kicker">
+                Find what you need
+              </span>
+              <h2>Popular Categories</h2>
+            </div>
+
+            <Link href="/categories" className="view-all">
+              All categories
+              <span>→</span>
+            </Link>
+          </div>
+
+          <div className="popular-category-grid">
+            {popularCategories.map((category) => (
               <Link
                 href={`/categories/${category.slug}`}
                 key={category.id}
                 className="popular-category-card"
               >
-                <div className="popular-category-image">
-                  {imageUrl ? (
-                    <img
-                      src={imageUrl}
-                      alt={category.name}
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="popular-category-placeholder">
-                      {getCategoryIcon(category)}
-                    </div>
-                  )}
-                </div>
+                <span className="popular-category-icon">
+                  {getCategoryIcon(category.name)}
+                </span>
 
-                <div className="popular-category-info">
+                <span className="popular-category-content">
                   <strong>{category.name}</strong>
-                  <span>
-                    {count} {count === 1 ? "business" : "businesses"}
-                  </span>
-                </div>
+                  <small>
+                    {category.count}{" "}
+                    {category.count === 1
+                      ? "business"
+                      : "businesses"}
+                  </small>
+                </span>
+
+                <span className="popular-category-arrow">
+                  →
+                </span>
               </Link>
-            );
-          })}
-
-          <Link
-            href="/categories"
-            className="popular-category-card popular-category-more"
-          >
-            <div className="popular-category-more-icon">•••</div>
-            <strong>More</strong>
-          </Link>
-        </div>
-      </section>
-
-      {/* NEARBY */}
-      <section className="discover-container discover-section">
-        <SectionHeader
-          icon="nearby"
-          title="Businesses Near You"
-          href="/businesses?nearby=true"
-        />
-
-        {!loading && nearbyBusinesses.length > 0 ? (
-          <div className="business-grid">
-            {nearbyBusinesses.map((business) => {
-              const mediaItem = mediaByBusiness.get(
-                business.business_id
-              );
-
-              return (
-                <BusinessCard
-                  key={`nearby-${business.business_id}`}
-                  business={business}
-                  coverUrl={
-                    mediaItem
-                      ? getStorageUrl(mediaItem.storage_path)
-                      : null
-                  }
-                />
-              );
-            })}
+            ))}
           </div>
-        ) : !loading ? (
-          <div className="empty-directory-state">
-            <Icon name="nearby" size={30} />
-            <h3>No nearby businesses found</h3>
+        </section>
+
+        {/* CTA */}
+        <section className="business-cta">
+          <div className="cta-decoration cta-decoration-one" />
+          <div className="cta-decoration cta-decoration-two" />
+
+          <div className="cta-content">
+            <span className="section-kicker">
+              Grow your business
+            </span>
+
+            <h2>
+              Put your business in front of more customers.
+            </h2>
+
             <p>
-              Try searching another location or allow location
-              access.
+              Create your business profile and let customers
+              discover what you offer.
             </p>
 
-            <button
-              type="button"
-              onClick={handleUseLocation}
-              className="empty-state-button"
+            <Link
+              href="/business/register"
+              className="cta-button"
             >
-              Find Businesses Near Me
-            </button>
+              List your business
+              <span>→</span>
+            </Link>
           </div>
-        ) : null}
-      </section>
+        </section>
+      </div>
 
-      {/* BUSINESS CTA */}
-      <section className="discover-container">
-        <div className="discover-business-cta">
-          <div className="discover-business-cta-icon">
-            <Icon name="store" size={27} />
-          </div>
-
-          <div className="discover-business-cta-copy">
-            <strong>Own a Business? Get Discovered Today!</strong>
-            <span>
-              List your business on IFC BIZGROWTH and reach more
-              customers across Africa.
-            </span>
-          </div>
-
-          <Link
-            href="/business/register"
-            className="discover-business-cta-button"
-          >
-            Register Your Business
-            <Icon name="arrow" size={15} />
-          </Link>
-        </div>
-      </section>
-
-      {/* DESKTOP FOOTER */}
+      {/* FOOTER */}
       <footer className="discover-footer">
-        <div className="discover-footer-inner">
-          <div>
-            <strong>IFC BIZGROWTH</strong>
-            <span>
-              African Business Advertising &amp; Discovery
-              Platform
-            </span>
+        <div className="discover-container footer-inner">
+          <div className="footer-brand">
+            <Link href="/" className="discover-brand">
+              <span className="brand-mark">IFC</span>
+              <span className="brand-text">
+                <strong>BIZGROWTH</strong>
+                <small>African Business Growth</small>
+              </span>
+            </Link>
+
+            <p>
+              Helping African businesses become more visible,
+              discoverable and connected to customers.
+            </p>
           </div>
 
-          <div className="discover-footer-links">
-            <Link href="/about">About</Link>
-            <Link href="/categories">Categories</Link>
-            <Link href="/businesses">Businesses</Link>
-            <Link href="/contact">Contact</Link>
-          </div>
+          <div className="footer-links">
+            <div>
+              <strong>Explore</strong>
+              <Link href="/discover">Discover</Link>
+              <Link href="/categories">Categories</Link>
+              <Link href="/about">About us</Link>
+            </div>
 
-          <span className="discover-footer-copy">
-            © {new Date().getFullYear()} IFC BIZGROWTH
+            <div>
+              <strong>Businesses</strong>
+              <Link href="/business/register">
+                List your business
+              </Link>
+              <Link href="/login">Business login</Link>
+              <Link href="/contact">Contact</Link>
+            </div>
+          </div>
+        </div>
+
+        <div className="footer-bottom discover-container">
+          <span>
+            © {new Date().getFullYear()} IFC BIZGROWTH. All
+            rights reserved.
+          </span>
+
+          <span>
+            An IFC Bridge Lab company
           </span>
         </div>
       </footer>
 
-      {/* MOBILE BOTTOM NAV */}
-      <nav className="discover-mobile-nav">
+      {/* MOBILE NAV */}
+      <nav className="mobile-bottom-nav">
         <Link href="/discover" className="mobile-nav-item active">
-          <Icon name="home" size={21} />
-          <span>Home</span>
-        </Link>
-
-        <Link href="/businesses" className="mobile-nav-item">
-          <Icon name="search" size={21} />
-          <span>Search</span>
+          <span>⌂</span>
+          <small>Discover</small>
         </Link>
 
         <Link href="/categories" className="mobile-nav-item">
-          <Icon name="categories" size={21} />
-          <span>Categories</span>
+          <span>◫</span>
+          <small>Categories</small>
         </Link>
 
-        <button
-          type="button"
-          className="mobile-nav-item"
-          onClick={handleUseLocation}
+        <Link
+          href="/business/register"
+          className="mobile-nav-item mobile-nav-add"
         >
-          <Icon name="nearby" size={21} />
-          <span>Nearby</span>
-        </button>
+          <span>+</span>
+        </Link>
 
-        <Link href="/more" className="mobile-nav-item">
-          <Icon name="more" size={21} />
-          <span>More</span>
+        <Link href="/about" className="mobile-nav-item">
+          <span>◎</span>
+          <small>About</small>
+        </Link>
+
+        <Link href="/login" className="mobile-nav-item">
+          <span>◯</span>
+          <small>Account</small>
         </Link>
       </nav>
     </main>
   );
+}
+
+function getCategoryIcon(name: string) {
+  const normalized = name.toLowerCase();
+
+  if (normalized.includes("food")) return "🍽";
+  if (normalized.includes("fashion")) return "✦";
+  if (normalized.includes("furniture")) return "⌂";
+  if (normalized.includes("real estate")) return "▦";
+  if (normalized.includes("construction")) return "⌂";
+  if (normalized.includes("education")) return "▤";
+  if (normalized.includes("health")) return "♡";
+  if (normalized.includes("technology")) return "◈";
+  if (normalized.includes("professional")) return "◉";
+  if (normalized.includes("retail")) return "◫";
+  if (normalized.includes("automotive")) return "◌";
+  if (normalized.includes("agriculture")) return "♧";
+  if (normalized.includes("finance")) return "₦";
+  if (normalized.includes("hospitality")) return "⌁";
+  if (normalized.includes("media")) return "▶";
+  if (normalized.includes("events")) return "★";
+  if (normalized.includes("logistics")) return "⇢";
+  if (normalized.includes("manufacturing")) return "⚙";
+  if (normalized.includes("home")) return "⌂";
+
+  return "✦";
   }
