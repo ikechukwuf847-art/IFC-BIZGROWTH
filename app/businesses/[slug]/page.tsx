@@ -65,6 +65,9 @@ type Rating = {
 
 type GenericRow = Record<string, unknown>;
 
+const SUPABASE_URL =
+  "https://iluczxsqdpohzgbknldh.supabase.co";
+
 function isValidUrl(value: string | null | undefined) {
   if (!value) return false;
 
@@ -76,24 +79,36 @@ function isValidUrl(value: string | null | undefined) {
   }
 }
 
-function getLogoUrl(path: string | null) {
+function getStorageUrl(
+  bucket: string,
+  path: string | null,
+) {
   if (!path) return null;
 
   if (isValidUrl(path)) {
     return path;
   }
 
-  return `https://iluczxsqdpohzgbknldh.supabase.co/storage/v1/object/public/business-logos/${path}`;
+  const cleanPath = path.replace(/^\/+/, "");
+
+  return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${cleanPath}`;
+}
+
+function getLogoUrl(path: string | null) {
+  return getStorageUrl("business-logos", path);
 }
 
 function getCustomerAvatarUrl(path: string | null) {
-  if (!path) return null;
+  return getStorageUrl("customer-logo", path);
+}
 
-  if (isValidUrl(path)) {
-    return path;
-  }
-
-  return `https://iluczxsqdpohzgbknldh.supabase.co/storage/v1/object/public/customer-logo/${path}`;
+/*
+ * ALL BUSINESS MEDIA IMAGES
+ * Products, services, promotions and gallery
+ * use the business-media bucket.
+ */
+function getBusinessMediaUrl(path: string | null) {
+  return getStorageUrl("business-media", path);
 }
 
 function getInitials(name: string) {
@@ -147,6 +162,26 @@ function getRowText(
   }
 
   return null;
+}
+
+/*
+ * Finds an image path from different possible
+ * backend column names.
+ */
+function getMediaPath(row: GenericRow) {
+  return getRowText(row, [
+    "storage_path",
+    "image_path",
+    "image_url",
+    "media_url",
+    "media_path",
+    "photo_url",
+    "photo_path",
+    "thumbnail_url",
+    "thumbnail_path",
+    "url",
+    "image",
+  ]);
 }
 
 function getDayName(value: unknown) {
@@ -646,6 +681,16 @@ export default function BusinessProfilePage() {
     loadBusiness();
   }, [loadBusiness]);
 
+  useEffect(() => {
+    return () => {
+      if (reviewImagePreview) {
+        URL.revokeObjectURL(
+          reviewImagePreview,
+        );
+      }
+    };
+  }, [reviewImagePreview]);
+
   const logoUrl = getLogoUrl(
     business?.logo_url ?? null,
   );
@@ -680,11 +725,11 @@ export default function BusinessProfilePage() {
       typeof location.longitude ===
         "number"
     ) {
-      return `https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`;
+      return `https://www.google.com/maps/dir/?api=1&destination=${location.latitude},${location.longitude}`;
     }
 
     if (address) {
-      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+      return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
         address,
       )}`;
     }
@@ -755,6 +800,33 @@ export default function BusinessProfilePage() {
     }
   };
 
+  const shareToTikTok =
+    async () => {
+      try {
+        await navigator.clipboard.writeText(
+          pageUrl,
+        );
+
+        setCopied(true);
+
+        window.setTimeout(() => {
+          setCopied(false);
+        }, 2000);
+
+        window.open(
+          "https://www.tiktok.com/",
+          "_blank",
+          "noopener,noreferrer",
+        );
+      } catch {
+        window.open(
+          "https://www.tiktok.com/",
+          "_blank",
+          "noopener,noreferrer",
+        );
+      }
+    };
+
   const handleReviewImage = (
     event: ChangeEvent<HTMLInputElement>,
   ) => {
@@ -788,6 +860,12 @@ export default function BusinessProfilePage() {
 
       event.target.value = "";
       return;
+    }
+
+    if (reviewImagePreview) {
+      URL.revokeObjectURL(
+        reviewImagePreview,
+      );
     }
 
     setReviewImage(file);
@@ -899,6 +977,13 @@ export default function BusinessProfilePage() {
       setReviewText("");
       setReviewRating(0);
       setReviewImage(null);
+
+      if (reviewImagePreview) {
+        URL.revokeObjectURL(
+          reviewImagePreview,
+        );
+      }
+
       setReviewImagePreview(null);
 
       setReviewMessage(
@@ -1036,6 +1121,17 @@ export default function BusinessProfilePage() {
                   Facebook
                 </small>
               </a>
+
+              <button
+                type="button"
+                onClick={shareToTikTok}
+                className="bp-share-option tiktok"
+              >
+                <span>♪</span>
+                <small>
+                  TikTok
+                </small>
+              </button>
 
               <a
                 href={`https://twitter.com/intent/tweet?text=${encodedShareText}&url=${encodedPageUrl}`}
@@ -1227,22 +1323,33 @@ export default function BusinessProfilePage() {
       </section>
 
       <div className="bp-container">
-        {business.description && (
-          <section
-            className="bp-section bp-about"
-            id="about"
-          >
-            <div className="bp-section-heading">
-              <h2>About</h2>
-            </div>
 
+        {/* ABOUT */}
+        <section
+          className="bp-section bp-about"
+          id="about"
+        >
+          <div className="bp-section-heading">
+            <h2>About</h2>
+          </div>
+
+          {business.description ? (
             <p>
               {business.description}
             </p>
-          </section>
-        )}
+          ) : (
+            <p>
+              Learn more about{" "}
+              {business.name}.
+            </p>
+          )}
+        </section>
 
-        <nav className="bp-profile-nav">
+        {/* SEPARATE NAVIGATION */}
+        <nav
+          className="bp-profile-nav"
+          aria-label="Business sections"
+        >
           <a
             href="#about"
             className="active"
@@ -1262,6 +1369,12 @@ export default function BusinessProfilePage() {
             </a>
           )}
 
+          {promotions.length > 0 && (
+            <a href="#promotions">
+              Promotions
+            </a>
+          )}
+
           <a href="#reviews">
             Reviews
             {rating.review_count
@@ -1270,8 +1383,12 @@ export default function BusinessProfilePage() {
           </a>
         </nav>
 
+        {/* PROMOTIONS ONLY */}
         {promotions.length > 0 && (
-          <section className="bp-section">
+          <section
+            className="bp-section"
+            id="promotions"
+          >
             <div className="bp-section-heading">
               <h2>
                 Special Offers
@@ -1312,6 +1429,16 @@ export default function BusinessProfilePage() {
                       ],
                     );
 
+                  const imagePath =
+                    getMediaPath(
+                      promotion,
+                    );
+
+                  const imageUrl =
+                    getBusinessMediaUrl(
+                      imagePath,
+                    );
+
                   return (
                     <article
                       className="bp-offer"
@@ -1323,11 +1450,19 @@ export default function BusinessProfilePage() {
                         `${title}-${index}`
                       }
                     >
-                      <div className="bp-offer-icon">
-                        %
-                      </div>
+                      {imageUrl ? (
+                        <img
+                          src={imageUrl}
+                          alt={title}
+                          className="bp-offer-image"
+                        />
+                      ) : (
+                        <div className="bp-offer-icon">
+                          %
+                        </div>
+                      )}
 
-                      <div>
+                      <div className="bp-offer-content">
                         <h3>
                           {title}
                         </h3>
@@ -1352,6 +1487,7 @@ export default function BusinessProfilePage() {
           </section>
         )}
 
+        {/* BUSINESS GALLERY */}
         {media.length > 0 && (
           <section className="bp-section">
             <div className="bp-section-heading">
@@ -1362,18 +1498,18 @@ export default function BusinessProfilePage() {
               {media.map(
                 (item, index) => {
                   const path =
-                    getRowText(item, [
-                      "storage_path",
-                      "media_url",
-                      "url",
-                    ]);
+                    getMediaPath(item);
 
                   if (!path) return null;
 
                   const imageUrl =
-                    isValidUrl(path)
-                      ? path
-                      : `https://iluczxsqdpohzgbknldh.supabase.co/storage/v1/object/public/business-media/${path}`;
+                    getBusinessMediaUrl(
+                      path,
+                    );
+
+                  if (!imageUrl) {
+                    return null;
+                  }
 
                   return (
                     <a
@@ -1410,6 +1546,7 @@ export default function BusinessProfilePage() {
           </section>
         )}
 
+        {/* SERVICES ONLY */}
         {services.length > 0 && (
           <section
             className="bp-section"
@@ -1430,7 +1567,8 @@ export default function BusinessProfilePage() {
                         "name",
                         "title",
                       ],
-                    ) || "Service";
+                    ) ||
+                    "Service";
 
                   const description =
                     getRowText(
@@ -1439,6 +1577,16 @@ export default function BusinessProfilePage() {
                         "description",
                         "service_description",
                       ],
+                    );
+
+                  const imagePath =
+                    getMediaPath(
+                      service,
+                    );
+
+                  const imageUrl =
+                    getBusinessMediaUrl(
+                      imagePath,
                     );
 
                   return (
@@ -1452,15 +1600,25 @@ export default function BusinessProfilePage() {
                         `${name}-${index}`
                       }
                     >
-                      <h3>
-                        {name}
-                      </h3>
-
-                      {description && (
-                        <p>
-                          {description}
-                        </p>
+                      {imageUrl && (
+                        <img
+                          src={imageUrl}
+                          alt={name}
+                          className="bp-service-image"
+                        />
                       )}
+
+                      <div className="bp-service-content">
+                        <h3>
+                          {name}
+                        </h3>
+
+                        {description && (
+                          <p>
+                            {description}
+                          </p>
+                        )}
+                      </div>
                     </article>
                   );
                 },
@@ -1469,6 +1627,7 @@ export default function BusinessProfilePage() {
           </section>
         )}
 
+        {/* PRODUCTS ONLY */}
         {products.length > 0 && (
           <section
             className="bp-section"
@@ -1489,7 +1648,8 @@ export default function BusinessProfilePage() {
                         "name",
                         "title",
                       ],
-                    ) || "Product";
+                    ) ||
+                    "Product";
 
                   const description =
                     getRowText(
@@ -1500,14 +1660,14 @@ export default function BusinessProfilePage() {
                       ],
                     );
 
-                  const image =
-                    getRowText(
+                  const imagePath =
+                    getMediaPath(
                       product,
-                      [
-                        "image_url",
-                        "media_url",
-                        "image",
-                      ],
+                    );
+
+                  const imageUrl =
+                    getBusinessMediaUrl(
+                      imagePath,
                     );
 
                   const price =
@@ -1531,16 +1691,11 @@ export default function BusinessProfilePage() {
                         `${name}-${index}`
                       }
                     >
-                      {image && (
+                      {imageUrl && (
                         <img
-                          src={
-                            isValidUrl(
-                              image,
-                            )
-                              ? image
-                              : `https://iluczxsqdpohzgbknldh.supabase.co/storage/v1/object/public/product-media/${image}`
-                          }
+                          src={imageUrl}
                           alt={name}
+                          className="bp-product-image"
                         />
                       )}
 
@@ -1569,6 +1724,7 @@ export default function BusinessProfilePage() {
           </section>
         )}
 
+        {/* CONTACT */}
         <section className="bp-section">
           <div className="bp-section-heading">
             <h2>Contact</h2>
@@ -1690,6 +1846,7 @@ export default function BusinessProfilePage() {
           </div>
         </section>
 
+        {/* BUSINESS HOURS */}
         {hours.length > 0 && (
           <section className="bp-section">
             <div className="bp-section-heading">
@@ -1741,8 +1898,13 @@ export default function BusinessProfilePage() {
                   const closed =
                     closedValue ===
                       "true" ||
-                    closedValue ===
-                      "1";
+                    closedValue === "1";
+
+                  const twentyFourHours =
+                    open ===
+                      "00:00:00" &&
+                    close ===
+                      "23:59:00";
 
                   return (
                     <div
@@ -1768,14 +1930,16 @@ export default function BusinessProfilePage() {
                       >
                         {closed
                           ? "Closed"
-                          : open &&
-                              close
-                            ? `${formatBusinessTime(
-                                open,
-                              )} – ${formatBusinessTime(
-                                close,
-                              )}`
-                            : "Hours unavailable"}
+                          : twentyFourHours
+                            ? "Open 24 hours"
+                            : open &&
+                                close
+                              ? `${formatBusinessTime(
+                                  open,
+                                )} – ${formatBusinessTime(
+                                  close,
+                                )}`
+                              : "Hours unavailable"}
                       </strong>
                     </div>
                   );
@@ -1785,6 +1949,7 @@ export default function BusinessProfilePage() {
           </section>
         )}
 
+        {/* SOCIAL LINKS */}
         {socialLinks.length > 0 && (
           <section className="bp-section">
             <div className="bp-section-heading">
@@ -1818,7 +1983,8 @@ export default function BusinessProfilePage() {
                         "platform_name",
                         "name",
                       ],
-                    ) || "Social";
+                    ) ||
+                    "Social";
 
                   return (
                     <a
@@ -1847,6 +2013,7 @@ export default function BusinessProfilePage() {
           </section>
         )}
 
+        {/* REVIEWS ONLY */}
         <section
           className="bp-section bp-reviews-section"
           id="reviews"
@@ -2120,6 +2287,7 @@ export default function BusinessProfilePage() {
           aria-label="Contact this business on WhatsApp"
         >
           <span>◉</span>
+
           <strong>
             WhatsApp
           </strong>
