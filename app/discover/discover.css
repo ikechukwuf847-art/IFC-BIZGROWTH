@@ -1527,7 +1527,7 @@
 
   .business-grid {
     grid-template-columns:
-      repeat(2, minmax(0, 1fr));
+      repeat(3, minmax(0, 1fr));
 
     gap: 9px;
   }
@@ -1694,14 +1694,14 @@
 
     z-index: 200;
 
-    height: 62px;
+    height: 64px;
 
     display: grid;
 
     grid-template-columns:
-      repeat(4, 1fr);
+      repeat(5, 1fr);
 
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--border-light);
 
     background: rgba(255, 255, 255, 0.98);
 
@@ -1713,9 +1713,14 @@
   }
 
   .mobile-bottom-nav a {
+    min-width: 0;
+
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+
+    gap: 4px;
 
     color: var(--text-muted);
 
@@ -1730,6 +1735,16 @@
     color: var(--biz-blue);
     font-weight: 800;
   }
+
+  .mobile-nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 17px;
+
+    line-height: 1;
+  }
 }
 
 
@@ -1743,6 +1758,9 @@
   }
 
   .business-grid {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+
     gap: 7px;
   }
 
@@ -1796,4 +1814,4 @@ select:focus-visible {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  }
+     }
