@@ -1491,3 +1491,39 @@
     border-radius: 18px;
   }
 }
+
+.bp-product-image,
+.bp-service-image,
+.bp-offer-image {
+  width: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.bp-product-image {
+  aspect-ratio: 1 / 1;
+  border-radius: 12px 12px 0 0;
+}
+
+.bp-service-image {
+  aspect-ratio: 16 / 10;
+  border-radius: 12px 12px 0 0;
+}
+
+.bp-offer-image {
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  margin-bottom: 14px;
+}
+
+.bp-offer-content {
+  flex: 1;
+}
+
+.bp-service-content {
+  padding: 16px;
+}
+
+.bp-product-content {
+  padding: 16px;
+}
