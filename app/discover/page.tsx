@@ -90,10 +90,10 @@ function isDirectUrl(value: string | null) {
 }
 
 /*
- * Private business logo
+ * Private business logo.
  *
  * The API route checks that the logo belongs to
- * an active/public business and then creates the
+ * an active/public business and creates the
  * signed Storage URL server-side.
  */
 function getLogoUrl(path: string | null) {
@@ -231,9 +231,7 @@ function BusinessCard({
 
           <span>
             {business.average_rating !== null
-              ? Number(
-                  business.average_rating
-                ).toFixed(1)
+              ? Number(business.average_rating).toFixed(1)
               : "New"}
           </span>
 
@@ -246,11 +244,7 @@ function BusinessCard({
 
           {business.distance_km !== null && (
             <span className="distance">
-              •{" "}
-              {Number(
-                business.distance_km
-              ).toFixed(1)}{" "}
-              km
+              • {Number(business.distance_km).toFixed(1)} km
             </span>
           )}
         </div>
@@ -292,9 +286,7 @@ export default function DiscoverPage() {
   const [featuredBusinesses, setFeaturedBusinesses] =
     useState<DirectoryBusiness[]>([]);
 
-  const [categories, setCategories] = useState<Category[]>(
-    []
-  );
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const [locations, setLocations] = useState<
     BusinessLocation[]
@@ -303,6 +295,7 @@ export default function DiscoverPage() {
   const [media, setMedia] = useState<BusinessMedia[]>([]);
 
   const [search, setSearch] = useState("");
+
   const [submittedSearch, setSubmittedSearch] =
     useState("");
 
@@ -314,6 +307,7 @@ export default function DiscoverPage() {
   >("backend");
 
   const [loading, setLoading] = useState(true);
+
   const [featuredLoading, setFeaturedLoading] =
     useState(true);
 
@@ -328,9 +322,6 @@ export default function DiscoverPage() {
       longitude: number;
     } | null>(null);
 
-  /*
-   * Categories
-   */
   const loadCategories = useCallback(async () => {
     const { data, error: categoriesError } =
       await supabase
@@ -352,15 +343,13 @@ export default function DiscoverPage() {
         "Unable to load categories:",
         categoriesError
       );
+
       return;
     }
 
     setCategories((data || []) as Category[]);
   }, []);
 
-  /*
-   * Locations
-   */
   const loadLocations = useCallback(async () => {
     const { data, error: locationsError } =
       await supabase.rpc(
@@ -372,6 +361,7 @@ export default function DiscoverPage() {
         "Unable to load locations:",
         locationsError
       );
+
       return;
     }
 
@@ -380,9 +370,6 @@ export default function DiscoverPage() {
     );
   }, []);
 
-  /*
-   * Normal directory businesses
-   */
   const loadBusinesses = useCallback(async () => {
     setLoading(true);
 
@@ -421,11 +408,6 @@ export default function DiscoverPage() {
           p_subcategory_id:
             null,
 
-          /*
-           * These are the visitor's coordinates.
-           * The RPC compares them against the
-           * business_locations latitude/longitude.
-           */
           p_latitude:
             isNearby
               ? userCoordinates.latitude
@@ -444,9 +426,11 @@ export default function DiscoverPage() {
           p_featured_only:
             false,
 
-          p_limit: 100,
+          p_limit:
+            100,
 
-          p_offset: 0,
+          p_offset:
+            0,
         }
       );
 
@@ -461,6 +445,7 @@ export default function DiscoverPage() {
       );
 
       setBusinesses([]);
+
       setLoading(false);
 
       return;
@@ -478,9 +463,6 @@ export default function DiscoverPage() {
     userCoordinates,
   ]);
 
-  /*
-   * Featured businesses
-   */
   const loadFeaturedBusinesses =
     useCallback(async () => {
       setFeaturedLoading(true);
@@ -501,47 +483,52 @@ export default function DiscoverPage() {
         locationMode === "nearby" &&
         userCoordinates !== null;
 
-      const { data, error: featuredError } =
-        await supabase.rpc(
-          "get_public_business_directory",
-          {
-            p_search: null,
+      const {
+        data,
+        error: featuredError,
+      } = await supabase.rpc(
+        "get_public_business_directory",
+        {
+          p_search:
+            null,
 
-            p_country_code:
-              selectedCountry,
+          p_country_code:
+            selectedCountry,
 
-            p_city:
-              selectedCity,
+          p_city:
+            selectedCity,
 
-            p_category_id:
-              null,
+          p_category_id:
+            null,
 
-            p_subcategory_id:
-              null,
+          p_subcategory_id:
+            null,
 
-            p_latitude:
-              isNearby
-                ? userCoordinates.latitude
-                : null,
+          p_latitude:
+            isNearby
+              ? userCoordinates.latitude
+              : null,
 
-            p_longitude:
-              isNearby
-                ? userCoordinates.longitude
-                : null,
+          p_longitude:
+            isNearby
+              ? userCoordinates.longitude
+              : null,
 
-            p_radius_km:
-              isNearby
-                ? 25
-                : null,
+          p_radius_km:
+            isNearby
+              ? 25
+              : null,
 
-            p_featured_only:
-              true,
+          p_featured_only:
+            true,
 
-            p_limit: 8,
+          p_limit:
+            8,
 
-            p_offset: 0,
-          }
-        );
+          p_offset:
+            0,
+        }
+      );
 
       if (featuredError) {
         console.error(
@@ -550,6 +537,7 @@ export default function DiscoverPage() {
         );
 
         setFeaturedBusinesses([]);
+
         setFeaturedLoading(false);
 
         return;
@@ -566,9 +554,6 @@ export default function DiscoverPage() {
       userCoordinates,
     ]);
 
-  /*
-   * Business media
-   */
   const loadMedia = useCallback(
     async (businessIds: string[]) => {
       if (!businessIds.length) {
@@ -576,24 +561,29 @@ export default function DiscoverPage() {
         return;
       }
 
-      const { data, error: mediaError } =
-        await supabase
-          .from("business_media")
-          .select(
-            "id, business_id, storage_path, media_type, title, description, sort_order, is_featured, is_active"
-          )
-          .in(
-            "business_id",
-            businessIds
-          )
-          .eq(
-            "is_active",
-            true
-          )
-          .order("sort_order", {
+      const {
+        data,
+        error: mediaError,
+      } = await supabase
+        .from("business_media")
+        .select(
+          "id, business_id, storage_path, media_type, title, description, sort_order, is_featured, is_active"
+        )
+        .in(
+          "business_id",
+          businessIds
+        )
+        .eq(
+          "is_active",
+          true
+        )
+        .order(
+          "sort_order",
+          {
             ascending: true,
             nullsFirst: false,
-          });
+          }
+        );
 
       if (mediaError) {
         console.error(
@@ -602,6 +592,7 @@ export default function DiscoverPage() {
         );
 
         setMedia([]);
+
         return;
       }
 
@@ -612,9 +603,6 @@ export default function DiscoverPage() {
     []
   );
 
-  /*
-   * Initial backend data
-   */
   useEffect(() => {
     loadCategories();
     loadLocations();
@@ -623,125 +611,98 @@ export default function DiscoverPage() {
     loadLocations,
   ]);
 
-  /*
-   * Device location
-   *
-   * No hardcoded location is used.
-   */
-  const handleUseLocation = useCallback(() => {
-    if (
-      typeof navigator === "undefined" ||
-      !navigator.geolocation
-    ) {
-      setError(
-        "Location is not supported on this device."
-      );
-
-      return;
-    }
-
-    setLocationLoading(true);
-    setError("");
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const latitude =
-          position.coords.latitude;
-
-        const longitude =
-          position.coords.longitude;
-
-        setUserCoordinates({
-          latitude,
-          longitude,
-        });
-
-        setLocationMode("nearby");
-        setSelectedLocation("");
-
-        setLocationLoading(false);
-      },
-
-      (positionError) => {
-        console.error(
-          "Unable to get device location:",
-          positionError
+  const handleUseLocation =
+    useCallback(() => {
+      if (
+        typeof navigator === "undefined" ||
+        !navigator.geolocation
+      ) {
+        setError(
+          "Location is not supported on this device."
         );
 
-        if (
-          positionError.code ===
-          positionError.PERMISSION_DENIED
-        ) {
-          setError(
-            "Location permission was denied. Please allow location access or select a location instead."
-          );
-        } else if (
-          positionError.code ===
-          positionError.POSITION_UNAVAILABLE
-        ) {
-          setError(
-            "Your device could not determine your location. Please select a location instead."
-          );
-        } else if (
-          positionError.code ===
-          positionError.TIMEOUT
-        ) {
-          setError(
-            "Location request timed out. Please select a location or try again."
-          );
-        } else {
-          setError(
-            "Unable to get your location. Please select a location instead."
-          );
-        }
-
-        /*
-         * Do NOT switch the entire page into
-         * an error state. The normal directory
-         * remains usable.
-         */
-        setLocationLoading(false);
-      },
-
-      {
-        /*
-         * Faster and more reliable for normal
-         * business discovery than forcing GPS.
-         */
-        enableHighAccuracy: false,
-
-        timeout: 30000,
-
-        maximumAge: 300000,
+        return;
       }
-    );
-  }, []);
 
-  /*
-   * Automatically request location once.
-   */
+      setLocationLoading(true);
+      setError("");
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const latitude =
+            position.coords.latitude;
+
+          const longitude =
+            position.coords.longitude;
+
+          setUserCoordinates({
+            latitude,
+            longitude,
+          });
+
+          setLocationMode("nearby");
+
+          setSelectedLocation("");
+
+          setLocationLoading(false);
+        },
+
+        (positionError) => {
+          console.error(
+            "Unable to get device location:",
+            positionError
+          );
+
+          if (
+            positionError.code ===
+            positionError.PERMISSION_DENIED
+          ) {
+            setError(
+              "Location permission was denied. Please allow location access or select a location instead."
+            );
+          } else if (
+            positionError.code ===
+            positionError.POSITION_UNAVAILABLE
+          ) {
+            setError(
+              "Your device could not determine your location. Please select a location instead."
+            );
+          } else if (
+            positionError.code ===
+            positionError.TIMEOUT
+          ) {
+            setError(
+              "Location request timed out. Please select a location or try again."
+            );
+          } else {
+            setError(
+              "Unable to get your location. Please select a location instead."
+            );
+          }
+
+          setLocationLoading(false);
+        },
+
+        {
+          enableHighAccuracy: false,
+          timeout: 30000,
+          maximumAge: 300000,
+        }
+      );
+    }, []);
+
   useEffect(() => {
     handleUseLocation();
   }, [handleUseLocation]);
 
-  /*
-   * Load businesses when an actual search,
-   * location filter, or coordinates change.
-   */
   useEffect(() => {
     loadBusinesses();
   }, [loadBusinesses]);
 
-  /*
-   * Load featured businesses.
-   */
   useEffect(() => {
     loadFeaturedBusinesses();
   }, [loadFeaturedBusinesses]);
 
-  /*
-   * Load media for visible businesses.
-   */
   useEffect(() => {
     const allIds = [
       ...businesses.map(
@@ -766,9 +727,6 @@ export default function DiscoverPage() {
     loadMedia,
   ]);
 
-  /*
-   * Map media by business.
-   */
   const mediaByBusiness = useMemo(() => {
     const map = new Map<
       string,
@@ -776,11 +734,7 @@ export default function DiscoverPage() {
     >();
 
     media.forEach((item) => {
-      if (
-        !map.has(
-          item.business_id
-        )
-      ) {
+      if (!map.has(item.business_id)) {
         map.set(
           item.business_id,
           item
@@ -791,13 +745,6 @@ export default function DiscoverPage() {
     return map;
   }, [media]);
 
-  /*
-   * Nearby businesses
-   *
-   * The database RPC calculates distance
-   * from the user's coordinates to the
-   * business location coordinates.
-   */
   const nearbyBusinesses = useMemo(() => {
     if (!userCoordinates) {
       return [];
@@ -824,20 +771,14 @@ export default function DiscoverPage() {
   ]);
 
   /*
-   * Popular businesses
+   * Popular Businesses is intentionally independent
+   * from Nearby Businesses.
+   *
+   * A business can therefore appear in both sections
+   * when it is both nearby and popular.
    */
   const popularBusinesses = useMemo(() => {
     return [...businesses]
-      .filter(
-        (business) =>
-          !userCoordinates ||
-          business.distance_km === null ||
-          !nearbyBusinesses.some(
-            (nearby) =>
-              nearby.business_id ===
-              business.business_id
-          )
-      )
       .sort((a, b) => {
         const ratingA =
           Number(
@@ -849,9 +790,7 @@ export default function DiscoverPage() {
             b.average_rating || 0
           );
 
-        if (
-          ratingB !== ratingA
-        ) {
+        if (ratingB !== ratingA) {
           return (
             ratingB - ratingA
           );
@@ -867,18 +806,8 @@ export default function DiscoverPage() {
         );
       })
       .slice(0, 8);
-  }, [
-    businesses,
-    nearbyBusinesses,
-    userCoordinates,
-  ]);
+  }, [businesses]);
 
-  /*
-   * Search
-   *
-   * Search only runs when the user submits
-   * the form.
-   */
   const handleSearch = (
     event: FormEvent
   ) => {
@@ -889,9 +818,6 @@ export default function DiscoverPage() {
     );
   };
 
-  /*
-   * Backend location selection
-   */
   const handleLocationChange = (
     value: string
   ) => {
@@ -901,20 +827,13 @@ export default function DiscoverPage() {
 
     setSelectedLocation(value);
 
-    /*
-     * Clear any previous location error.
-     */
     setError("");
   };
 
-  /*
-   * Human-readable location label
-   */
   const selectedLocationLabel =
     useMemo(() => {
       if (
-        locationMode ===
-        "nearby"
+        locationMode === "nearby"
       ) {
         return "Near me";
       }
@@ -924,9 +843,7 @@ export default function DiscoverPage() {
       }
 
       const parts =
-        selectedLocation.split(
-          "|"
-        );
+        selectedLocation.split("|");
 
       const country =
         parts[0];
@@ -947,11 +864,8 @@ export default function DiscoverPage() {
 
   return (
     <main className="discover-page">
-
-      {/* Header */}
       <header className="discover-header">
         <div className="discover-header-inner">
-
           <Link
             href="/"
             className="discover-brand"
@@ -993,7 +907,6 @@ export default function DiscoverPage() {
           </nav>
 
           <div className="header-actions">
-
             <Link
               href="/business/register"
               className="header-business-link"
@@ -1007,16 +920,12 @@ export default function DiscoverPage() {
             >
               Login
             </Link>
-
           </div>
         </div>
       </header>
 
-      {/* Hero */}
       <section className="discover-hero">
-
         <div className="discover-container hero-content">
-
           <span className="hero-eyebrow">
             Discover businesses across Africa
           </span>
@@ -1039,9 +948,7 @@ export default function DiscoverPage() {
             className="discover-search"
             onSubmit={handleSearch}
           >
-
             <div className="search-main">
-
               <span className="search-icon">
                 ⌕
               </span>
@@ -1056,7 +963,6 @@ export default function DiscoverPage() {
                 }
                 placeholder="Search businesses, services..."
               />
-
             </div>
 
             <div className="search-divider" />
@@ -1064,8 +970,7 @@ export default function DiscoverPage() {
             <select
               className="discover-search-location"
               value={
-                locationMode ===
-                "nearby"
+                locationMode === "nearby"
                   ? ""
                   : selectedLocation
               }
@@ -1078,7 +983,6 @@ export default function DiscoverPage() {
                 locationLoading
               }
             >
-
               <option value="">
                 {selectedLocationLabel}
               </option>
@@ -1088,25 +992,17 @@ export default function DiscoverPage() {
                   location,
                   index
                 ) => {
+                  const value = `${location.country_code}|${
+                    location.city || ""
+                  }`;
 
-                  const value =
-                    `${location.country_code}|${
-                      location.city ||
-                      ""
-                    }`;
-
-                  const label =
-                    [
-                      location.city,
-                      location.state_region,
-                      location.country_code,
-                    ]
-                      .filter(
-                        Boolean
-                      )
-                      .join(
-                        ", "
-                      );
+                  const label = [
+                    location.city,
+                    location.state_region,
+                    location.country_code,
+                  ]
+                    .filter(Boolean)
+                    .join(", ");
 
                   return (
                     <option
@@ -1122,7 +1018,6 @@ export default function DiscoverPage() {
                   );
                 }
               )}
-
             </select>
 
             <button
@@ -1147,26 +1042,20 @@ export default function DiscoverPage() {
             >
               Search
             </button>
-
           </form>
-
         </div>
       </section>
 
-      {/* Main */}
       <div className="discover-container discover-main">
-
         {error && (
           <div className="discover-error">
             {error}
           </div>
         )}
 
-        {/* Categories */}
+        {/* Browse by category */}
         <section className="discover-section">
-
           <div className="section-heading">
-
             <div>
               <span className="section-kicker">
                 Explore
@@ -1183,38 +1072,28 @@ export default function DiscoverPage() {
             >
               View all →
             </Link>
-
           </div>
 
           <div className="category-scroll">
-
             {categories
               .slice(0, 8)
               .map(
                 (category) => (
                   <Link
                     href={`/categories/${category.slug}`}
-                    key={
-                      category.id
-                    }
+                    key={category.id}
                     className="category-chip"
                   >
-                    {
-                      category.name
-                    }
+                    {category.name}
                   </Link>
                 )
               )}
-
           </div>
-
         </section>
 
-        {/* Featured */}
+        {/* Featured Businesses */}
         <section className="discover-section">
-
           <div className="section-heading">
-
             <div>
               <span className="section-kicker">
                 Featured
@@ -1224,12 +1103,10 @@ export default function DiscoverPage() {
                 Featured Businesses
               </h2>
             </div>
-
           </div>
 
           {featuredLoading ? (
             <div className="business-grid">
-
               {Array.from({
                 length: 4,
               }).map(
@@ -1239,17 +1116,15 @@ export default function DiscoverPage() {
                   />
                 )
               )}
-
             </div>
           ) : featuredBusinesses.length ===
             0 ? (
             <div className="empty-section">
-              No featured businesses available
-              yet.
+              No featured businesses
+              available yet.
             </div>
           ) : (
             <div className="business-grid">
-
               {featuredBusinesses.map(
                 (business) => (
                   <BusinessCard
@@ -1265,17 +1140,13 @@ export default function DiscoverPage() {
                   />
                 )
               )}
-
             </div>
           )}
-
         </section>
 
-        {/* Nearby */}
+        {/* Businesses Near You */}
         <section className="discover-section">
-
           <div className="section-heading">
-
             <div>
               <span className="section-kicker">
                 Around you
@@ -1300,17 +1171,17 @@ export default function DiscoverPage() {
               {locationLoading
                 ? "Locating..."
                 : locationMode ===
-                    "nearby"
-                  ? "Near me"
-                  : "Find nearby"}
+                  "nearby"
+                ? "Near me"
+                : "Find nearby"}
             </button>
-
           </div>
 
           {!userCoordinates ? (
             <div className="empty-section">
-              Use your location to discover
-              businesses near you.
+              Use your location to
+              discover businesses near
+              you.
             </div>
           ) : nearbyBusinesses.length ===
             0 ? (
@@ -1320,7 +1191,6 @@ export default function DiscoverPage() {
             </div>
           ) : (
             <div className="business-grid">
-
               {nearbyBusinesses.map(
                 (business) => (
                   <BusinessCard
@@ -1336,17 +1206,13 @@ export default function DiscoverPage() {
                   />
                 )
               )}
-
             </div>
           )}
-
         </section>
 
-        {/* Popular */}
+        {/* Popular Businesses */}
         <section className="discover-section">
-
           <div className="section-heading">
-
             <div>
               <span className="section-kicker">
                 Popular
@@ -1357,11 +1223,16 @@ export default function DiscoverPage() {
               </h2>
             </div>
 
+            <Link
+              href="/businesses"
+              className="view-all"
+            >
+              View all →
+            </Link>
           </div>
 
           {loading ? (
             <div className="business-grid">
-
               {Array.from({
                 length: 4,
               }).map(
@@ -1371,7 +1242,6 @@ export default function DiscoverPage() {
                   />
                 )
               )}
-
             </div>
           ) : popularBusinesses.length ===
             0 ? (
@@ -1380,7 +1250,6 @@ export default function DiscoverPage() {
             </div>
           ) : (
             <div className="business-grid">
-
               {popularBusinesses.map(
                 (business) => (
                   <BusinessCard
@@ -1396,17 +1265,13 @@ export default function DiscoverPage() {
                   />
                 )
               )}
-
             </div>
           )}
-
         </section>
 
         {/* Popular Categories */}
         <section className="discover-section">
-
           <div className="section-heading">
-
             <div>
               <span className="section-kicker">
                 Explore more
@@ -1416,26 +1281,20 @@ export default function DiscoverPage() {
                 Popular Categories
               </h2>
             </div>
-
           </div>
 
           <div className="popular-category-grid">
-
             {categories
               .slice(0, 6)
               .map(
                 (category) => (
                   <Link
                     href={`/categories/${category.slug}`}
-                    key={
-                      category.id
-                    }
+                    key={category.id}
                     className="popular-category-card"
                   >
                     <strong>
-                      {
-                        category.name
-                      }
+                      {category.name}
                     </strong>
 
                     <span>
@@ -1444,29 +1303,25 @@ export default function DiscoverPage() {
                   </Link>
                 )
               )}
-
           </div>
-
         </section>
 
-        {/* CTA */}
+        {/* Business CTA */}
         <section className="business-cta">
-
           <div>
-
             <span className="section-kicker">
               Grow your business
             </span>
 
             <h2>
-              Put your business in front of
-              more customers.
+              Put your business in front
+              of more customers.
             </h2>
 
             <p>
               Create your business profile
-              and let customers discover your
-              brand.
+              and let customers discover
+              your brand.
             </p>
 
             <Link
@@ -1475,20 +1330,14 @@ export default function DiscoverPage() {
             >
               List your business →
             </Link>
-
           </div>
-
         </section>
-
       </div>
 
       {/* Footer */}
       <footer className="discover-footer">
-
         <div className="discover-container footer-inner">
-
           <div className="footer-brand">
-
             <Link
               href="/"
               className="discover-brand"
@@ -1511,14 +1360,12 @@ export default function DiscoverPage() {
             <p>
               Helping African businesses
               become more visible,
-              discoverable and connected to
-              customers.
+              discoverable and connected
+              to customers.
             </p>
-
           </div>
 
           <div className="footer-links">
-
             <Link href="/discover">
               Discover
             </Link>
@@ -1534,37 +1381,177 @@ export default function DiscoverPage() {
             <Link href="/contact">
               Contact
             </Link>
-
           </div>
-
         </div>
-
       </footer>
 
-      {/* Mobile navigation */}
-      <nav className="mobile-bottom-nav">
-
+      {/* Mobile Bottom Navigation */}
+      <nav
+        className="mobile-bottom-nav"
+        aria-label="Mobile navigation"
+      >
         <Link
           href="/discover"
           className="active"
         >
-          Discover
+          <span
+            className="mobile-nav-icon"
+            aria-hidden="true"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M3 10.5 12 3l9 7.5" />
+              <path d="M5 9.5V21h14V9.5" />
+              <path d="M9 21v-6h6v6" />
+            </svg>
+          </span>
+
+          <span>Home</span>
+        </Link>
+
+        <Link href="/businesses">
+          <span
+            className="mobile-nav-icon"
+            aria-hidden="true"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle
+                cx="11"
+                cy="11"
+                r="7"
+              />
+              <path d="m20 20-4-4" />
+            </svg>
+          </span>
+
+          <span>Search</span>
         </Link>
 
         <Link href="/categories">
-          Categories
+          <span
+            className="mobile-nav-icon"
+            aria-hidden="true"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect
+                x="4"
+                y="4"
+                width="6"
+                height="6"
+                rx="1"
+              />
+              <rect
+                x="14"
+                y="4"
+                width="6"
+                height="6"
+                rx="1"
+              />
+              <rect
+                x="4"
+                y="14"
+                width="6"
+                height="6"
+                rx="1"
+              />
+              <rect
+                x="14"
+                y="14"
+                width="6"
+                height="6"
+                rx="1"
+              />
+            </svg>
+          </span>
+
+          <span>Categories</span>
         </Link>
 
-        <Link href="/business/register">
-          List Business
+        <Link href="/businesses?nearby=true">
+          <span
+            className="mobile-nav-icon"
+            aria-hidden="true"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Z" />
+              <circle
+                cx="12"
+                cy="9"
+                r="2.5"
+              />
+            </svg>
+          </span>
+
+          <span>Nearby</span>
         </Link>
 
-        <Link href="/login">
-          Account
-        </Link>
+        <Link href="/more">
+          <span
+            className="mobile-nav-icon mobile-nav-more"
+            aria-hidden="true"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="currentColor"
+            >
+              <circle
+                cx="5"
+                cy="12"
+                r="1.7"
+              />
+              <circle
+                cx="12"
+                cy="12"
+                r="1.7"
+              />
+              <circle
+                cx="19"
+                cy="12"
+                r="1.7"
+              />
+            </svg>
+          </span>
 
+          <span>More</span>
+        </Link>
       </nav>
-
     </main>
   );
   }
