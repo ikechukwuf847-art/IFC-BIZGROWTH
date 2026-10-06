@@ -109,7 +109,10 @@ function cleanPhone(phone: string) {
   return phone.replace(/[^\d+]/g, "");
 }
 
-function getWhatsAppUrl(phone: string | null, businessName: string) {
+function getWhatsAppUrl(
+  phone: string | null,
+  businessName: string,
+) {
   if (!phone) return null;
 
   const digits = cleanPhone(phone).replace(/^\+/, "");
@@ -146,6 +149,73 @@ function getRowText(
   return null;
 }
 
+function getDayName(value: unknown) {
+  const day = Number(value);
+
+  const days = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
+
+  if (
+    Number.isInteger(day) &&
+    day >= 0 &&
+    day <= 6
+  ) {
+    return days[day];
+  }
+
+  return typeof value === "string" ? value : "";
+}
+
+function formatBusinessTime(
+  value: string | null,
+) {
+  if (!value) return null;
+
+  const parts = value.split(":");
+  const hour = Number(parts[0]);
+  const minute = Number(parts[1] || 0);
+
+  if (
+    Number.isNaN(hour) ||
+    Number.isNaN(minute)
+  ) {
+    return value;
+  }
+
+  const suffix = hour >= 12 ? "PM" : "AM";
+  const displayHour = hour % 12 || 12;
+
+  return `${displayHour}:${String(minute).padStart(
+    2,
+    "0",
+  )} ${suffix}`;
+}
+
+function isBusinessVerified(
+  status: string | null,
+) {
+  if (!status) return false;
+
+  const normalized = status
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+
+  return [
+    "verified",
+    "approved",
+    "fully_verified",
+    "verified_business",
+  ].includes(normalized);
+}
+
 function formatDate(value: string) {
   try {
     return new Intl.DateTimeFormat("en", {
@@ -175,7 +245,9 @@ function StarRating({
       {[1, 2, 3, 4, 5].map((star) => (
         <span
           key={star}
-          className={star <= rounded ? "filled" : ""}
+          className={
+            star <= rounded ? "filled" : ""
+          }
         >
           ★
         </span>
@@ -213,55 +285,105 @@ function Logo({
 
 export default function BusinessProfilePage() {
   const params = useParams();
-  const slug = typeof params.slug === "string" ? params.slug : "";
+
+  const slug =
+    typeof params.slug === "string"
+      ? params.slug
+      : "";
 
   const supabase = useMemo(
     () => createSupabaseBrowserClient(),
     [],
   );
 
-  const [business, setBusiness] = useState<Business | null>(null);
-  const [location, setLocation] = useState<Location | null>(null);
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [rating, setRating] = useState<Rating>({
-    average_rating: null,
-    review_count: 0,
-  });
+  const [business, setBusiness] =
+    useState<Business | null>(null);
 
-  const [products, setProducts] = useState<GenericRow[]>([]);
-  const [services, setServices] = useState<GenericRow[]>([]);
-  const [media, setMedia] = useState<GenericRow[]>([]);
-  const [socialLinks, setSocialLinks] = useState<GenericRow[]>([]);
-  const [promotions, setPromotions] = useState<GenericRow[]>([]);
-  const [hours, setHours] = useState<GenericRow[]>([]);
+  const [location, setLocation] =
+    useState<Location | null>(null);
 
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
-  const [error, setError] = useState("");
+  const [reviews, setReviews] =
+    useState<Review[]>([]);
 
-  const [showShare, setShowShare] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [rating, setRating] =
+    useState<Rating>({
+      average_rating: null,
+      review_count: 0,
+    });
 
-  const [reviewerName, setReviewerName] = useState("");
-  const [reviewText, setReviewText] = useState("");
-  const [reviewRating, setReviewRating] = useState(0);
-  const [reviewImage, setReviewImage] = useState<File | null>(null);
-  const [reviewImagePreview, setReviewImagePreview] =
-    useState<string | null>(null);
+  const [products, setProducts] =
+    useState<GenericRow[]>([]);
 
-  const [submittingReview, setSubmittingReview] = useState(false);
-  const [reviewMessage, setReviewMessage] = useState("");
+  const [services, setServices] =
+    useState<GenericRow[]>([]);
 
-  const loadBusiness = useCallback(async () => {
-    if (!slug) return;
+  const [media, setMedia] =
+    useState<GenericRow[]>([]);
 
-    setLoading(true);
-    setError("");
-    setNotFound(false);
+  const [socialLinks, setSocialLinks] =
+    useState<GenericRow[]>([]);
 
-    try {
-      const { data: businessData, error: businessError } =
-        await supabase
+  const [promotions, setPromotions] =
+    useState<GenericRow[]>([]);
+
+  const [hours, setHours] =
+    useState<GenericRow[]>([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [notFound, setNotFound] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
+
+  const [showShare, setShowShare] =
+    useState(false);
+
+  const [copied, setCopied] =
+    useState(false);
+
+  const [reviewerName, setReviewerName] =
+    useState("");
+
+  const [reviewText, setReviewText] =
+    useState("");
+
+  const [reviewRating, setReviewRating] =
+    useState(0);
+
+  const [reviewImage, setReviewImage] =
+    useState<File | null>(null);
+
+  const [
+    reviewImagePreview,
+    setReviewImagePreview,
+  ] = useState<string | null>(null);
+
+  const [
+    submittingReview,
+    setSubmittingReview,
+  ] = useState(false);
+
+  const [
+    reviewMessage,
+    setReviewMessage,
+  ] = useState("");
+
+  const loadBusiness = useCallback(
+    async () => {
+      if (!slug) return;
+
+      setLoading(true);
+      setError("");
+      setNotFound(false);
+
+      try {
+        const {
+          data: businessData,
+          error: businessError,
+        } = await supabase
           .from("businesses")
           .select(
             `
@@ -285,189 +407,254 @@ export default function BusinessProfilePage() {
           .eq("status", "active")
           .maybeSingle();
 
-      if (businessError) {
-        throw businessError;
+        if (businessError) {
+          throw businessError;
+        }
+
+        if (!businessData) {
+          setNotFound(true);
+          return;
+        }
+
+        setBusiness(
+          businessData as Business,
+        );
+
+        const businessId =
+          businessData.id;
+
+        const [
+          locationResult,
+          reviewsResult,
+          ratingResult,
+          productsResult,
+          servicesResult,
+          mediaResult,
+          socialResult,
+          promotionsResult,
+          hoursResult,
+        ] = await Promise.all([
+          supabase
+            .from("business_locations")
+            .select("*")
+            .eq("business_id", businessId)
+            .eq("is_active", true)
+            .eq("is_public", true)
+            .order("is_primary", {
+              ascending: false,
+            })
+            .limit(1)
+            .maybeSingle(),
+
+          supabase
+            .from("business_reviews")
+            .select("*")
+            .eq("business_id", businessId)
+            .eq("is_published", true)
+            .order("created_at", {
+              ascending: false,
+            }),
+
+          supabase.rpc(
+            "get_business_rating",
+            {
+              p_business_id: businessId,
+            },
+          ),
+
+          supabase
+            .from("business_products")
+            .select("*")
+            .eq(
+              "business_id",
+              businessId,
+            ),
+
+          supabase
+            .from("business_services")
+            .select("*")
+            .eq(
+              "business_id",
+              businessId,
+            ),
+
+          supabase
+            .from("business_media")
+            .select("*")
+            .eq(
+              "business_id",
+              businessId,
+            )
+            .eq("is_active", true)
+            .order("sort_order", {
+              ascending: true,
+            }),
+
+          supabase
+            .from("business_social_links")
+            .select("*")
+            .eq(
+              "business_id",
+              businessId,
+            ),
+
+          supabase
+            .from("business_promotions")
+            .select("*")
+            .eq(
+              "business_id",
+              businessId,
+            ),
+
+          supabase
+            .from("business_hours")
+            .select("*")
+            .eq(
+              "business_id",
+              businessId,
+            )
+            .order("day_of_week", {
+              ascending: true,
+            }),
+        ]);
+
+        if (locationResult.error) {
+          console.error(
+            locationResult.error,
+          );
+        }
+
+        if (reviewsResult.error) {
+          console.error(
+            reviewsResult.error,
+          );
+        }
+
+        if (productsResult.error) {
+          console.error(
+            productsResult.error,
+          );
+        }
+
+        if (servicesResult.error) {
+          console.error(
+            servicesResult.error,
+          );
+        }
+
+        if (mediaResult.error) {
+          console.error(
+            mediaResult.error,
+          );
+        }
+
+        if (socialResult.error) {
+          console.error(
+            socialResult.error,
+          );
+        }
+
+        if (promotionsResult.error) {
+          console.error(
+            promotionsResult.error,
+          );
+        }
+
+        if (hoursResult.error) {
+          console.error(
+            hoursResult.error,
+          );
+        }
+
+        setLocation(
+          (locationResult.data as Location | null) ??
+            null,
+        );
+
+        setReviews(
+          (reviewsResult.data as Review[]) ??
+            [],
+        );
+
+        const ratingData =
+          Array.isArray(ratingResult.data)
+            ? ratingResult.data[0]
+            : ratingResult.data;
+
+        if (ratingData) {
+          setRating({
+            average_rating:
+              Number(
+                ratingData.average_rating,
+              ) || 0,
+
+            review_count:
+              Number(
+                ratingData.review_count,
+              ) || 0,
+          });
+        } else {
+          setRating({
+            average_rating: 0,
+            review_count: 0,
+          });
+        }
+
+        setProducts(
+          (productsResult.data as GenericRow[]) ??
+            [],
+        );
+
+        setServices(
+          (servicesResult.data as GenericRow[]) ??
+            [],
+        );
+
+        setMedia(
+          (mediaResult.data as GenericRow[]) ??
+            [],
+        );
+
+        setSocialLinks(
+          (socialResult.data as GenericRow[]) ??
+            [],
+        );
+
+        setPromotions(
+          (promotionsResult.data as GenericRow[]) ??
+            [],
+        );
+
+        setHours(
+          (hoursResult.data as GenericRow[]) ??
+            [],
+        );
+      } catch (err) {
+        console.error(err);
+
+        setError(
+          "We couldn't load this business right now. Please try again.",
+        );
+      } finally {
+        setLoading(false);
       }
-
-      if (!businessData) {
-        setNotFound(true);
-        return;
-      }
-
-      setBusiness(businessData as Business);
-
-      const businessId = businessData.id;
-
-      const [
-        locationResult,
-        reviewsResult,
-        ratingResult,
-        productsResult,
-        servicesResult,
-        mediaResult,
-        socialResult,
-        promotionsResult,
-        hoursResult,
-      ] = await Promise.all([
-        supabase
-          .from("business_locations")
-          .select("*")
-          .eq("business_id", businessId)
-          .eq("is_active", true)
-          .eq("is_public", true)
-          .order("is_primary", {
-            ascending: false,
-          })
-          .limit(1)
-          .maybeSingle(),
-
-        supabase
-          .from("business_reviews")
-          .select("*")
-          .eq("business_id", businessId)
-          .eq("is_published", true)
-          .order("created_at", {
-            ascending: false,
-          }),
-
-        supabase.rpc("get_business_rating", {
-          p_business_id: businessId,
-        }),
-
-        supabase
-          .from("business_products")
-          .select("*")
-          .eq("business_id", businessId),
-
-        supabase
-          .from("business_services")
-          .select("*")
-          .eq("business_id", businessId),
-
-        supabase
-          .from("business_media")
-          .select("*")
-          .eq("business_id", businessId)
-          .eq("is_active", true)
-          .order("sort_order", {
-            ascending: true,
-          }),
-
-        supabase
-          .from("business_social_links")
-          .select("*")
-          .eq("business_id", businessId),
-
-        supabase
-          .from("business_promotions")
-          .select("*")
-          .eq("business_id", businessId),
-
-        supabase
-          .from("business_hours")
-          .select("*")
-          .eq("business_id", businessId)
-          .order("day_of_week", {
-            ascending: true,
-          }),
-      ]);
-
-      if (locationResult.error) {
-        console.error(locationResult.error);
-      }
-
-      if (reviewsResult.error) {
-        console.error(reviewsResult.error);
-      }
-
-      if (productsResult.error) {
-        console.error(productsResult.error);
-      }
-
-      if (servicesResult.error) {
-        console.error(servicesResult.error);
-      }
-
-      if (mediaResult.error) {
-        console.error(mediaResult.error);
-      }
-
-      if (socialResult.error) {
-        console.error(socialResult.error);
-      }
-
-      if (promotionsResult.error) {
-        console.error(promotionsResult.error);
-      }
-
-      if (hoursResult.error) {
-        console.error(hoursResult.error);
-      }
-
-      setLocation(
-        (locationResult.data as Location | null) ?? null,
-      );
-
-      setReviews(
-        (reviewsResult.data as Review[]) ?? [],
-      );
-
-      const ratingData = Array.isArray(ratingResult.data)
-        ? ratingResult.data[0]
-        : ratingResult.data;
-
-      if (ratingData) {
-        setRating({
-          average_rating:
-            Number(ratingData.average_rating) || 0,
-          review_count:
-            Number(ratingData.review_count) || 0,
-        });
-      }
-
-      setProducts(
-        (productsResult.data as GenericRow[]) ?? [],
-      );
-
-      setServices(
-        (servicesResult.data as GenericRow[]) ?? [],
-      );
-
-      setMedia(
-        (mediaResult.data as GenericRow[]) ?? [],
-      );
-
-      setSocialLinks(
-        (socialResult.data as GenericRow[]) ?? [],
-      );
-
-      setPromotions(
-        (promotionsResult.data as GenericRow[]) ?? [],
-      );
-
-      setHours(
-        (hoursResult.data as GenericRow[]) ?? [],
-      );
-    } catch (err) {
-      console.error(err);
-      setError(
-        "We couldn't load this business right now. Please try again.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [slug, supabase]);
+    },
+    [slug, supabase],
+  );
 
   useEffect(() => {
     loadBusiness();
   }, [loadBusiness]);
 
-  const logoUrl = getLogoUrl(business?.logo_url ?? null);
-
-  const whatsappUrl = getWhatsAppUrl(
-    business?.phone ?? null,
-    business?.name ?? "",
+  const logoUrl = getLogoUrl(
+    business?.logo_url ?? null,
   );
+
+  const whatsappUrl =
+    getWhatsAppUrl(
+      business?.phone ?? null,
+      business?.name ?? "",
+    );
 
   const address = useMemo(() => {
     if (!location) return "";
@@ -488,8 +675,10 @@ export default function BusinessProfilePage() {
     if (!location) return null;
 
     if (
-      typeof location.latitude === "number" &&
-      typeof location.longitude === "number"
+      typeof location.latitude ===
+        "number" &&
+      typeof location.longitude ===
+        "number"
     ) {
       return `https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`;
     }
@@ -508,54 +697,69 @@ export default function BusinessProfilePage() {
       ? window.location.href
       : "";
 
-  const shareBusiness = async () => {
-    if (!business) return;
+  const encodedPageUrl =
+    encodeURIComponent(pageUrl);
 
-    const shareData = {
-      title: business.name,
-      text:
-        business.description ||
-        `Check out ${business.name} on IFC BIZGROWTH.`,
-      url: pageUrl,
-    };
+  const encodedShareText =
+    encodeURIComponent(
+      business
+        ? `Check out ${business.name} on IFC BIZGROWTH.`
+        : "Check out this business on IFC BIZGROWTH.",
+    );
 
-    try {
-      if (
-        typeof navigator !== "undefined" &&
-        navigator.share
-      ) {
-        await navigator.share(shareData);
-        return;
+  const shareBusiness =
+    async () => {
+      if (!business) return;
+
+      const shareData = {
+        title: business.name,
+        text:
+          business.description ||
+          `Check out ${business.name} on IFC BIZGROWTH.`,
+        url: pageUrl,
+      };
+
+      try {
+        if (
+          typeof navigator !==
+            "undefined" &&
+          navigator.share
+        ) {
+          await navigator.share(
+            shareData,
+          );
+          return;
+        }
+
+        setShowShare(true);
+      } catch {
+        // User cancelled native sharing.
       }
-
-      await navigator.clipboard.writeText(pageUrl);
-      setCopied(true);
-
-      window.setTimeout(() => {
-        setCopied(false);
-      }, 2000);
-    } catch {
-      // User cancelled native sharing.
-    }
-  };
+    };
 
   const copyLink = async () => {
     try {
-      await navigator.clipboard.writeText(pageUrl);
+      await navigator.clipboard.writeText(
+        pageUrl,
+      );
+
       setCopied(true);
 
       window.setTimeout(() => {
         setCopied(false);
       }, 2000);
     } catch {
-      setError("Unable to copy the business link.");
+      setError(
+        "Unable to copy the business link.",
+      );
     }
   };
 
   const handleReviewImage = (
     event: ChangeEvent<HTMLInputElement>,
   ) => {
-    const file = event.target.files?.[0];
+    const file =
+      event.target.files?.[0];
 
     if (!file) return;
 
@@ -569,14 +773,19 @@ export default function BusinessProfilePage() {
       setReviewMessage(
         "Please choose a JPG, PNG, or WebP image.",
       );
+
       event.target.value = "";
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
+    if (
+      file.size >
+      2 * 1024 * 1024
+    ) {
       setReviewMessage(
         "Your picture must be 2 MB or smaller.",
       );
+
       event.target.value = "";
       return;
     }
@@ -584,8 +793,12 @@ export default function BusinessProfilePage() {
     setReviewImage(file);
     setReviewMessage("");
 
-    const previewUrl = URL.createObjectURL(file);
-    setReviewImagePreview(previewUrl);
+    const previewUrl =
+      URL.createObjectURL(file);
+
+    setReviewImagePreview(
+      previewUrl,
+    );
   };
 
   const submitReview = async (
@@ -597,7 +810,9 @@ export default function BusinessProfilePage() {
 
     setReviewMessage("");
 
-    if (reviewerName.trim().length < 2) {
+    if (
+      reviewerName.trim().length < 2
+    ) {
       setReviewMessage(
         "Please enter your name.",
       );
@@ -614,25 +829,37 @@ export default function BusinessProfilePage() {
     setSubmittingReview(true);
 
     try {
-      let avatarPath: string | null = null;
+      let avatarPath: string | null =
+        null;
 
       if (reviewImage) {
         const extension =
-          reviewImage.name.split(".").pop()?.toLowerCase() ||
+          reviewImage.name
+            .split(".")
+            .pop()
+            ?.toLowerCase() ||
           "jpg";
 
-        const randomPart = crypto.randomUUID();
+        const randomPart =
+          crypto.randomUUID();
 
-        const filePath = `reviews/${business.id}/${randomPart}.${extension}`;
+        const filePath =
+          `reviews/${business.id}/${randomPart}.${extension}`;
 
-        const { error: uploadError } =
-          await supabase.storage
-            .from("customer-logo")
-            .upload(filePath, reviewImage, {
+        const {
+          error: uploadError,
+        } = await supabase.storage
+          .from("customer-logo")
+          .upload(
+            filePath,
+            reviewImage,
+            {
               cacheControl: "3600",
               upsert: false,
-              contentType: reviewImage.type,
-            });
+              contentType:
+                reviewImage.type,
+            },
+          );
 
         if (uploadError) {
           throw uploadError;
@@ -641,18 +868,28 @@ export default function BusinessProfilePage() {
         avatarPath = filePath;
       }
 
-      const { error: reviewError } =
-        await supabase.rpc(
-          "submit_public_business_review",
-          {
-            p_business_id: business.id,
-            p_reviewer_name: reviewerName.trim(),
-            p_reviewer_avatar_url: avatarPath,
-            p_rating: reviewRating,
-            p_review_text:
-              reviewText.trim() || null,
-          },
-        );
+      const {
+        error: reviewError,
+      } = await supabase.rpc(
+        "submit_public_business_review",
+        {
+          p_business_id:
+            business.id,
+
+          p_reviewer_name:
+            reviewerName.trim(),
+
+          p_reviewer_avatar_url:
+            avatarPath,
+
+          p_rating:
+            reviewRating,
+
+          p_review_text:
+            reviewText.trim() ||
+            null,
+        },
+      );
 
       if (reviewError) {
         throw reviewError;
@@ -685,7 +922,9 @@ export default function BusinessProfilePage() {
       <main className="bp-page">
         <div className="bp-loading">
           <div className="bp-spinner" />
-          <p>Loading business...</p>
+          <p>
+            Loading business...
+          </p>
         </div>
       </main>
     );
@@ -695,11 +934,19 @@ export default function BusinessProfilePage() {
     return (
       <main className="bp-page">
         <div className="bp-empty">
-          <div className="bp-empty-icon">?</div>
-          <h1>Business not found</h1>
+          <div className="bp-empty-icon">
+            ?
+          </div>
+
+          <h1>
+            Business not found
+          </h1>
+
           <p>
-            This business may no longer be publicly available.
+            This business may no longer
+            be publicly available.
           </p>
+
           <Link
             href="/businesses"
             className="bp-primary-button"
@@ -733,7 +980,11 @@ export default function BusinessProfilePage() {
           <button
             type="button"
             className="bp-share-top"
-            onClick={() => setShowShare((value) => !value)}
+            onClick={() =>
+              setShowShare(
+                (value) => !value,
+              )
+            }
             aria-label="Share business"
           >
             ↗
@@ -742,19 +993,95 @@ export default function BusinessProfilePage() {
 
         {showShare && (
           <div className="bp-share-menu">
-            <button
-              type="button"
-              onClick={shareBusiness}
-            >
-              Share business
-            </button>
+            <div className="bp-share-title">
+              <strong>
+                Share business
+              </strong>
 
-            <button
-              type="button"
-              onClick={copyLink}
-            >
-              {copied ? "Link copied" : "Copy link"}
-            </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setShowShare(false)
+                }
+                aria-label="Close share menu"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="bp-share-grid">
+              <a
+                href={
+                  whatsappUrl ||
+                  `https://wa.me/?text=${encodedShareText}%20${encodedPageUrl}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bp-share-option whatsapp"
+              >
+                <span>◉</span>
+                <small>
+                  WhatsApp
+                </small>
+              </a>
+
+              <a
+                href={`https://www.facebook.com/sharer/sharer.php?u=${encodedPageUrl}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bp-share-option facebook"
+              >
+                <span>f</span>
+                <small>
+                  Facebook
+                </small>
+              </a>
+
+              <a
+                href={`https://twitter.com/intent/tweet?text=${encodedShareText}&url=${encodedPageUrl}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bp-share-option x"
+              >
+                <span>𝕏</span>
+                <small>X</small>
+              </a>
+
+              <a
+                href={`https://t.me/share/url?url=${encodedPageUrl}&text=${encodedShareText}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bp-share-option telegram"
+              >
+                <span>➤</span>
+                <small>
+                  Telegram
+                </small>
+              </a>
+
+              <a
+                href={`mailto:?subject=${encodedShareText}&body=${encodedShareText}%0A${encodedPageUrl}`}
+                className="bp-share-option email"
+              >
+                <span>@</span>
+                <small>
+                  Email
+                </small>
+              </a>
+
+              <button
+                type="button"
+                onClick={copyLink}
+                className="bp-share-option copy"
+              >
+                <span>⌘</span>
+                <small>
+                  {copied
+                    ? "Copied"
+                    : "Copy link"}
+                </small>
+              </button>
+            </div>
           </div>
         )}
       </header>
@@ -771,22 +1098,46 @@ export default function BusinessProfilePage() {
 
             <div className="bp-business-heading-content">
               <div className="bp-name-row">
-                <h1>{business.name}</h1>
+                <h1>
+                  {business.name}
+                </h1>
 
-                {business.verification_status ===
-                  "verified" && (
+                {isBusinessVerified(
+                  business.verification_status,
+                ) && (
                   <span
                     className="bp-verified"
                     title="Verified business"
+                    aria-label="Verified business"
                   >
-                    ✓
+                    <svg
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M12 2.5l2.1 1.2 2.4-.1 1.1 2.1 2.1 1.1-.1 2.4L20.5 11l.7 2.3-1.5 1.9.1 2.4-2.2 1-1.1 2.1-2.4-.2L12 21.5l-2.1-1.2-2.4.2-1.1-2.1-2.2-1 .1-2.4-1.5-1.9.7-2.3-.7-2.3 1.5-1.8-.1-2.4 2.2-1 1.1-2.1 2.4.1L12 2.5z"
+                        fill="currentColor"
+                      />
+
+                      <path
+                        d="M8.1 12.1l2.5 2.5 5.4-5.4"
+                        fill="none"
+                        stroke="white"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
                   </span>
                 )}
               </div>
 
               <div className="bp-rating-row">
                 <StarRating
-                  rating={rating.average_rating ?? 0}
+                  rating={
+                    rating.average_rating ??
+                    0
+                  }
                   size="medium"
                 />
 
@@ -799,13 +1150,17 @@ export default function BusinessProfilePage() {
                 </strong>
 
                 <span>
-                  ({rating.review_count ?? 0} reviews)
+                  (
+                  {rating.review_count ??
+                    0}{" "}
+                  reviews)
                 </span>
               </div>
 
               {location && (
                 <p className="bp-location">
                   <span>⌖</span>
+
                   {[
                     location.city,
                     location.state_region,
@@ -844,7 +1199,9 @@ export default function BusinessProfilePage() {
             {business.website_url && (
               <a
                 href={
-                  isValidUrl(business.website_url)
+                  isValidUrl(
+                    business.website_url,
+                  )
                     ? business.website_url
                     : `https://${business.website_url}`
                 }
@@ -871,70 +1228,126 @@ export default function BusinessProfilePage() {
 
       <div className="bp-container">
         {business.description && (
-          <section className="bp-section bp-about">
+          <section
+            className="bp-section bp-about"
+            id="about"
+          >
             <div className="bp-section-heading">
               <h2>About</h2>
             </div>
 
-            <p>{business.description}</p>
+            <p>
+              {business.description}
+            </p>
           </section>
         )}
+
+        <nav className="bp-profile-nav">
+          <a
+            href="#about"
+            className="active"
+          >
+            About
+          </a>
+
+          {products.length > 0 && (
+            <a href="#products">
+              Products
+            </a>
+          )}
+
+          {services.length > 0 && (
+            <a href="#services">
+              Services
+            </a>
+          )}
+
+          <a href="#reviews">
+            Reviews
+            {rating.review_count
+              ? ` (${rating.review_count})`
+              : ""}
+          </a>
+        </nav>
 
         {promotions.length > 0 && (
           <section className="bp-section">
             <div className="bp-section-heading">
-              <h2>Special Offers</h2>
+              <h2>
+                Special Offers
+              </h2>
             </div>
 
             <div className="bp-offers">
-              {promotions.map((promotion, index) => {
-                const title =
-                  getRowText(promotion, [
-                    "title",
-                    "name",
-                    "promotion_name",
-                  ]) || "Special offer";
+              {promotions.map(
+                (promotion, index) => {
+                  const title =
+                    getRowText(
+                      promotion,
+                      [
+                        "title",
+                        "name",
+                        "promotion_name",
+                      ],
+                    ) ||
+                    "Special offer";
 
-                const description =
-                  getRowText(promotion, [
-                    "description",
-                    "details",
-                    "offer_description",
-                  ]);
+                  const description =
+                    getRowText(
+                      promotion,
+                      [
+                        "description",
+                        "details",
+                        "offer_description",
+                      ],
+                    );
 
-                const discount =
-                  getRowText(promotion, [
-                    "discount",
-                    "discount_text",
-                    "offer",
-                  ]);
+                  const discount =
+                    getRowText(
+                      promotion,
+                      [
+                        "discount",
+                        "discount_text",
+                        "offer",
+                      ],
+                    );
 
-                return (
-                  <article
-                    className="bp-offer"
-                    key={
-                      getRowText(promotion, ["id"]) ||
-                      `${title}-${index}`
-                    }
-                  >
-                    <div className="bp-offer-icon">
-                      %
-                    </div>
+                  return (
+                    <article
+                      className="bp-offer"
+                      key={
+                        getRowText(
+                          promotion,
+                          ["id"],
+                        ) ||
+                        `${title}-${index}`
+                      }
+                    >
+                      <div className="bp-offer-icon">
+                        %
+                      </div>
 
-                    <div>
-                      <h3>{title}</h3>
+                      <div>
+                        <h3>
+                          {title}
+                        </h3>
 
-                      {discount && (
-                        <strong>{discount}</strong>
-                      )}
+                        {discount && (
+                          <strong>
+                            {discount}
+                          </strong>
+                        )}
 
-                      {description && (
-                        <p>{description}</p>
-                      )}
-                    </div>
-                  </article>
-                );
-              })}
+                        {description && (
+                          <p>
+                            {description}
+                          </p>
+                        )}
+                      </div>
+                    </article>
+                  );
+                },
+              )}
             </div>
           </section>
         )}
@@ -946,156 +1359,212 @@ export default function BusinessProfilePage() {
             </div>
 
             <div className="bp-gallery">
-              {media.map((item, index) => {
-                const path = getRowText(item, [
-                  "storage_path",
-                  "media_url",
-                  "url",
-                ]);
+              {media.map(
+                (item, index) => {
+                  const path =
+                    getRowText(item, [
+                      "storage_path",
+                      "media_url",
+                      "url",
+                    ]);
 
-                if (!path) return null;
+                  if (!path) return null;
 
-                const imageUrl = isValidUrl(path)
-                  ? path
-                  : `https://iluczxsqdpohzgbknldh.supabase.co/storage/v1/object/public/business-media/${path}`;
+                  const imageUrl =
+                    isValidUrl(path)
+                      ? path
+                      : `https://iluczxsqdpohzgbknldh.supabase.co/storage/v1/object/public/business-media/${path}`;
 
-                return (
-                  <a
-                    href={imageUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    key={
-                      getRowText(item, ["id"]) ||
-                      `${path}-${index}`
-                    }
-                    className="bp-gallery-item"
-                  >
-                    <img
-                      src={imageUrl}
-                      alt={
-                        getRowText(item, [
-                          "title",
-                          "description",
-                        ]) ||
-                        `${business.name} photo`
+                  return (
+                    <a
+                      href={imageUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      key={
+                        getRowText(
+                          item,
+                          ["id"],
+                        ) ||
+                        `${path}-${index}`
                       }
-                    />
-                  </a>
-                );
-              })}
+                      className="bp-gallery-item"
+                    >
+                      <img
+                        src={imageUrl}
+                        alt={
+                          getRowText(
+                            item,
+                            [
+                              "title",
+                              "description",
+                            ],
+                          ) ||
+                          `${business.name} photo`
+                        }
+                      />
+                    </a>
+                  );
+                },
+              )}
             </div>
           </section>
         )}
 
         {services.length > 0 && (
-          <section className="bp-section">
+          <section
+            className="bp-section"
+            id="services"
+          >
             <div className="bp-section-heading">
               <h2>Services</h2>
             </div>
 
             <div className="bp-service-grid">
-              {services.map((service, index) => {
-                const name =
-                  getRowText(service, [
-                    "service_name",
-                    "name",
-                    "title",
-                  ]) || "Service";
+              {services.map(
+                (service, index) => {
+                  const name =
+                    getRowText(
+                      service,
+                      [
+                        "service_name",
+                        "name",
+                        "title",
+                      ],
+                    ) || "Service";
 
-                const description =
-                  getRowText(service, [
-                    "description",
-                    "service_description",
-                  ]);
+                  const description =
+                    getRowText(
+                      service,
+                      [
+                        "description",
+                        "service_description",
+                      ],
+                    );
 
-                return (
-                  <article
-                    className="bp-service-card"
-                    key={
-                      getRowText(service, ["id"]) ||
-                      `${name}-${index}`
-                    }
-                  >
-                    <h3>{name}</h3>
+                  return (
+                    <article
+                      className="bp-service-card"
+                      key={
+                        getRowText(
+                          service,
+                          ["id"],
+                        ) ||
+                        `${name}-${index}`
+                      }
+                    >
+                      <h3>
+                        {name}
+                      </h3>
 
-                    {description && (
-                      <p>{description}</p>
-                    )}
-                  </article>
-                );
-              })}
+                      {description && (
+                        <p>
+                          {description}
+                        </p>
+                      )}
+                    </article>
+                  );
+                },
+              )}
             </div>
           </section>
         )}
 
         {products.length > 0 && (
-          <section className="bp-section">
+          <section
+            className="bp-section"
+            id="products"
+          >
             <div className="bp-section-heading">
               <h2>Products</h2>
             </div>
 
             <div className="bp-product-grid">
-              {products.map((product, index) => {
-                const name =
-                  getRowText(product, [
-                    "product_name",
-                    "name",
-                    "title",
-                  ]) || "Product";
+              {products.map(
+                (product, index) => {
+                  const name =
+                    getRowText(
+                      product,
+                      [
+                        "product_name",
+                        "name",
+                        "title",
+                      ],
+                    ) || "Product";
 
-                const description =
-                  getRowText(product, [
-                    "description",
-                    "product_description",
-                  ]);
+                  const description =
+                    getRowText(
+                      product,
+                      [
+                        "description",
+                        "product_description",
+                      ],
+                    );
 
-                const image =
-                  getRowText(product, [
-                    "image_url",
-                    "media_url",
-                    "image",
-                  ]);
+                  const image =
+                    getRowText(
+                      product,
+                      [
+                        "image_url",
+                        "media_url",
+                        "image",
+                      ],
+                    );
 
-                const price =
-                  getRowText(product, [
-                    "price",
-                    "display_price",
-                    "price_text",
-                  ]);
+                  const price =
+                    getRowText(
+                      product,
+                      [
+                        "price",
+                        "display_price",
+                        "price_text",
+                      ],
+                    );
 
-                return (
-                  <article
-                    className="bp-product-card"
-                    key={
-                      getRowText(product, ["id"]) ||
-                      `${name}-${index}`
-                    }
-                  >
-                    {image && (
-                      <img
-                        src={
-                          isValidUrl(image)
-                            ? image
-                            : `https://iluczxsqdpohzgbknldh.supabase.co/storage/v1/object/public/product-media/${image}`
-                        }
-                        alt={name}
-                      />
-                    )}
-
-                    <div className="bp-product-content">
-                      <h3>{name}</h3>
-
-                      {description && (
-                        <p>{description}</p>
+                  return (
+                    <article
+                      className="bp-product-card"
+                      key={
+                        getRowText(
+                          product,
+                          ["id"],
+                        ) ||
+                        `${name}-${index}`
+                      }
+                    >
+                      {image && (
+                        <img
+                          src={
+                            isValidUrl(
+                              image,
+                            )
+                              ? image
+                              : `https://iluczxsqdpohzgbknldh.supabase.co/storage/v1/object/public/product-media/${image}`
+                          }
+                          alt={name}
+                        />
                       )}
 
-                      {price && (
-                        <strong>{price}</strong>
-                      )}
-                    </div>
-                  </article>
-                );
-              })}
+                      <div className="bp-product-content">
+                        <h3>
+                          {name}
+                        </h3>
+
+                        {description && (
+                          <p>
+                            {description}
+                          </p>
+                        )}
+
+                        {price && (
+                          <strong>
+                            {price}
+                          </strong>
+                        )}
+                      </div>
+                    </article>
+                  );
+                },
+              )}
             </div>
           </section>
         )}
@@ -1113,7 +1582,10 @@ export default function BusinessProfilePage() {
                 </span>
 
                 <div>
-                  <strong>Address</strong>
+                  <strong>
+                    Address
+                  </strong>
+
                   <p>{address}</p>
 
                   {mapUrl && (
@@ -1121,8 +1593,15 @@ export default function BusinessProfilePage() {
                       href={mapUrl}
                       target="_blank"
                       rel="noopener noreferrer"
+                      className="bp-directions"
                     >
-                      Get directions
+                      <span className="bp-paper-plane">
+                        ➤
+                      </span>
+
+                      <span>
+                        Get directions
+                      </span>
                     </a>
                   )}
                 </div>
@@ -1136,8 +1615,13 @@ export default function BusinessProfilePage() {
                 </span>
 
                 <div>
-                  <strong>Phone</strong>
-                  <a href={`tel:${business.phone}`}>
+                  <strong>
+                    Phone
+                  </strong>
+
+                  <a
+                    href={`tel:${business.phone}`}
+                  >
                     {business.phone}
                   </a>
                 </div>
@@ -1151,8 +1635,13 @@ export default function BusinessProfilePage() {
                 </span>
 
                 <div>
-                  <strong>Email</strong>
-                  <a href={`mailto:${business.email}`}>
+                  <strong>
+                    Email
+                  </strong>
+
+                  <a
+                    href={`mailto:${business.email}`}
+                  >
                     {business.email}
                   </a>
                 </div>
@@ -1166,7 +1655,10 @@ export default function BusinessProfilePage() {
                 </span>
 
                 <div>
-                  <strong>Website</strong>
+                  <strong>
+                    Website
+                  </strong>
+
                   <a
                     href={
                       isValidUrl(
@@ -1201,65 +1693,94 @@ export default function BusinessProfilePage() {
         {hours.length > 0 && (
           <section className="bp-section">
             <div className="bp-section-heading">
-              <h2>Business Hours</h2>
+              <h2>
+                Business Hours
+              </h2>
             </div>
 
             <div className="bp-hours">
-              {hours.map((item, index) => {
-                const day =
-                  getRowText(item, [
-                    "day_name",
-                    "day",
-                    "day_of_week",
-                  ]) || "";
+              {hours.map(
+                (item, index) => {
+                  const rawDay =
+                    item.day_of_week;
 
-                const open =
-                  getRowText(item, [
-                    "open_time",
-                    "opening_time",
-                    "opens_at",
-                  ]);
+                  const day =
+                    getDayName(
+                      rawDay,
+                    );
 
-                const close =
-                  getRowText(item, [
-                    "close_time",
-                    "closing_time",
-                    "closes_at",
-                  ]);
+                  const open =
+                    getRowText(
+                      item,
+                      [
+                        "open_time",
+                        "opening_time",
+                        "opens_at",
+                      ],
+                    );
 
-                const closedValue =
-                  getRowText(item, [
-                    "is_closed",
-                    "closed",
-                  ]);
+                  const close =
+                    getRowText(
+                      item,
+                      [
+                        "close_time",
+                        "closing_time",
+                        "closes_at",
+                      ],
+                    );
 
-                const closed =
-                  closedValue === "true";
+                  const closedValue =
+                    getRowText(
+                      item,
+                      [
+                        "is_closed",
+                        "closed",
+                      ],
+                    );
 
-                return (
-                  <div
-                    className="bp-hours-row"
-                    key={
-                      getRowText(item, ["id"]) ||
-                      `${day}-${index}`
-                    }
-                  >
-                    <span>{day}</span>
+                  const closed =
+                    closedValue ===
+                      "true" ||
+                    closedValue ===
+                      "1";
 
-                    <strong
-                      className={
-                        closed ? "closed" : ""
+                  return (
+                    <div
+                      className="bp-hours-row"
+                      key={
+                        getRowText(
+                          item,
+                          ["id"],
+                        ) ||
+                        `${day}-${index}`
                       }
                     >
-                      {closed
-                        ? "Closed"
-                        : open && close
-                          ? `${open} – ${close}`
-                          : "Hours unavailable"}
-                    </strong>
-                  </div>
-                );
-              })}
+                      <span>
+                        {day}
+                      </span>
+
+                      <strong
+                        className={
+                          closed
+                            ? "closed"
+                            : ""
+                        }
+                      >
+                        {closed
+                          ? "Closed"
+                          : open &&
+                              close
+                            ? `${formatBusinessTime(
+                                open,
+                              )} – ${formatBusinessTime(
+                                close,
+                              )}`
+                            : "Hours unavailable"}
+                      </strong>
+                    </div>
+                  );
+                },
+              )}
             </div>
           </section>
         )}
@@ -1267,46 +1788,61 @@ export default function BusinessProfilePage() {
         {socialLinks.length > 0 && (
           <section className="bp-section">
             <div className="bp-section-heading">
-              <h2>Follow {business.name}</h2>
+              <h2>
+                Follow{" "}
+                {business.name}
+              </h2>
             </div>
 
             <div className="bp-socials">
-              {socialLinks.map((social, index) => {
-                const url = getRowText(social, [
-                  "url",
-                  "profile_url",
-                  "social_url",
-                  "link",
-                ]);
+              {socialLinks.map(
+                (social, index) => {
+                  const url =
+                    getRowText(
+                      social,
+                      [
+                        "url",
+                        "profile_url",
+                        "social_url",
+                        "link",
+                      ],
+                    );
 
-                if (!url) return null;
+                  if (!url) return null;
 
-                const platform =
-                  getRowText(social, [
-                    "platform",
-                    "platform_name",
-                    "name",
-                  ]) || "Social";
+                  const platform =
+                    getRowText(
+                      social,
+                      [
+                        "platform",
+                        "platform_name",
+                        "name",
+                      ],
+                    ) || "Social";
 
-                return (
-                  <a
-                    href={
-                      isValidUrl(url)
-                        ? url
-                        : `https://${url}`
-                    }
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bp-social"
-                    key={
-                      getRowText(social, ["id"]) ||
-                      `${platform}-${index}`
-                    }
-                  >
-                    {platform}
-                  </a>
-                );
-              })}
+                  return (
+                    <a
+                      href={
+                        isValidUrl(url)
+                          ? url
+                          : `https://${url}`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bp-social"
+                      key={
+                        getRowText(
+                          social,
+                          ["id"],
+                        ) ||
+                        `${platform}-${index}`
+                      }
+                    >
+                      {platform}
+                    </a>
+                  );
+                },
+              )}
             </div>
           </section>
         )}
@@ -1321,7 +1857,10 @@ export default function BusinessProfilePage() {
 
               <div className="bp-rating-summary">
                 <StarRating
-                  rating={rating.average_rating ?? 0}
+                  rating={
+                    rating.average_rating ??
+                    0
+                  }
                   size="large"
                 />
 
@@ -1334,7 +1873,9 @@ export default function BusinessProfilePage() {
                 </strong>
 
                 <span>
-                  {rating.review_count ?? 0} reviews
+                  {rating.review_count ??
+                    0}{" "}
+                  reviews
                 </span>
               </div>
             </div>
@@ -1342,14 +1883,20 @@ export default function BusinessProfilePage() {
 
           <div className="bp-review-form-card">
             <div className="bp-review-form-header">
-              <h3>Write a review</h3>
+              <h3>
+                Write a review
+              </h3>
+
               <p>
-                No account is required. Tell others about
-                your experience.
+                No account is required.
+                Tell others about your
+                experience.
               </p>
             </div>
 
-            <form onSubmit={submitReview}>
+            <form
+              onSubmit={submitReview}
+            >
               <div className="bp-form-group">
                 <label htmlFor="reviewer-name">
                   Your name
@@ -1360,7 +1907,9 @@ export default function BusinessProfilePage() {
                   type="text"
                   value={reviewerName}
                   onChange={(event) =>
-                    setReviewerName(event.target.value)
+                    setReviewerName(
+                      event.target.value,
+                    )
                   }
                   placeholder="Enter your name"
                   maxLength={100}
@@ -1369,28 +1918,37 @@ export default function BusinessProfilePage() {
               </div>
 
               <div className="bp-form-group">
-                <label>Your rating</label>
+                <label>
+                  Your rating
+                </label>
 
                 <div className="bp-rating-input">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      className={
-                        star <= reviewRating
-                          ? "selected"
-                          : ""
-                      }
-                      onClick={() =>
-                        setReviewRating(star)
-                      }
-                      aria-label={`${star} star${
-                        star === 1 ? "" : "s"
-                      }`}
-                    >
-                      ★
-                    </button>
-                  ))}
+                  {[1, 2, 3, 4, 5].map(
+                    (star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        className={
+                          star <=
+                          reviewRating
+                            ? "selected"
+                            : ""
+                        }
+                        onClick={() =>
+                          setReviewRating(
+                            star,
+                          )
+                        }
+                        aria-label={`${star} star${
+                          star === 1
+                            ? ""
+                            : "s"
+                        }`}
+                      >
+                        ★
+                      </button>
+                    ),
+                  )}
                 </div>
               </div>
 
@@ -1403,7 +1961,9 @@ export default function BusinessProfilePage() {
                   id="review-text"
                   value={reviewText}
                   onChange={(event) =>
-                    setReviewText(event.target.value)
+                    setReviewText(
+                      event.target.value,
+                    )
                   }
                   placeholder="Share your experience..."
                   maxLength={2000}
@@ -1414,27 +1974,35 @@ export default function BusinessProfilePage() {
               <div className="bp-form-group">
                 <label htmlFor="review-picture">
                   Your picture
-                  <span> Optional</span>
+                  <span>
+                    {" "}
+                    Optional
+                  </span>
                 </label>
 
                 <input
                   id="review-picture"
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
-                  onChange={handleReviewImage}
+                  onChange={
+                    handleReviewImage
+                  }
                 />
 
                 {reviewImagePreview && (
                   <div className="bp-review-image-preview">
                     <img
-                      src={reviewImagePreview}
+                      src={
+                        reviewImagePreview
+                      }
                       alt="Your review picture preview"
                     />
                   </div>
                 )}
 
                 <small>
-                  JPG, PNG or WebP. Maximum 2 MB.
+                  JPG, PNG or WebP.
+                  Maximum 2 MB.
                 </small>
               </div>
 
@@ -1447,7 +2015,9 @@ export default function BusinessProfilePage() {
               <button
                 type="submit"
                 className="bp-primary-button"
-                disabled={submittingReview}
+                disabled={
+                  submittingReview
+                }
               >
                 {submittingReview
                   ? "Submitting..."
@@ -1458,66 +2028,82 @@ export default function BusinessProfilePage() {
 
           {reviews.length > 0 ? (
             <div className="bp-reviews-list">
-              {reviews.map((review) => {
-                const avatar = getCustomerAvatarUrl(
-                  review.reviewer_avatar_url,
-                );
+              {reviews.map(
+                (review) => {
+                  const avatar =
+                    getCustomerAvatarUrl(
+                      review.reviewer_avatar_url,
+                    );
 
-                const reviewer =
-                  review.reviewer_name ||
-                  "Customer";
+                  const reviewer =
+                    review.reviewer_name ||
+                    "Customer";
 
-                return (
-                  <article
-                    className="bp-review"
-                    key={review.id}
-                  >
-                    <div className="bp-review-top">
-                      {avatar ? (
-                        <img
-                          src={avatar}
-                          alt={reviewer}
-                          className="bp-review-avatar"
-                        />
-                      ) : (
-                        <div className="bp-review-avatar-fallback">
-                          {getInitials(reviewer)}
-                        </div>
-                      )}
-
-                      <div className="bp-review-author">
-                        <strong>{reviewer}</strong>
-
-                        <div className="bp-review-meta">
-                          <StarRating
-                            rating={review.rating}
-                            size="small"
+                  return (
+                    <article
+                      className="bp-review"
+                      key={review.id}
+                    >
+                      <div className="bp-review-top">
+                        {avatar ? (
+                          <img
+                            src={avatar}
+                            alt={reviewer}
+                            className="bp-review-avatar"
                           />
-
-                          <span>
-                            {formatDate(
-                              review.created_at,
+                        ) : (
+                          <div className="bp-review-avatar-fallback">
+                            {getInitials(
+                              reviewer,
                             )}
-                          </span>
+                          </div>
+                        )}
+
+                        <div className="bp-review-author">
+                          <strong>
+                            {reviewer}
+                          </strong>
+
+                          <div className="bp-review-meta">
+                            <StarRating
+                              rating={
+                                review.rating
+                              }
+                              size="small"
+                            />
+
+                            <span>
+                              {formatDate(
+                                review.created_at,
+                              )}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {review.review_text && (
-                      <p className="bp-review-text">
-                        {review.review_text}
-                      </p>
-                    )}
-                  </article>
-                );
-              })}
+                      {review.review_text && (
+                        <p className="bp-review-text">
+                          {
+                            review.review_text
+                          }
+                        </p>
+                      )}
+                    </article>
+                  );
+                },
+              )}
             </div>
           ) : (
             <div className="bp-no-reviews">
               <div>★</div>
-              <h3>No reviews yet</h3>
+
+              <h3>
+                No reviews yet
+              </h3>
+
               <p>
-                Be the first person to review this
+                Be the first person
+                to review this
                 business.
               </p>
             </div>
@@ -1534,7 +2120,9 @@ export default function BusinessProfilePage() {
           aria-label="Contact this business on WhatsApp"
         >
           <span>◉</span>
-          <strong>WhatsApp</strong>
+          <strong>
+            WhatsApp
+          </strong>
         </a>
       )}
     </main>
