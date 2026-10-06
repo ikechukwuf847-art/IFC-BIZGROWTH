@@ -1,64 +1,82 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const BUCKET = "business-logos";
+export const dynamic = "force-dynamic";
 
 export async function GET(
-  request: NextRequest
+  request: NextRequest,
 ) {
   try {
     const path =
-      request.nextUrl.searchParams.get(
-        "path"
-      );
+      request.nextUrl.searchParams.get("path");
 
     if (!path) {
-      return NextResponse.json(
+      return new NextResponse(
+        "Missing logo path.",
         {
-          error:
-            "Missing logo path.",
+          status: 400,
         },
-        { status: 400 }
       );
     }
-
-    const parts = path.split("/");
-
-    if (parts.length !== 2) {
-      return NextResponse.json(
-        {
-          error:
-            "Invalid logo path.",
-        },
-        { status: 400 }
-      );
-    }
-
-    const businessId =
-      parts[0];
 
     const supabaseUrl =
-      process.env
-        .NEXT_PUBLIC_SUPABASE_URL;
+      process.env.NEXT_PUBLIC_SUPABASE_URL;
 
     const serviceRoleKey =
-      process.env
-        .NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
+      process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
 
     if (
       !supabaseUrl ||
       !serviceRoleKey
     ) {
       console.error(
-        "Missing Supabase configuration."
+        "Missing Supabase server environment variables.",
       );
 
-      return NextResponse.json(
+      return new NextResponse(
+        "Server configuration error.",
         {
-          error:
-            "Server configuration error.",
+          status: 500,
         },
-        { status: 500 }
+      );
+    }
+
+    /*
+     * Expected storage path:
+     *
+     * business_id/logo.jpg
+     *
+     * Example:
+     * a8219d77-4572-47e6-a8da-62bcfa9ca698/logo.jpg
+     */
+
+    const pathParts =
+      path.split("/");
+
+    if (pathParts.length !== 2) {
+      return new NextResponse(
+        "Invalid logo path.",
+        {
+          status: 400,
+        },
+      );
+    }
+
+    const businessId =
+      pathParts[0];
+
+    const filePath =
+      pathParts[1];
+
+    if (
+      !businessId ||
+      !filePath
+    ) {
+      return new NextResponse(
+        "Invalid logo path.",
+        {
+          status: 400,
+        },
       );
     }
 
@@ -71,95 +89,134 @@ export async function GET(
             autoRefreshToken: false,
             persistSession: false,
           },
-        }
+        },
       );
 
+    /*
+     * Make sure the business is actually
+     * public and active before exposing
+     * its logo.
+     */
     const {
       data: business,
       error: businessError,
     } = await supabase
       .from("businesses")
-      .select("id")
-      .eq("id", businessId)
-      .eq("logo_url", path)
-      .eq(
-        "is_public",
-        true
+      .select(
+        "id, logo_url, is_public, status",
       )
       .eq(
-        "status",
-        "active"
+        "id",
+        businessId,
       )
       .maybeSingle();
 
     if (businessError) {
       console.error(
-        "Business lookup error:",
-        businessError
+        "Unable to verify business logo:",
+        businessError,
       );
 
-      return NextResponse.json(
+      return new NextResponse(
+        "Unable to verify business.",
         {
-          error:
-            "Unable to verify business.",
+          status: 500,
         },
-        { status: 500 }
       );
     }
 
     if (!business) {
-      return NextResponse.json(
+      return new NextResponse(
+        "Business not found.",
         {
-          error:
-            "Logo not available.",
+          status: 404,
         },
-        { status: 404 }
       );
     }
 
+    if (
+      business.is_public !== true ||
+      business.status !== "active"
+    ) {
+      return new NextResponse(
+        "Business is not publicly available.",
+        {
+          status: 404,
+        },
+      );
+    }
+
+    /*
+     * Make sure the requested file is
+     * actually the business' registered logo.
+     */
+    if (
+      business.logo_url !== path
+    ) {
+      return new NextResponse(
+        "Logo does not belong to this business.",
+        {
+          status: 403,
+        },
+      );
+    }
+
+    /*
+     * Create a temporary signed URL
+     * for the private Storage object.
+     */
     const {
-      data,
-      error,
+      data: signedUrlData,
+      error: signedUrlError,
     } = await supabase.storage
-      .from(BUCKET)
+      .from("business-logos")
       .createSignedUrl(
         path,
-        3600
+        60 * 60,
       );
+
+    if (signedUrlError) {
+      console.error(
+        "Unable to create signed logo URL:",
+        signedUrlError,
+      );
+
+      return new NextResponse(
+        "Unable to load business logo.",
+        {
+          status: 404,
+        },
+      );
+    }
 
     if (
-      error ||
-      !data?.signedUrl
+      !signedUrlData?.signedUrl
     ) {
-      console.error(
-        "Logo signing error:",
-        error
-      );
-
-      return NextResponse.json(
+      return new NextResponse(
+        "Logo URL was not generated.",
         {
-          error:
-            "Unable to load logo.",
+          status: 404,
         },
-        { status: 500 }
       );
     }
 
     return NextResponse.redirect(
-      data.signedUrl
+      signedUrlData.signedUrl,
+      {
+        status: 302,
+      },
     );
   } catch (error) {
     console.error(
       "Business logo route error:",
-      error
+      error,
     );
 
-    return NextResponse.json(
+    return new NextResponse(
+      "Unable to load business logo.",
       {
-        error:
-          "Unable to load logo.",
+        status: 500,
       },
-      { status: 500 }
     );
   }
-          }
+        }
