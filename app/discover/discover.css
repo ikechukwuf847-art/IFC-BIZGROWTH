@@ -1527,7 +1527,7 @@
 
   .business-grid {
     grid-template-columns:
-      repeat(3, minmax(0, 1fr));
+      repeat(2, minmax(0, 1fr));
 
     gap: 9px;
   }
@@ -1757,13 +1757,13 @@
     width: calc(100% - 18px);
   }
 
-  .business-grid {
+    .business-grid {
     grid-template-columns:
-      repeat(3, minmax(0, 1fr));
+      repeat(2, minmax(0, 1fr));
 
-    gap: 7px;
-  }
-
+    gap: 9px;
+    }
+   
   .business-card-cover {
     height: 103px;
   }
