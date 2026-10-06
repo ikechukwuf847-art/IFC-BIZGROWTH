@@ -103,8 +103,8 @@ function getLogoUrl(path: string | null) {
     return path;
   }
 
-  return `/api/public/business-logo?path=${encodeURIComponent(path)}`;
-}
+  return `https://iluczxsqdpohzgbknldh.supabase.co/storage/v1/object/public/business-logos/${path}`;
+    }
 
 const BusinessLogo = memo(function BusinessLogo({
   business,
