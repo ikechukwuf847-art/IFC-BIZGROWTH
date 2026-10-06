@@ -1797,3 +1797,36 @@ select:focus-visible {
     transition-duration: 0.01ms !important;
   }
   }
+
+@media (max-width: 767px) {
+  .business-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .business-card {
+    min-width: 0;
+  }
+
+  .business-card-content {
+    min-width: 0;
+  }
+
+  .business-title-row h3,
+  .business-category,
+  .business-description,
+  .business-location span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .business-title-row h3 {
+    white-space: nowrap;
+  }
+
+  .business-description {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+}
