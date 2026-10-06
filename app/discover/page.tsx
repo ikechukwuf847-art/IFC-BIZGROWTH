@@ -14,8 +14,6 @@ import "./discover.css";
 
 const supabase = createSupabaseBrowserClient();
 
-const STORAGE_BUCKET = "business-logos";
-
 type DirectoryBusiness = {
   business_id: string;
   business_name: string;
@@ -92,11 +90,22 @@ function isDirectUrl(value: string | null) {
 }
 
 /*
- * Business logo
+ * Private business logo
  *
- * The bucket is private, so the component receives
- * an already-generated signed URL.
+ * The API route checks that the logo belongs to
+ * an active/public business and then creates the
+ * signed Storage URL server-side.
  */
+function getLogoUrl(path: string | null) {
+  if (!path) return null;
+
+  if (isDirectUrl(path)) {
+    return path;
+  }
+
+  return `/api/public/business-logo?path=${encodeURIComponent(path)}`;
+}
+
 const BusinessLogo = memo(function BusinessLogo({
   business,
   logoUrl,
@@ -131,23 +140,21 @@ const BusinessLogo = memo(function BusinessLogo({
 function BusinessCard({
   business,
   media,
-  storageUrls,
 }: {
   business: DirectoryBusiness;
   media?: BusinessMedia;
-  storageUrls: Record<string, string>;
 }) {
+  /*
+   * business_media currently has no active rows,
+   * but this remains ready for future cover images.
+   */
   const coverUrl = media?.storage_path
     ? isDirectUrl(media.storage_path)
       ? media.storage_path
-      : storageUrls[media.storage_path] || null
+      : null
     : null;
 
-  const logoUrl = business.logo_url
-    ? isDirectUrl(business.logo_url)
-      ? business.logo_url
-      : storageUrls[business.logo_url] || null
-    : null;
+  const logoUrl = getLogoUrl(business.logo_url);
 
   return (
     <Link
@@ -295,20 +302,9 @@ export default function DiscoverPage() {
 
   const [media, setMedia] = useState<BusinessMedia[]>([]);
 
-  /*
-   * Signed URLs for private Supabase Storage files.
-   *
-   * Key:
-   * storage path
-   *
-   * Value:
-   * signed URL
-   */
-  const [storageUrls, setStorageUrls] = useState<
-    Record<string, string>
-  >({});
-
   const [search, setSearch] = useState("");
+  const [submittedSearch, setSubmittedSearch] =
+    useState("");
 
   const [selectedLocation, setSelectedLocation] =
     useState("");
@@ -318,7 +314,6 @@ export default function DiscoverPage() {
   >("backend");
 
   const [loading, setLoading] = useState(true);
-
   const [featuredLoading, setFeaturedLoading] =
     useState(true);
 
@@ -365,9 +360,6 @@ export default function DiscoverPage() {
 
   /*
    * Locations
-   *
-   * These come from:
-   * get_public_business_locations
    */
   const loadLocations = useCallback(async () => {
     const { data, error: locationsError } =
@@ -393,7 +385,6 @@ export default function DiscoverPage() {
    */
   const loadBusinesses = useCallback(async () => {
     setLoading(true);
-    setError("");
 
     const locationParts =
       locationMode === "backend" &&
@@ -407,12 +398,16 @@ export default function DiscoverPage() {
     const selectedCity =
       locationParts?.[1] || null;
 
+    const isNearby =
+      locationMode === "nearby" &&
+      userCoordinates !== null;
+
     const { data, error: businessesError } =
       await supabase.rpc(
         "get_public_business_directory",
         {
           p_search:
-            search.trim() || null,
+            submittedSearch.trim() || null,
 
           p_country_code:
             selectedCountry,
@@ -426,20 +421,23 @@ export default function DiscoverPage() {
           p_subcategory_id:
             null,
 
+          /*
+           * These are the visitor's coordinates.
+           * The RPC compares them against the
+           * business_locations latitude/longitude.
+           */
           p_latitude:
-            locationMode === "nearby"
-              ? userCoordinates?.latitude ??
-                null
+            isNearby
+              ? userCoordinates.latitude
               : null,
 
           p_longitude:
-            locationMode === "nearby"
-              ? userCoordinates?.longitude ??
-                null
+            isNearby
+              ? userCoordinates.longitude
               : null,
 
           p_radius_km:
-            locationMode === "nearby"
+            isNearby
               ? 25
               : null,
 
@@ -474,7 +472,7 @@ export default function DiscoverPage() {
 
     setLoading(false);
   }, [
-    search,
+    submittedSearch,
     selectedLocation,
     locationMode,
     userCoordinates,
@@ -482,8 +480,6 @@ export default function DiscoverPage() {
 
   /*
    * Featured businesses
-   *
-   * This is always a separate backend query.
    */
   const loadFeaturedBusinesses =
     useCallback(async () => {
@@ -500,6 +496,10 @@ export default function DiscoverPage() {
 
       const selectedCity =
         locationParts?.[1] || null;
+
+      const isNearby =
+        locationMode === "nearby" &&
+        userCoordinates !== null;
 
       const { data, error: featuredError } =
         await supabase.rpc(
@@ -520,19 +520,17 @@ export default function DiscoverPage() {
               null,
 
             p_latitude:
-              locationMode === "nearby"
-                ? userCoordinates?.latitude ??
-                  null
+              isNearby
+                ? userCoordinates.latitude
                 : null,
 
             p_longitude:
-              locationMode === "nearby"
-                ? userCoordinates?.longitude ??
-                  null
+              isNearby
+                ? userCoordinates.longitude
                 : null,
 
             p_radius_km:
-              locationMode === "nearby"
+              isNearby
                 ? 25
                 : null,
 
@@ -602,6 +600,8 @@ export default function DiscoverPage() {
           "Unable to load business media:",
           mediaError
         );
+
+        setMedia([]);
         return;
       }
 
@@ -610,72 +610,6 @@ export default function DiscoverPage() {
       );
     },
     []
-  );
-
-  /*
-   * Create signed URLs for private
-   * Supabase Storage files.
-   */
-  const loadStorageUrls = useCallback(
-    async (paths: string[]) => {
-      const uniquePaths = Array.from(
-        new Set(
-          paths.filter(
-            (path) =>
-              Boolean(path) &&
-              !isDirectUrl(path)
-          )
-        )
-      );
-
-      if (!uniquePaths.length) {
-        return;
-      }
-
-      const newUrls: Record<
-        string,
-        string
-      > = {};
-
-      for (const path of uniquePaths) {
-        /*
-         * Don't request another signed URL
-         * if we already have one.
-         */
-        if (storageUrls[path]) {
-          continue;
-        }
-
-        const { data, error: signedUrlError } =
-          await supabase.storage
-            .from(STORAGE_BUCKET)
-            .createSignedUrl(
-              path,
-              3600
-            );
-
-        if (signedUrlError) {
-          console.error(
-            `Unable to create signed URL for ${path}:`,
-            signedUrlError
-          );
-          continue;
-        }
-
-        if (data?.signedUrl) {
-          newUrls[path] =
-            data.signedUrl;
-        }
-      }
-
-      if (Object.keys(newUrls).length) {
-        setStorageUrls((current) => ({
-          ...current,
-          ...newUrls,
-        }));
-      }
-    },
-    [storageUrls]
   );
 
   /*
@@ -690,11 +624,9 @@ export default function DiscoverPage() {
   ]);
 
   /*
-   * Automatically request the user's
-   * location when Discover opens.
+   * Device location
    *
-   * There is deliberately NO hardcoded
-   * Abuja/default location here.
+   * No hardcoded location is used.
    */
   const handleUseLocation = useCallback(() => {
     if (
@@ -713,12 +645,15 @@ export default function DiscoverPage() {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setUserCoordinates({
-          latitude:
-            position.coords.latitude,
+        const latitude =
+          position.coords.latitude;
 
-          longitude:
-            position.coords.longitude,
+        const longitude =
+          position.coords.longitude;
+
+        setUserCoordinates({
+          latitude,
+          longitude,
         });
 
         setLocationMode("nearby");
@@ -733,60 +668,72 @@ export default function DiscoverPage() {
           positionError
         );
 
-        let message =
-          "Unable to get your location.";
-
         if (
           positionError.code ===
           positionError.PERMISSION_DENIED
         ) {
-          message =
-            "Location permission was denied. Please allow location access or select a location instead.";
+          setError(
+            "Location permission was denied. Please allow location access or select a location instead."
+          );
         } else if (
           positionError.code ===
           positionError.POSITION_UNAVAILABLE
         ) {
-          message =
-            "Your device could not determine your location. Please select a location instead.";
+          setError(
+            "Your device could not determine your location. Please select a location instead."
+          );
         } else if (
           positionError.code ===
           positionError.TIMEOUT
         ) {
-          message =
-            "Location request timed out. Please try again or select a location instead.";
+          setError(
+            "Location request timed out. Please select a location or try again."
+          );
+        } else {
+          setError(
+            "Unable to get your location. Please select a location instead."
+          );
         }
 
-        setError(message);
+        /*
+         * Do NOT switch the entire page into
+         * an error state. The normal directory
+         * remains usable.
+         */
         setLocationLoading(false);
       },
 
       {
-        enableHighAccuracy: true,
-        timeout: 15000,
+        /*
+         * Faster and more reliable for normal
+         * business discovery than forcing GPS.
+         */
+        enableHighAccuracy: false,
+
+        timeout: 30000,
+
         maximumAge: 300000,
       }
     );
   }, []);
 
   /*
-   * Automatically request location
-   * once when the Discover page opens.
+   * Automatically request location once.
    */
   useEffect(() => {
     handleUseLocation();
   }, [handleUseLocation]);
 
   /*
-   * Reload businesses when filters,
-   * search, or device location changes.
+   * Load businesses when an actual search,
+   * location filter, or coordinates change.
    */
   useEffect(() => {
     loadBusinesses();
   }, [loadBusinesses]);
 
   /*
-   * Reload featured businesses when
-   * location changes.
+   * Load featured businesses.
    */
   useEffect(() => {
     loadFeaturedBusinesses();
@@ -820,64 +767,6 @@ export default function DiscoverPage() {
   ]);
 
   /*
-   * Generate signed URLs for business
-   * logos and business media.
-   */
-  useEffect(() => {
-    const paths: string[] = [];
-
-    businesses.forEach((business) => {
-      if (
-        business.logo_url &&
-        !isDirectUrl(
-          business.logo_url
-        )
-      ) {
-        paths.push(
-          business.logo_url
-        );
-      }
-    });
-
-    featuredBusinesses.forEach(
-      (business) => {
-        if (
-          business.logo_url &&
-          !isDirectUrl(
-            business.logo_url
-          )
-        ) {
-          paths.push(
-            business.logo_url
-          );
-        }
-      }
-    );
-
-    media.forEach((item) => {
-      if (
-        item.storage_path &&
-        !isDirectUrl(
-          item.storage_path
-        )
-      ) {
-        paths.push(
-          item.storage_path
-        );
-      }
-    });
-
-    if (paths.length) {
-      loadStorageUrls(paths);
-    }
-  }, [
-    businesses,
-    featuredBusinesses,
-    media,
-    loadStorageUrls,
-  ]);
-
-  /*
    * Map media by business.
    */
   const mediaByBusiness = useMemo(() => {
@@ -903,18 +792,62 @@ export default function DiscoverPage() {
   }, [media]);
 
   /*
+   * Nearby businesses
+   *
+   * The database RPC calculates distance
+   * from the user's coordinates to the
+   * business location coordinates.
+   */
+  const nearbyBusinesses = useMemo(() => {
+    if (!userCoordinates) {
+      return [];
+    }
+
+    return [...businesses]
+      .filter(
+        (business) =>
+          business.distance_km !== null
+      )
+      .sort(
+        (a, b) =>
+          Number(
+            a.distance_km ?? 999999
+          ) -
+          Number(
+            b.distance_km ?? 999999
+          )
+      )
+      .slice(0, 8);
+  }, [
+    businesses,
+    userCoordinates,
+  ]);
+
+  /*
    * Popular businesses
    */
   const popularBusinesses = useMemo(() => {
     return [...businesses]
+      .filter(
+        (business) =>
+          !userCoordinates ||
+          business.distance_km === null ||
+          !nearbyBusinesses.some(
+            (nearby) =>
+              nearby.business_id ===
+              business.business_id
+          )
+      )
       .sort((a, b) => {
-        const ratingA = Number(
-          a.average_rating || 0
-        );
+        const ratingA =
+          Number(
+            a.average_rating || 0
+          );
 
-        const ratingB = Number(
-          b.average_rating || 0
-        );
+        const ratingB =
+          Number(
+            b.average_rating || 0
+          );
 
         if (
           ratingB !== ratingA
@@ -934,51 +867,26 @@ export default function DiscoverPage() {
         );
       })
       .slice(0, 8);
-  }, [businesses]);
-
-  /*
-   * Nearby businesses
-   *
-   * The RPC already calculates
-   * distance_km from the user's coordinates.
-   */
-  const nearbyBusinesses = useMemo(() => {
-    if (!userCoordinates) {
-      return [];
-    }
-
-    return [...businesses]
-      .filter(
-        (business) =>
-          business.distance_km !==
-          null
-      )
-      .sort(
-        (a, b) =>
-          Number(
-            a.distance_km ||
-              999999
-          ) -
-          Number(
-            b.distance_km ||
-              999999
-          )
-      )
-      .slice(0, 8);
   }, [
     businesses,
+    nearbyBusinesses,
     userCoordinates,
   ]);
 
   /*
    * Search
+   *
+   * Search only runs when the user submits
+   * the form.
    */
   const handleSearch = (
     event: FormEvent
   ) => {
     event.preventDefault();
 
-    loadBusinesses();
+    setSubmittedSearch(
+      search.trim()
+    );
   };
 
   /*
@@ -987,15 +895,16 @@ export default function DiscoverPage() {
   const handleLocationChange = (
     value: string
   ) => {
-    setLocationMode(
-      "backend"
-    );
+    setLocationMode("backend");
 
     setUserCoordinates(null);
 
-    setSelectedLocation(
-      value
-    );
+    setSelectedLocation(value);
+
+    /*
+     * Clear any previous location error.
+     */
+    setError("");
   };
 
   /*
@@ -1201,9 +1110,7 @@ export default function DiscoverPage() {
 
                   return (
                     <option
-                      value={
-                        value
-                      }
+                      value={value}
                       key={`${value}-${index}`}
                     >
                       {label} (
@@ -1328,9 +1235,7 @@ export default function DiscoverPage() {
               }).map(
                 (_, index) => (
                   <BusinessCardSkeleton
-                    key={
-                      index
-                    }
+                    key={index}
                   />
                 )
               )}
@@ -1357,9 +1262,77 @@ export default function DiscoverPage() {
                     media={mediaByBusiness.get(
                       business.business_id
                     )}
-                    storageUrls={
-                      storageUrls
+                  />
+                )
+              )}
+
+            </div>
+          )}
+
+        </section>
+
+        {/* Nearby */}
+        <section className="discover-section">
+
+          <div className="section-heading">
+
+            <div>
+              <span className="section-kicker">
+                Around you
+              </span>
+
+              <h2>
+                Businesses Near You
+              </h2>
+            </div>
+
+            <button
+              type="button"
+              className="view-all location-button"
+              onClick={
+                handleUseLocation
+              }
+              disabled={
+                locationLoading
+              }
+            >
+              📍{" "}
+              {locationLoading
+                ? "Locating..."
+                : locationMode ===
+                    "nearby"
+                  ? "Near me"
+                  : "Find nearby"}
+            </button>
+
+          </div>
+
+          {!userCoordinates ? (
+            <div className="empty-section">
+              Use your location to discover
+              businesses near you.
+            </div>
+          ) : nearbyBusinesses.length ===
+            0 ? (
+            <div className="empty-section">
+              No businesses found within
+              25 km of your location.
+            </div>
+          ) : (
+            <div className="business-grid">
+
+              {nearbyBusinesses.map(
+                (business) => (
+                  <BusinessCard
+                    key={
+                      business.business_id
                     }
+                    business={
+                      business
+                    }
+                    media={mediaByBusiness.get(
+                      business.business_id
+                    )}
                   />
                 )
               )}
@@ -1394,9 +1367,7 @@ export default function DiscoverPage() {
               }).map(
                 (_, index) => (
                   <BusinessCardSkeleton
-                    key={
-                      index
-                    }
+                    key={index}
                   />
                 )
               )}
@@ -1422,77 +1393,6 @@ export default function DiscoverPage() {
                     media={mediaByBusiness.get(
                       business.business_id
                     )}
-                    storageUrls={
-                      storageUrls
-                    }
-                  />
-                )
-              )}
-
-            </div>
-          )}
-
-        </section>
-
-        {/* Nearby */}
-        <section className="discover-section">
-
-          <div className="section-heading">
-
-            <div>
-              <span className="section-kicker">
-                Around you
-              </span>
-
-              <h2>
-                Businesses Near You
-              </h2>
-            </div>
-
-            <button
-              type="button"
-              className="view-all location-button"
-              onClick={
-                handleUseLocation
-              }
-            >
-              📍{" "}
-              {locationMode ===
-              "nearby"
-                ? "Near me"
-                : "Find nearby"}
-            </button>
-
-          </div>
-
-          {!userCoordinates ? (
-            <div className="empty-section">
-              Use your location to discover
-              businesses near you.
-            </div>
-          ) : nearbyBusinesses.length ===
-            0 ? (
-            <div className="empty-section">
-              No businesses found near you.
-            </div>
-          ) : (
-            <div className="business-grid">
-
-              {nearbyBusinesses.map(
-                (business) => (
-                  <BusinessCard
-                    key={
-                      business.business_id
-                    }
-                    business={
-                      business
-                    }
-                    media={mediaByBusiness.get(
-                      business.business_id
-                    )}
-                    storageUrls={
-                      storageUrls
-                    }
                   />
                 )
               )}
