@@ -65,6 +65,17 @@ type Rating = {
 
 type GenericRow = Record<string, unknown>;
 
+type ProfileSection =
+  | "about"
+  | "products"
+  | "services"
+  | "promotions"
+  | "photos"
+  | "contact"
+  | "hours"
+  | "social"
+  | "reviews";
+
 const SUPABASE_URL =
   "https://iluczxsqdpohzgbknldh.supabase.co";
 
@@ -89,7 +100,9 @@ function getStorageUrl(
     return path;
   }
 
-  const cleanPath = path.replace(/^\/+/, "");
+  const cleanPath = path
+    .replace(/^\/+/, "")
+    .replace(new RegExp(`^${bucket}/`), "");
 
   return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${cleanPath}`;
 }
@@ -103,12 +116,18 @@ function getCustomerAvatarUrl(path: string | null) {
 }
 
 /*
- * ALL BUSINESS MEDIA IMAGES
- * Products, services, promotions and gallery
- * use the business-media bucket.
+ * SERVICES, PROMOTIONS AND BUSINESS PHOTOS
+ * all use business-media.
  */
 function getBusinessMediaUrl(path: string | null) {
   return getStorageUrl("business-media", path);
+}
+
+/*
+ * PRODUCTS use product-media.
+ */
+function getProductMediaUrl(path: string | null) {
+  return getStorageUrl("product-media", path);
 }
 
 function getInitials(name: string) {
@@ -164,10 +183,6 @@ function getRowText(
   return null;
 }
 
-/*
- * Finds an image path from different possible
- * backend column names.
- */
 function getMediaPath(row: GenericRow) {
   return getRowText(row, [
     "storage_path",
@@ -405,6 +420,15 @@ export default function BusinessProfilePage() {
     reviewMessage,
     setReviewMessage,
   ] = useState("");
+
+  /*
+   * This controls the actual navigation.
+   *
+   * Clicking a tab changes the displayed section.
+   * It does NOT scroll down the page.
+   */
+  const [activeSection, setActiveSection] =
+    useState<ProfileSection>("about");
 
   const loadBusiness = useCallback(
     async () => {
@@ -691,6 +715,13 @@ export default function BusinessProfilePage() {
     };
   }, [reviewImagePreview]);
 
+  /*
+   * When the business loads, start on About.
+   */
+  useEffect(() => {
+    setActiveSection("about");
+  }, [slug]);
+
   const logoUrl = getLogoUrl(
     business?.logo_url ?? null,
   );
@@ -778,7 +809,7 @@ export default function BusinessProfilePage() {
 
         setShowShare(true);
       } catch {
-        // User cancelled native sharing.
+        // User cancelled sharing.
       }
     };
 
@@ -990,6 +1021,8 @@ export default function BusinessProfilePage() {
         "Thank you! Your review has been submitted.",
       );
 
+      setActiveSection("reviews");
+
       await loadBusiness();
     } catch (err) {
       console.error(err);
@@ -1002,11 +1035,110 @@ export default function BusinessProfilePage() {
     }
   };
 
+  /*
+   * Navigation configuration.
+   * Only sections that actually contain data are shown.
+   */
+  const navigationItems = useMemo(
+    () => {
+      const items: {
+        id: ProfileSection;
+        label: string;
+        count?: number;
+      }[] = [];
+
+      items.push({
+        id: "about",
+        label: "About",
+      });
+
+      if (products.length > 0) {
+        items.push({
+          id: "products",
+          label: "Products",
+          count: products.length,
+        });
+      }
+
+      if (services.length > 0) {
+        items.push({
+          id: "services",
+          label: "Services",
+          count: services.length,
+        });
+      }
+
+      if (promotions.length > 0) {
+        items.push({
+          id: "promotions",
+          label: "Promotions",
+          count: promotions.length,
+        });
+      }
+
+      if (media.length > 0) {
+        items.push({
+          id: "photos",
+          label: "Photos",
+          count: media.length,
+        });
+      }
+
+      if (
+        address ||
+        business.phone ||
+        business.email ||
+        business.website_url
+      ) {
+        items.push({
+          id: "contact",
+          label: "Contact",
+        });
+      }
+
+      if (hours.length > 0) {
+        items.push({
+          id: "hours",
+          label: "Hours",
+        });
+      }
+
+      if (socialLinks.length > 0) {
+        items.push({
+          id: "social",
+          label: "Social",
+        });
+      }
+
+      items.push({
+        id: "reviews",
+        label: "Reviews",
+        count: rating.review_count || 0,
+      });
+
+      return items;
+    },
+    [
+      products.length,
+      services.length,
+      promotions.length,
+      media.length,
+      address,
+      business.phone,
+      business.email,
+      business.website_url,
+      hours.length,
+      socialLinks.length,
+      rating.review_count,
+    ],
+  );
+
   if (loading) {
     return (
       <main className="bp-page">
         <div className="bp-loading">
           <div className="bp-spinner" />
+
           <p>
             Loading business...
           </p>
@@ -1323,959 +1455,1219 @@ export default function BusinessProfilePage() {
       </section>
 
       <div className="bp-container">
-
-        {/* ABOUT */}
-        <section
-          className="bp-section bp-about"
-          id="about"
-        >
-          <div className="bp-section-heading">
-            <h2>About</h2>
-          </div>
-
-          {business.description ? (
-            <p>
-              {business.description}
-            </p>
-          ) : (
-            <p>
-              Learn more about{" "}
-              {business.name}.
-            </p>
-          )}
-        </section>
-
-        {/* SEPARATE NAVIGATION */}
+        {/* =========================
+            SECTION NAVIGATION
+        ========================== */}
         <nav
           className="bp-profile-nav"
           aria-label="Business sections"
         >
-          <a
-            href="#about"
-            className="active"
-          >
-            About
-          </a>
+          {navigationItems.map(
+            (item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={
+                  activeSection ===
+                  item.id
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  setActiveSection(
+                    item.id,
+                  )
+                }
+                aria-current={
+                  activeSection ===
+                  item.id
+                    ? "page"
+                    : undefined
+                }
+              >
+                <span>
+                  {item.label}
+                </span>
 
-          {products.length > 0 && (
-            <a href="#products">
-              Products
-            </a>
+                {typeof item.count ===
+                  "number" &&
+                  item.count > 0 && (
+                    <small>
+                      {item.count}
+                    </small>
+                  )}
+              </button>
+            ),
           )}
-
-          {services.length > 0 && (
-            <a href="#services">
-              Services
-            </a>
-          )}
-
-          {promotions.length > 0 && (
-            <a href="#promotions">
-              Promotions
-            </a>
-          )}
-
-          <a href="#reviews">
-            Reviews
-            {rating.review_count
-              ? ` (${rating.review_count})`
-              : ""}
-          </a>
         </nav>
 
-        {/* PROMOTIONS ONLY */}
-        {promotions.length > 0 && (
-          <section
-            className="bp-section"
-            id="promotions"
-          >
-            <div className="bp-section-heading">
-              <h2>
-                Special Offers
-              </h2>
-            </div>
+        {/* =========================
+            ACTIVE SECTION
+        ========================== */}
 
-            <div className="bp-offers">
-              {promotions.map(
-                (promotion, index) => {
-                  const title =
-                    getRowText(
-                      promotion,
-                      [
-                        "title",
-                        "name",
-                        "promotion_name",
-                      ],
-                    ) ||
-                    "Special offer";
+        {activeSection ===
+          "about" && (
+            <section className="bp-section bp-active-content">
+              <div className="bp-section-heading">
+                <h2>About</h2>
+              </div>
 
-                  const description =
-                    getRowText(
-                      promotion,
-                      [
-                        "description",
-                        "details",
-                        "offer_description",
-                      ],
-                    );
+              <div className="bp-about-content">
+                <p>
+                  {business.description ||
+                    `Learn more about ${business.name}.`}
+                </p>
+              </div>
+            </section>
+          )}
 
-                  const discount =
-                    getRowText(
-                      promotion,
-                      [
-                        "discount",
-                        "discount_text",
-                        "offer",
-                      ],
-                    );
+        {/* =========================
+            PRODUCTS
+        ========================== */}
 
-                  const imagePath =
-                    getMediaPath(
-                      promotion,
-                    );
+        {activeSection ===
+          "products" && (
+            <section className="bp-section bp-active-content">
+              <div className="bp-section-heading">
+                <div>
+                  <h2>Products</h2>
 
-                  const imageUrl =
-                    getBusinessMediaUrl(
-                      imagePath,
-                    );
+                  <p className="bp-section-subtitle">
+                    Products offered by{" "}
+                    {business.name}
+                  </p>
+                </div>
+              </div>
 
-                  return (
-                    <article
-                      className="bp-offer"
-                      key={
-                        getRowText(
-                          promotion,
-                          ["id"],
-                        ) ||
-                        `${title}-${index}`
-                      }
-                    >
-                      {imageUrl ? (
-                        <img
-                          src={imageUrl}
-                          alt={title}
-                          className="bp-offer-image"
-                        />
-                      ) : (
-                        <div className="bp-offer-icon">
-                          %
-                        </div>
-                      )}
-
-                      <div className="bp-offer-content">
-                        <h3>
-                          {title}
-                        </h3>
-
-                        {discount && (
-                          <strong>
-                            {discount}
-                          </strong>
-                        )}
-
-                        {description && (
-                          <p>
-                            {description}
-                          </p>
-                        )}
-                      </div>
-                    </article>
-                  );
-                },
-              )}
-            </div>
-          </section>
-        )}
-
-        {/* BUSINESS GALLERY */}
-        {media.length > 0 && (
-          <section className="bp-section">
-            <div className="bp-section-heading">
-              <h2>Photos</h2>
-            </div>
-
-            <div className="bp-gallery">
-              {media.map(
-                (item, index) => {
-                  const path =
-                    getMediaPath(item);
-
-                  if (!path) return null;
-
-                  const imageUrl =
-                    getBusinessMediaUrl(
-                      path,
-                    );
-
-                  if (!imageUrl) {
-                    return null;
-                  }
-
-                  return (
-                    <a
-                      href={imageUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      key={
-                        getRowText(
-                          item,
-                          ["id"],
-                        ) ||
-                        `${path}-${index}`
-                      }
-                      className="bp-gallery-item"
-                    >
-                      <img
-                        src={imageUrl}
-                        alt={
-                          getRowText(
-                            item,
-                            [
-                              "title",
-                              "description",
-                            ],
-                          ) ||
-                          `${business.name} photo`
-                        }
-                      />
-                    </a>
-                  );
-                },
-              )}
-            </div>
-          </section>
-        )}
-
-        {/* SERVICES ONLY */}
-        {services.length > 0 && (
-          <section
-            className="bp-section"
-            id="services"
-          >
-            <div className="bp-section-heading">
-              <h2>Services</h2>
-            </div>
-
-            <div className="bp-service-grid">
-              {services.map(
-                (service, index) => {
-                  const name =
-                    getRowText(
-                      service,
-                      [
-                        "service_name",
-                        "name",
-                        "title",
-                      ],
-                    ) ||
-                    "Service";
-
-                  const description =
-                    getRowText(
-                      service,
-                      [
-                        "description",
-                        "service_description",
-                      ],
-                    );
-
-                  const imagePath =
-                    getMediaPath(
-                      service,
-                    );
-
-                  const imageUrl =
-                    getBusinessMediaUrl(
-                      imagePath,
-                    );
-
-                  return (
-                    <article
-                      className="bp-service-card"
-                      key={
-                        getRowText(
-                          service,
-                          ["id"],
-                        ) ||
-                        `${name}-${index}`
-                      }
-                    >
-                      {imageUrl && (
-                        <img
-                          src={imageUrl}
-                          alt={name}
-                          className="bp-service-image"
-                        />
-                      )}
-
-                      <div className="bp-service-content">
-                        <h3>
-                          {name}
-                        </h3>
-
-                        {description && (
-                          <p>
-                            {description}
-                          </p>
-                        )}
-                      </div>
-                    </article>
-                  );
-                },
-              )}
-            </div>
-          </section>
-        )}
-
-        {/* PRODUCTS ONLY */}
-        {products.length > 0 && (
-          <section
-            className="bp-section"
-            id="products"
-          >
-            <div className="bp-section-heading">
-              <h2>Products</h2>
-            </div>
-
-            <div className="bp-product-grid">
-              {products.map(
-                (product, index) => {
-                  const name =
-                    getRowText(
+              {products.length > 0 ? (
+                <div className="bp-product-grid">
+                  {products.map(
+                    (
                       product,
-                      [
-                        "product_name",
-                        "name",
-                        "title",
-                      ],
-                    ) ||
-                    "Product";
-
-                  const description =
-                    getRowText(
-                      product,
-                      [
-                        "description",
-                        "product_description",
-                      ],
-                    );
-
-                  const imagePath =
-                    getMediaPath(
-                      product,
-                    );
-
-                  const imageUrl =
-                    getBusinessMediaUrl(
-                      imagePath,
-                    );
-
-                  const price =
-                    getRowText(
-                      product,
-                      [
-                        "price",
-                        "display_price",
-                        "price_text",
-                      ],
-                    );
-
-                  return (
-                    <article
-                      className="bp-product-card"
-                      key={
+                      index,
+                    ) => {
+                      const name =
                         getRowText(
                           product,
-                          ["id"],
+                          [
+                            "product_name",
+                            "name",
+                            "title",
+                          ],
                         ) ||
-                        `${name}-${index}`
-                      }
-                    >
-                      {imageUrl && (
-                        <img
-                          src={imageUrl}
-                          alt={name}
-                          className="bp-product-image"
-                        />
-                      )}
+                        "Product";
 
-                      <div className="bp-product-content">
-                        <h3>
-                          {name}
-                        </h3>
+                      const description =
+                        getRowText(
+                          product,
+                          [
+                            "description",
+                            "product_description",
+                          ],
+                        );
 
-                        {description && (
-                          <p>
-                            {description}
-                          </p>
-                        )}
+                      const imagePath =
+                        getMediaPath(
+                          product,
+                        );
 
-                        {price && (
-                          <strong>
-                            {price}
-                          </strong>
-                        )}
-                      </div>
-                    </article>
-                  );
-                },
-              )}
-            </div>
-          </section>
-        )}
+                      /*
+                       * IMPORTANT:
+                       * Products use product-media.
+                       */
+                      const imageUrl =
+                        getProductMediaUrl(
+                          imagePath,
+                        );
 
-        {/* CONTACT */}
-        <section className="bp-section">
-          <div className="bp-section-heading">
-            <h2>Contact</h2>
-          </div>
+                      const price =
+                        getRowText(
+                          product,
+                          [
+                            "price",
+                            "display_price",
+                            "price_text",
+                          ],
+                        );
 
-          <div className="bp-contact-card">
-            {address && (
-              <div className="bp-contact-item">
-                <span className="bp-contact-icon">
-                  ⌖
-                </span>
+                      return (
+                        <article
+                          className="bp-product-card"
+                          key={
+                            getRowText(
+                              product,
+                              ["id"],
+                            ) ||
+                            `${name}-${index}`
+                          }
+                        >
+                          {imageUrl ? (
+                            <div className="bp-product-image-wrap">
+                              <img
+                                src={
+                                  imageUrl
+                                }
+                                alt={
+                                  name
+                                }
+                                className="bp-product-image"
+                                loading="lazy"
+                              />
+                            </div>
+                          ) : (
+                            <div className="bp-product-image-placeholder">
+                              <span>
+                                {getInitials(
+                                  name,
+                                )}
+                              </span>
+                            </div>
+                          )}
 
-                <div>
-                  <strong>
-                    Address
-                  </strong>
+                          <div className="bp-product-content">
+                            <h3>
+                              {name}
+                            </h3>
 
-                  <p>{address}</p>
+                            {description && (
+                              <p>
+                                {
+                                  description
+                                }
+                              </p>
+                            )}
 
-                  {mapUrl && (
-                    <a
-                      href={mapUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="bp-directions"
-                    >
-                      <span className="bp-paper-plane">
-                        ➤
-                      </span>
-
-                      <span>
-                        Get directions
-                      </span>
-                    </a>
+                            {price && (
+                              <strong className="bp-product-price">
+                                {
+                                  price
+                                }
+                              </strong>
+                            )}
+                          </div>
+                        </article>
+                      );
+                    },
                   )}
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="bp-empty-section">
+                  <h3>
+                    No products available
+                  </h3>
 
-            {business.phone && (
-              <div className="bp-contact-item">
-                <span className="bp-contact-icon">
-                  ☎
-                </span>
+                  <p>
+                    This business has not
+                    added any products yet.
+                  </p>
+                </div>
+              )}
+            </section>
+          )}
 
+        {/* =========================
+            SERVICES
+        ========================== */}
+
+        {activeSection ===
+          "services" && (
+            <section className="bp-section bp-active-content">
+              <div className="bp-section-heading">
                 <div>
-                  <strong>
-                    Phone
-                  </strong>
+                  <h2>Services</h2>
 
-                  <a
-                    href={`tel:${business.phone}`}
-                  >
-                    {business.phone}
-                  </a>
+                  <p className="bp-section-subtitle">
+                    Services provided by{" "}
+                    {business.name}
+                  </p>
                 </div>
               </div>
-            )}
 
-            {business.email && (
-              <div className="bp-contact-item">
-                <span className="bp-contact-icon">
-                  @
-                </span>
-
-                <div>
-                  <strong>
-                    Email
-                  </strong>
-
-                  <a
-                    href={`mailto:${business.email}`}
-                  >
-                    {business.email}
-                  </a>
-                </div>
-              </div>
-            )}
-
-            {business.website_url && (
-              <div className="bp-contact-item">
-                <span className="bp-contact-icon">
-                  ↗
-                </span>
-
-                <div>
-                  <strong>
-                    Website
-                  </strong>
-
-                  <a
-                    href={
-                      isValidUrl(
-                        business.website_url,
-                      )
-                        ? business.website_url
-                        : `https://${business.website_url}`
-                    }
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Visit website
-                  </a>
-                </div>
-              </div>
-            )}
-
-            {whatsappUrl && (
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bp-whatsapp-large"
-              >
-                <span>◉</span>
-                Contact on WhatsApp
-              </a>
-            )}
-          </div>
-        </section>
-
-        {/* BUSINESS HOURS */}
-        {hours.length > 0 && (
-          <section className="bp-section">
-            <div className="bp-section-heading">
-              <h2>
-                Business Hours
-              </h2>
-            </div>
-
-            <div className="bp-hours">
-              {hours.map(
-                (item, index) => {
-                  const rawDay =
-                    item.day_of_week;
-
-                  const day =
-                    getDayName(
-                      rawDay,
-                    );
-
-                  const open =
-                    getRowText(
-                      item,
-                      [
-                        "open_time",
-                        "opening_time",
-                        "opens_at",
-                      ],
-                    );
-
-                  const close =
-                    getRowText(
-                      item,
-                      [
-                        "close_time",
-                        "closing_time",
-                        "closes_at",
-                      ],
-                    );
-
-                  const closedValue =
-                    getRowText(
-                      item,
-                      [
-                        "is_closed",
-                        "closed",
-                      ],
-                    );
-
-                  const closed =
-                    closedValue ===
-                      "true" ||
-                    closedValue === "1";
-
-                  const twentyFourHours =
-                    open ===
-                      "00:00:00" &&
-                    close ===
-                      "23:59:00";
-
-                  return (
-                    <div
-                      className="bp-hours-row"
-                      key={
+              {services.length > 0 ? (
+                <div className="bp-service-grid">
+                  {services.map(
+                    (
+                      service,
+                      index,
+                    ) => {
+                      const name =
                         getRowText(
+                          service,
+                          [
+                            "service_name",
+                            "name",
+                            "title",
+                          ],
+                        ) ||
+                        "Service";
+
+                      const description =
+                        getRowText(
+                          service,
+                          [
+                            "description",
+                            "service_description",
+                          ],
+                        );
+
+                      /*
+                       * Services use business-media.
+                       */
+                      const imagePath =
+                        getMediaPath(
+                          service,
+                        );
+
+                      const imageUrl =
+                        getBusinessMediaUrl(
+                          imagePath,
+                        );
+
+                      return (
+                        <article
+                          className="bp-service-card"
+                          key={
+                            getRowText(
+                              service,
+                              ["id"],
+                            ) ||
+                            `${name}-${index}`
+                          }
+                        >
+                          {imageUrl ? (
+                            <div className="bp-service-image-wrap">
+                              <img
+                                src={
+                                  imageUrl
+                                }
+                                alt={
+                                  name
+                                }
+                                className="bp-service-image"
+                                loading="lazy"
+                              />
+                            </div>
+                          ) : (
+                            <div className="bp-service-image-placeholder">
+                              <span>
+                                {getInitials(
+                                  name,
+                                )}
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="bp-service-content">
+                            <h3>
+                              {name}
+                            </h3>
+
+                            {description && (
+                              <p>
+                                {
+                                  description
+                                }
+                              </p>
+                            )}
+                          </div>
+                        </article>
+                      );
+                    },
+                  )}
+                </div>
+              ) : (
+                <div className="bp-empty-section">
+                  <h3>
+                    No services available
+                  </h3>
+
+                  <p>
+                    This business has not
+                    added any services yet.
+                  </p>
+                </div>
+              )}
+            </section>
+          )}
+
+        {/* =========================
+            PROMOTIONS
+        ========================== */}
+
+        {activeSection ===
+          "promotions" && (
+            <section className="bp-section bp-active-content">
+              <div className="bp-section-heading">
+                <div>
+                  <h2>Promotions</h2>
+
+                  <p className="bp-section-subtitle">
+                    Current offers from{" "}
+                    {business.name}
+                  </p>
+                </div>
+              </div>
+
+              {promotions.length > 0 ? (
+                <div className="bp-offers">
+                  {promotions.map(
+                    (
+                      promotion,
+                      index,
+                    ) => {
+                      const title =
+                        getRowText(
+                          promotion,
+                          [
+                            "title",
+                            "name",
+                            "promotion_name",
+                          ],
+                        ) ||
+                        "Special offer";
+
+                      const description =
+                        getRowText(
+                          promotion,
+                          [
+                            "description",
+                            "details",
+                            "offer_description",
+                          ],
+                        );
+
+                      const discount =
+                        getRowText(
+                          promotion,
+                          [
+                            "discount",
+                            "discount_text",
+                            "offer",
+                          ],
+                        );
+
+                      const imagePath =
+                        getMediaPath(
+                          promotion,
+                        );
+
+                      /*
+                       * Promotions use business-media.
+                       */
+                      const imageUrl =
+                        getBusinessMediaUrl(
+                          imagePath,
+                        );
+
+                      return (
+                        <article
+                          className="bp-offer"
+                          key={
+                            getRowText(
+                              promotion,
+                              ["id"],
+                            ) ||
+                            `${title}-${index}`
+                          }
+                        >
+                          {imageUrl ? (
+                            <div className="bp-offer-image-wrap">
+                              <img
+                                src={
+                                  imageUrl
+                                }
+                                alt={
+                                  title
+                                }
+                                className="bp-offer-image"
+                                loading="lazy"
+                              />
+                            </div>
+                          ) : (
+                            <div className="bp-offer-icon">
+                              %
+                            </div>
+                          )}
+
+                          <div className="bp-offer-content">
+                            <h3>
+                              {title}
+                            </h3>
+
+                            {discount && (
+                              <strong>
+                                {
+                                  discount
+                                }
+                              </strong>
+                            )}
+
+                            {description && (
+                              <p>
+                                {
+                                  description
+                                }
+                              </p>
+                            )}
+                          </div>
+                        </article>
+                      );
+                    },
+                  )}
+                </div>
+              ) : (
+                <div className="bp-empty-section">
+                  <h3>
+                    No promotions available
+                  </h3>
+
+                  <p>
+                    This business has no
+                    active promotions.
+                  </p>
+                </div>
+              )}
+            </section>
+          )}
+
+        {/* =========================
+            PHOTOS
+        ========================== */}
+
+        {activeSection ===
+          "photos" && (
+            <section className="bp-section bp-active-content">
+              <div className="bp-section-heading">
+                <div>
+                  <h2>Photos</h2>
+
+                  <p className="bp-section-subtitle">
+                    Photos from{" "}
+                    {business.name}
+                  </p>
+                </div>
+              </div>
+
+              {media.length > 0 ? (
+                <div className="bp-gallery">
+                  {media.map(
+                    (
+                      item,
+                      index,
+                    ) => {
+                      const path =
+                        getMediaPath(
                           item,
-                          ["id"],
-                        ) ||
-                        `${day}-${index}`
-                      }
-                    >
-                      <span>
-                        {day}
-                      </span>
+                        );
 
-                      <strong
-                        className={
-                          closed
-                            ? "closed"
-                            : ""
-                        }
-                      >
-                        {closed
-                          ? "Closed"
-                          : twentyFourHours
-                            ? "Open 24 hours"
-                            : open &&
-                                close
-                              ? `${formatBusinessTime(
-                                  open,
-                                )} – ${formatBusinessTime(
-                                  close,
-                                )}`
-                              : "Hours unavailable"}
-                      </strong>
-                    </div>
-                  );
-                },
-              )}
-            </div>
-          </section>
-        )}
+                      if (!path)
+                        return null;
 
-        {/* SOCIAL LINKS */}
-        {socialLinks.length > 0 && (
-          <section className="bp-section">
-            <div className="bp-section-heading">
-              <h2>
-                Follow{" "}
-                {business.name}
-              </h2>
-            </div>
+                      const imageUrl =
+                        getBusinessMediaUrl(
+                          path,
+                        );
 
-            <div className="bp-socials">
-              {socialLinks.map(
-                (social, index) => {
-                  const url =
-                    getRowText(
-                      social,
-                      [
-                        "url",
-                        "profile_url",
-                        "social_url",
-                        "link",
-                      ],
-                    );
+                      if (!imageUrl)
+                        return null;
 
-                  if (!url) return null;
-
-                  const platform =
-                    getRowText(
-                      social,
-                      [
-                        "platform",
-                        "platform_name",
-                        "name",
-                      ],
-                    ) ||
-                    "Social";
-
-                  return (
-                    <a
-                      href={
-                        isValidUrl(url)
-                          ? url
-                          : `https://${url}`
-                      }
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="bp-social"
-                      key={
-                        getRowText(
-                          social,
-                          ["id"],
-                        ) ||
-                        `${platform}-${index}`
-                      }
-                    >
-                      {platform}
-                    </a>
-                  );
-                },
-              )}
-            </div>
-          </section>
-        )}
-
-        {/* REVIEWS ONLY */}
-        <section
-          className="bp-section bp-reviews-section"
-          id="reviews"
-        >
-          <div className="bp-section-heading bp-reviews-heading">
-            <div>
-              <h2>Reviews</h2>
-
-              <div className="bp-rating-summary">
-                <StarRating
-                  rating={
-                    rating.average_rating ??
-                    0
-                  }
-                  size="large"
-                />
-
-                <strong>
-                  {rating.average_rating
-                    ? Number(
-                        rating.average_rating,
-                      ).toFixed(1)
-                    : "0.0"}
-                </strong>
-
-                <span>
-                  {rating.review_count ??
-                    0}{" "}
-                  reviews
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bp-review-form-card">
-            <div className="bp-review-form-header">
-              <h3>
-                Write a review
-              </h3>
-
-              <p>
-                No account is required.
-                Tell others about your
-                experience.
-              </p>
-            </div>
-
-            <form
-              onSubmit={submitReview}
-            >
-              <div className="bp-form-group">
-                <label htmlFor="reviewer-name">
-                  Your name
-                </label>
-
-                <input
-                  id="reviewer-name"
-                  type="text"
-                  value={reviewerName}
-                  onChange={(event) =>
-                    setReviewerName(
-                      event.target.value,
-                    )
-                  }
-                  placeholder="Enter your name"
-                  maxLength={100}
-                  required
-                />
-              </div>
-
-              <div className="bp-form-group">
-                <label>
-                  Your rating
-                </label>
-
-                <div className="bp-rating-input">
-                  {[1, 2, 3, 4, 5].map(
-                    (star) => (
-                      <button
-                        key={star}
-                        type="button"
-                        className={
-                          star <=
-                          reviewRating
-                            ? "selected"
-                            : ""
-                        }
-                        onClick={() =>
-                          setReviewRating(
-                            star,
-                          )
-                        }
-                        aria-label={`${star} star${
-                          star === 1
-                            ? ""
-                            : "s"
-                        }`}
-                      >
-                        ★
-                      </button>
-                    ),
+                      return (
+                        <a
+                          href={
+                            imageUrl
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          key={
+                            getRowText(
+                              item,
+                              ["id"],
+                            ) ||
+                            `${path}-${index}`
+                          }
+                          className="bp-gallery-item"
+                        >
+                          <img
+                            src={
+                              imageUrl
+                            }
+                            alt={
+                              getRowText(
+                                item,
+                                [
+                                  "title",
+                                  "description",
+                                ],
+                              ) ||
+                              `${business.name} photo`
+                            }
+                            loading="lazy"
+                          />
+                        </a>
+                      );
+                    },
                   )}
+                </div>
+              ) : (
+                <div className="bp-empty-section">
+                  <h3>
+                    No photos available
+                  </h3>
+
+                  <p>
+                    This business has not
+                    added any photos yet.
+                  </p>
+                </div>
+              )}
+            </section>
+          )}
+
+        {/* =========================
+            CONTACT
+        ========================== */}
+
+        {activeSection ===
+          "contact" && (
+            <section className="bp-section bp-active-content">
+              <div className="bp-section-heading">
+                <div>
+                  <h2>Contact</h2>
+
+                  <p className="bp-section-subtitle">
+                    Contact{" "}
+                    {business.name}
+                  </p>
                 </div>
               </div>
 
-              <div className="bp-form-group">
-                <label htmlFor="review-text">
-                  Your review
-                </label>
+              <div className="bp-contact-card">
+                {address && (
+                  <div className="bp-contact-item">
+                    <span className="bp-contact-icon">
+                      ⌖
+                    </span>
 
-                <textarea
-                  id="review-text"
-                  value={reviewText}
-                  onChange={(event) =>
-                    setReviewText(
-                      event.target.value,
-                    )
-                  }
-                  placeholder="Share your experience..."
-                  maxLength={2000}
-                  rows={5}
-                />
-              </div>
+                    <div>
+                      <strong>
+                        Address
+                      </strong>
 
-              <div className="bp-form-group">
-                <label htmlFor="review-picture">
-                  Your picture
-                  <span>
-                    {" "}
-                    Optional
-                  </span>
-                </label>
+                      <p>
+                        {address}
+                      </p>
 
-                <input
-                  id="review-picture"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={
-                    handleReviewImage
-                  }
-                />
+                      {mapUrl && (
+                        <a
+                          href={mapUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bp-directions"
+                        >
+                          <span className="bp-paper-plane">
+                            ➤
+                          </span>
 
-                {reviewImagePreview && (
-                  <div className="bp-review-image-preview">
-                    <img
-                      src={
-                        reviewImagePreview
-                      }
-                      alt="Your review picture preview"
-                    />
+                          <span>
+                            Get directions
+                          </span>
+                        </a>
+                      )}
+                    </div>
                   </div>
                 )}
 
-                <small>
-                  JPG, PNG or WebP.
-                  Maximum 2 MB.
-                </small>
+                {business.phone && (
+                  <div className="bp-contact-item">
+                    <span className="bp-contact-icon">
+                      ☎
+                    </span>
+
+                    <div>
+                      <strong>
+                        Phone
+                      </strong>
+
+                      <a
+                        href={`tel:${business.phone}`}
+                      >
+                        {
+                          business.phone
+                        }
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {business.email && (
+                  <div className="bp-contact-item">
+                    <span className="bp-contact-icon">
+                      @
+                    </span>
+
+                    <div>
+                      <strong>
+                        Email
+                      </strong>
+
+                      <a
+                        href={`mailto:${business.email}`}
+                      >
+                        {
+                          business.email
+                        }
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {business.website_url && (
+                  <div className="bp-contact-item">
+                    <span className="bp-contact-icon">
+                      ↗
+                    </span>
+
+                    <div>
+                      <strong>
+                        Website
+                      </strong>
+
+                      <a
+                        href={
+                          isValidUrl(
+                            business.website_url,
+                          )
+                            ? business.website_url
+                            : `https://${business.website_url}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Visit website
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {whatsappUrl && (
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bp-whatsapp-large"
+                  >
+                    <span>◉</span>
+                    Contact on WhatsApp
+                  </a>
+                )}
+              </div>
+            </section>
+          )}
+
+        {/* =========================
+            BUSINESS HOURS
+        ========================== */}
+
+        {activeSection ===
+          "hours" && (
+            <section className="bp-section bp-active-content">
+              <div className="bp-section-heading">
+                <div>
+                  <h2>
+                    Business Hours
+                  </h2>
+
+                  <p className="bp-section-subtitle">
+                    Opening hours for{" "}
+                    {business.name}
+                  </p>
+                </div>
               </div>
 
-              {reviewMessage && (
-                <p className="bp-review-message">
-                  {reviewMessage}
-                </p>
-              )}
+              <div className="bp-hours">
+                {hours.map(
+                  (
+                    item,
+                    index,
+                  ) => {
+                    const rawDay =
+                      item.day_of_week;
 
-              <button
-                type="submit"
-                className="bp-primary-button"
-                disabled={
-                  submittingReview
-                }
-              >
-                {submittingReview
-                  ? "Submitting..."
-                  : "Submit review"}
-              </button>
-            </form>
-          </div>
+                    const day =
+                      getDayName(
+                        rawDay,
+                      );
 
-          {reviews.length > 0 ? (
-            <div className="bp-reviews-list">
-              {reviews.map(
-                (review) => {
-                  const avatar =
-                    getCustomerAvatarUrl(
-                      review.reviewer_avatar_url,
-                    );
+                    const open =
+                      getRowText(
+                        item,
+                        [
+                          "open_time",
+                          "opening_time",
+                          "opens_at",
+                        ],
+                      );
 
-                  const reviewer =
-                    review.reviewer_name ||
-                    "Customer";
+                    const close =
+                      getRowText(
+                        item,
+                        [
+                          "close_time",
+                          "closing_time",
+                          "closes_at",
+                        ],
+                      );
 
-                  return (
-                    <article
-                      className="bp-review"
-                      key={review.id}
-                    >
-                      <div className="bp-review-top">
-                        {avatar ? (
-                          <img
-                            src={avatar}
-                            alt={reviewer}
-                            className="bp-review-avatar"
-                          />
-                        ) : (
-                          <div className="bp-review-avatar-fallback">
-                            {getInitials(
-                              reviewer,
-                            )}
-                          </div>
-                        )}
+                    const closedValue =
+                      getRowText(
+                        item,
+                        [
+                          "is_closed",
+                          "closed",
+                        ],
+                      );
 
-                        <div className="bp-review-author">
-                          <strong>
-                            {reviewer}
-                          </strong>
+                    const closed =
+                      closedValue ===
+                        "true" ||
+                      closedValue === "1";
 
-                          <div className="bp-review-meta">
-                            <StarRating
-                              rating={
-                                review.rating
-                              }
-                              size="small"
-                            />
+                    const twentyFourHours =
+                      (open ===
+                        "00:00:00" ||
+                        open ===
+                          "00:00") &&
+                      (close ===
+                        "23:59:00" ||
+                        close ===
+                          "23:59");
 
-                            <span>
-                              {formatDate(
-                                review.created_at,
-                              )}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+                    return (
+                      <div
+                        className="bp-hours-row"
+                        key={
+                          getRowText(
+                            item,
+                            ["id"],
+                          ) ||
+                          `${day}-${index}`
+                        }
+                      >
+                        <span>
+                          {day}
+                        </span>
 
-                      {review.review_text && (
-                        <p className="bp-review-text">
-                          {
-                            review.review_text
+                        <strong
+                          className={
+                            closed
+                              ? "closed"
+                              : ""
                           }
-                        </p>
-                      )}
-                    </article>
-                  );
-                },
-              )}
-            </div>
-          ) : (
-            <div className="bp-no-reviews">
-              <div>★</div>
-
-              <h3>
-                No reviews yet
-              </h3>
-
-              <p>
-                Be the first person
-                to review this
-                business.
-              </p>
-            </div>
+                        >
+                          {closed
+                            ? "Closed"
+                            : twentyFourHours
+                              ? "Open 24 hours"
+                              : open &&
+                                  close
+                                ? `${formatBusinessTime(
+                                    open,
+                                  )} – ${formatBusinessTime(
+                                    close,
+                                  )}`
+                                : "Hours unavailable"}
+                        </strong>
+                      </div>
+                    );
+                  },
+                )}
+              </div>
+            </section>
           )}
-        </section>
+
+        {/* =========================
+            SOCIAL
+        ========================== */}
+
+        {activeSection ===
+          "social" && (
+            <section className="bp-section bp-active-content">
+              <div className="bp-section-heading">
+                <div>
+                  <h2>
+                    Follow{" "}
+                    {business.name}
+                  </h2>
+
+                  <p className="bp-section-subtitle">
+                    Connect with this
+                    business online
+                  </p>
+                </div>
+              </div>
+
+              <div className="bp-socials">
+                {socialLinks.map(
+                  (
+                    social,
+                    index,
+                  ) => {
+                    const url =
+                      getRowText(
+                        social,
+                        [
+                          "url",
+                          "profile_url",
+                          "social_url",
+                          "link",
+                        ],
+                      );
+
+                    if (!url)
+                      return null;
+
+                    const platform =
+                      getRowText(
+                        social,
+                        [
+                          "platform",
+                          "platform_name",
+                          "name",
+                        ],
+                      ) ||
+                      "Social";
+
+                    return (
+                      <a
+                        href={
+                          isValidUrl(
+                            url,
+                          )
+                            ? url
+                            : `https://${url}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bp-social"
+                        key={
+                          getRowText(
+                            social,
+                            ["id"],
+                          ) ||
+                          `${platform}-${index}`
+                        }
+                      >
+                        {platform}
+                      </a>
+                    );
+                  },
+                )}
+              </div>
+            </section>
+          )}
+
+        {/* =========================
+            REVIEWS
+        ========================== */}
+
+        {activeSection ===
+          "reviews" && (
+            <section className="bp-section bp-reviews-section bp-active-content">
+              <div className="bp-section-heading bp-reviews-heading">
+                <div>
+                  <h2>Reviews</h2>
+
+                  <p className="bp-section-subtitle">
+                    What customers say
+                    about{" "}
+                    {business.name}
+                  </p>
+
+                  <div className="bp-rating-summary">
+                    <StarRating
+                      rating={
+                        rating.average_rating ??
+                        0
+                      }
+                      size="large"
+                    />
+
+                    <strong>
+                      {rating.average_rating
+                        ? Number(
+                            rating.average_rating,
+                          ).toFixed(1)
+                        : "0.0"}
+                    </strong>
+
+                    <span>
+                      {rating.review_count ??
+                        0}{" "}
+                      reviews
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bp-review-form-card">
+                <div className="bp-review-form-header">
+                  <h3>
+                    Write a review
+                  </h3>
+
+                  <p>
+                    No account is required.
+                    Tell others about your
+                    experience.
+                  </p>
+                </div>
+
+                <form
+                  onSubmit={submitReview}
+                >
+                  <div className="bp-form-group">
+                    <label htmlFor="reviewer-name">
+                      Your name
+                    </label>
+
+                    <input
+                      id="reviewer-name"
+                      type="text"
+                      value={
+                        reviewerName
+                      }
+                      onChange={(
+                        event,
+                      ) =>
+                        setReviewerName(
+                          event.target
+                            .value,
+                        )
+                      }
+                      placeholder="Enter your name"
+                      maxLength={100}
+                      required
+                    />
+                  </div>
+
+                  <div className="bp-form-group">
+                    <label>
+                      Your rating
+                    </label>
+
+                    <div className="bp-rating-input">
+                      {[
+                        1,
+                        2,
+                        3,
+                        4,
+                        5,
+                      ].map(
+                        (star) => (
+                          <button
+                            key={
+                              star
+                            }
+                            type="button"
+                            className={
+                              star <=
+                              reviewRating
+                                ? "selected"
+                                : ""
+                            }
+                            onClick={() =>
+                              setReviewRating(
+                                star,
+                              )
+                            }
+                            aria-label={`${star} star${
+                              star ===
+                              1
+                                ? ""
+                                : "s"
+                            }`}
+                          >
+                            ★
+                          </button>
+                        ),
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bp-form-group">
+                    <label htmlFor="review-text">
+                      Your review
+                    </label>
+
+                    <textarea
+                      id="review-text"
+                      value={
+                        reviewText
+                      }
+                      onChange={(
+                        event,
+                      ) =>
+                        setReviewText(
+                          event.target
+                            .value,
+                        )
+                      }
+                      placeholder="Share your experience..."
+                      maxLength={2000}
+                      rows={5}
+                    />
+                  </div>
+
+                  <div className="bp-form-group">
+                    <label htmlFor="review-picture">
+                      Your picture
+                      <span>
+                        {" "}
+                        Optional
+                      </span>
+                    </label>
+
+                    <input
+                      id="review-picture"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={
+                        handleReviewImage
+                      }
+                    />
+
+                    {reviewImagePreview && (
+                      <div className="bp-review-image-preview">
+                        <img
+                          src={
+                            reviewImagePreview
+                          }
+                          alt="Your review picture preview"
+                        />
+                      </div>
+                    )}
+
+                    <small>
+                      JPG, PNG or WebP.
+                      Maximum 2 MB.
+                    </small>
+                  </div>
+
+                  {reviewMessage && (
+                    <p className="bp-review-message">
+                      {
+                        reviewMessage
+                      }
+                    </p>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="bp-primary-button"
+                    disabled={
+                      submittingReview
+                    }
+                  >
+                    {submittingReview
+                      ? "Submitting..."
+                      : "Submit review"}
+                  </button>
+                </form>
+              </div>
+
+              {reviews.length >
+              0 ? (
+                <div className="bp-reviews-list">
+                  {reviews.map(
+                    (review) => {
+                      const avatar =
+                        getCustomerAvatarUrl(
+                          review.reviewer_avatar_url,
+                        );
+
+                      const reviewer =
+                        review.reviewer_name ||
+                        "Customer";
+
+                      return (
+                        <article
+                          className="bp-review"
+                          key={
+                            review.id
+                          }
+                        >
+                          <div className="bp-review-top">
+                            {avatar ? (
+                              <img
+                                src={
+                                  avatar
+                                }
+                                alt={
+                                  reviewer
+                                }
+                                className="bp-review-avatar"
+                              />
+                            ) : (
+                              <div className="bp-review-avatar-fallback">
+                                {getInitials(
+                                  reviewer,
+                                )}
+                              </div>
+                            )}
+
+                            <div className="bp-review-author">
+                              <strong>
+                                {
+                                  reviewer
+                                }
+                              </strong>
+
+                              <div className="bp-review-meta">
+                                <StarRating
+                                  rating={
+                                    review.rating
+                                  }
+                                  size="small"
+                                />
+
+                                <span>
+                                  {formatDate(
+                                    review.created_at,
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {review.review_text && (
+                            <p className="bp-review-text">
+                              {
+                                review.review_text
+                              }
+                            </p>
+                          )}
+                        </article>
+                      );
+                    },
+                  )}
+                </div>
+              ) : (
+                <div className="bp-no-reviews">
+                  <div>★</div>
+
+                  <h3>
+                    No reviews yet
+                  </h3>
+
+                  <p>
+                    Be the first person
+                    to review this
+                    business.
+                  </p>
+                </div>
+              )}
+            </section>
+          )}
       </div>
 
       {whatsappUrl && (
