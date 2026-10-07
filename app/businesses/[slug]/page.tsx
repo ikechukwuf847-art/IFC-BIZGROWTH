@@ -1085,15 +1085,15 @@ export default function BusinessProfilePage() {
       }
 
       if (
-        address ||
-        business.phone ||
-        business.email ||
-        business.website_url
-      ) {
-        items.push({
-          id: "contact",
-          label: "Contact",
-        });
+  address ||
+  business?.phone ||
+  business?.email ||
+  business?.website_url
+) {
+  items.push({
+    id: "contact",
+    label: "Contact",
+  });
       }
 
       if (hours.length > 0) {
@@ -1124,9 +1124,9 @@ export default function BusinessProfilePage() {
       promotions.length,
       media.length,
       address,
-      business.phone,
-      business.email,
-      business.website_url,
+      business?.phone,
+business?.email,
+business?.website_url,
       hours.length,
       socialLinks.length,
       rating.review_count,
