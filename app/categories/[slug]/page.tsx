@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 import "./category.css";
 
 const SUPABASE_URL = "https://iluczxsqdpohzgbknldh.supabase.co";
@@ -306,10 +306,7 @@ export default function CategoryPage() {
 
   const selectedSubcategory = searchParams.get("subcategory");
 
-  const supabase = useMemo(
-    () => createSupabaseBrowserClient(),
-    []
-  );
+  const supabase = useMemo(() => createClient(), []);
 
   const [category, setCategory] = useState<Category | null>(
     null
