@@ -218,22 +218,22 @@ const socialLinks = [
   {
     name: "TikTok",
     icon: "tiktok",
-    url: "https://www.tiktok.com/@YOUR_TIKTOK_HANDLE",
+    url: "https://www.tiktok.com/@ifcbizgrowth",
   },
   {
     name: "X (Twitter)",
     icon: "x-twitter",
-    url: "https://x.com/YOUR_X_HANDLE",
+    url: "https://x.com/ifcbizgrowth",
   },
   {
     name: "Instagram",
     icon: "instagram",
-    url: "https://www.instagram.com/YOUR_INSTAGRAM_HANDLE",
+    url: "https://www.instagram.com/ifcbizgrowth",
   },
   {
     name: "YouTube",
     icon: "youtube",
-    url: "https://www.youtube.com/@YOUR_YOUTUBE_HANDLE",
+    url: "https://www.youtube.com/@ifcbizgrowth",
   },
 ];
 
