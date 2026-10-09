@@ -304,65 +304,55 @@ export default function MarketingPage() {
     });
   }
 
-  async function submitRequest() {
-  if (!businessId) {
-    setError("Business account not found.");
-    return;
-  }
+async function submitRequest() {
+if (!businessId) {
+setError("Business account not found.");
+return;
+}
 
-  if (!selectedPlan) {
-    setError("Please select a campaign plan.");
-    return;
-  }
+if (!selectedPlan) {
+setError("Please select a campaign plan.");
+return;
+}
 
-  if (!selectedServiceId) {
-    setError("Please select a marketing service.");
-    return;
-  }
+if (!selectedServiceId) {
+setError("Please select a marketing service.");
+return;
+}
 
-  if (!title.trim()) {
-    setError("Please enter a campaign title.");
-    return;
-  }
+if (!title.trim()) {
+setError("Please enter a campaign title.");
+return;
+}
 
-  if (!description.trim()) {
-    setError("Please describe what you want to achieve.");
-    return;
-  }
+if (!description.trim()) {
+setError("Please describe what you want to achieve.");
+return;
+}
 
-  try {
-    setSubmitting(true);
-    setError("");
-    setSuccess("");
+try {
+setSubmitting(true);
+setError("");
+setSuccess("");
 
-    const selectedService = services.find(
-      (service) => service.id === selectedServiceId,
-    );
+const selectedService = services.find(
+  (service) => service.id === selectedServiceId,
+);
 
-    if (!selectedService) {
-      throw new Error("Selected service was not found.");
-    }
+if (!selectedService) {
+  throw new Error("Selected service was not found.");
+}
 
-    const startsAt = new Date();
+const startsAt = new Date();
 
-    const endsAt = new Date(
-      startsAt.getTime() +
-        selectedPlan.duration_days *
-          24 *
-          60 *
-          60 *
-          1000,
-    );
+const endsAt = new Date(
+  startsAt.getTime() +
+    selectedPlan.duration_days * 24 * 60 * 60 * 1000,
+);
 
-    const token = await getAccessToken();
+const token = await getAccessToken();
 
-    /*
-     * STEP 1
-     * Create the marketing request through the
-     * existing create-marketing-campaign Edge Function.
-     */
-
-    const {
+const {
   data: campaignData,
   error: campaignError,
 } = await supabase.functions.invoke(
@@ -383,78 +373,123 @@ export default function MarketingPage() {
   },
 );
 
-    if (campaignError) {
-  console.error("CREATE MARKETING REQUEST ERROR:", campaignError);
-  console.error("CREATE MARKETING REQUEST DATA:", campaignData);
+// Read the actual error returned by the Edge Function.
+let serverErrorMessage =
+  typeof campaignData?.error === "string"
+    ? campaignData.error
+    : "";
+
+if (campaignError && !serverErrorMessage) {
+  try {
+    const context = (
+      campaignError as typeof campaignError & {
+        context?: Response;
+      }
+    ).context;
+
+    if (context) {
+      const responseBody = await context.clone().json();
+
+      if (typeof responseBody?.error === "string") {
+        serverErrorMessage = responseBody.error;
+      }
+    }
+  } catch {
+    // Use the normal error message if the response body cannot be read.
+  }
+}
+
+// Handle duplicate requests without confusing the business owner.
+if (
+  /active request already exists for this marketing service/i.test(
+    serverErrorMessage,
+  )
+) {
+  setShowForm(false);
+  setActiveTab("pending");
+
+  await loadPage();
+
+  setError(
+    "You already have a request for this marketing service. Please check your existing request under Pending Requests before submitting another one.",
+  );
+
+  return;
+}
+
+if (campaignError) {
+  console.error(
+    "CREATE MARKETING REQUEST ERROR:",
+    campaignError,
+  );
+
+  console.error(
+    "CREATE MARKETING REQUEST DATA:",
+    campaignData,
+  );
 
   throw new Error(
-    campaignData?.error ||
+    serverErrorMessage ||
       campaignError.message ||
-      "Unable to create marketing campaign.",
+      "Unable to create your marketing request. Please try again.",
   );
-    }
+}
 
-    if (!campaignData?.success || !campaignData?.request?.id) {
-      throw new Error(
-        campaignData?.error ||
-          "Unable to create marketing campaign.",
-      );
-    }
+if (!campaignData?.success || !campaignData?.request?.id) {
+  throw new Error(
+    serverErrorMessage ||
+      "Unable to create your marketing request. Please try again.",
+  );
+}
 
-    const requestId = campaignData.request.id;
+const requestId = campaignData.request.id;
 
-    /*
-     * STEP 2
-     * Initialize payment using the existing payment Edge Function.
-     */
-    const {
-      data: paymentData,
-      error: paymentError,
-    } = await supabase.functions.invoke(
-      "create-payment",
-      {
-        body: {
-          order_type: "marketing_service",
-          business_id: businessId,
-          service_request_id: requestId,
-        },
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    );
+// Initialize payment using the existing payment Edge Function.
+const {
+  data: paymentData,
+  error: paymentError,
+} = await supabase.functions.invoke(
+  "create-payment",
+  {
+    body: {
+      order_type: "marketing_service",
+      business_id: businessId,
+      service_request_id: requestId,
+    },
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  },
+);
 
-    if (paymentError) {
-      throw new Error(
-        paymentError.message ||
-          "Unable to initialize payment.",
-      );
-    }
+if (paymentError) {
+  throw new Error(
+    paymentError.message ||
+      "Your request was created, but payment could not be initialized. Please contact support before submitting another request.",
+  );
+}
 
-    if (!paymentData?.authorization_url) {
-      throw new Error(
-        paymentData?.error ||
-          "Payment could not be initialized.",
-      );
-    }
+if (!paymentData?.authorization_url) {
+  throw new Error(
+    paymentData?.error ||
+      "Your request was created, but payment could not be initialized. Please contact support before submitting another request.",
+  );
+}
 
-    /*
-     * STEP 3
-     * Send the business owner to Paystack.
-     */
-    window.location.href =
-      paymentData.authorization_url;
-  } catch (err) {
-    setError(
-      err instanceof Error
-        ? err.message
-        : "Unable to submit marketing request.",
-    );
-  } finally {
-    setSubmitting(false);
-  }
-  }
+// Redirect the business owner to Paystack.
+window.location.href = paymentData.authorization_url;
 
+} catch (err) {
+setError(
+err instanceof Error
+? err.message
+: "Unable to submit your marketing request. Please try again.",
+);
+} finally {
+setSubmitting(false);
+}
+}
+  
   function formatMoney(
     amount: number,
     currency: string,
