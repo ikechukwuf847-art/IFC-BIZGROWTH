@@ -414,7 +414,7 @@ export default function MarketingPage() {
       "create-payment",
       {
         body: {
-          order_type: "marketing",
+          order_type: "marketing_service",
           business_id: businessId,
           service_request_id: requestId,
         },
