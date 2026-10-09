@@ -361,26 +361,27 @@ export default function MarketingPage() {
      * Create the marketing request through the
      * existing create-marketing-campaign Edge Function.
      */
+
     const {
-      data: campaignData,
-      error: campaignError,
-    } = await supabase.functions.invoke(
-      "create-marketing-request",
-      {
-        body: {
-          business_id: businessId,
-          service_id: selectedService.id,
-          title: title.trim(),
-          description: description.trim(),
-          budget: selectedPlan.local_price,
-          requested_start_at: startsAt.toISOString(),
-          requested_deadline: endsAt.toISOString(),
-        },
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    );
+  data: campaignData,
+  error: campaignError,
+} = await supabase.functions.invoke(
+  "create-marketing-request",
+  {
+    body: {
+      business_id: businessId,
+      service_id: selectedService.id,
+      plan_id: selectedPlan.id,
+      title: title.trim(),
+      description: description.trim(),
+      requested_start_at: startsAt.toISOString(),
+      requested_deadline: endsAt.toISOString(),
+    },
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  },
+);
 
     if (campaignError) {
   console.error("CREATE MARKETING REQUEST ERROR:", campaignError);
