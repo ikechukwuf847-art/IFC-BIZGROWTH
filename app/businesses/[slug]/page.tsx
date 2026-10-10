@@ -6,6 +6,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import Link from "next/link";
@@ -78,6 +79,42 @@ type ProfileSection =
 
 const SUPABASE_URL =
   "https://iluczxsqdpohzgbknldh.supabase.co";
+
+/*
+ * ANALYTICS HELPERS
+ *
+ * Uses the existing /api/analytics/business endpoint.
+ * Analytics failures must never interrupt profile functionality.
+ */
+
+type AnalyticsMetadata = Record<
+  string,
+  string | number | boolean | null
+>;
+
+function getAnalyticsId(storage: Storage, key: string) {
+  try {
+    let id = storage.getItem(key);
+
+    if (!id) {
+      id =
+        typeof crypto !== "undefined" &&
+        typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random()
+              .toString(36)
+              .slice(2)}`;
+
+      storage.setItem(key, id);
+    }
+
+    return id;
+  } catch {
+    return `${
+      Date.now()
+    }-${Math.random().toString(36).slice(2)}`;
+  }
+}
 
 function isValidUrl(value: string | null | undefined) {
   if (!value) return false;
@@ -223,9 +260,7 @@ function getDayName(value: unknown) {
   return typeof value === "string" ? value : "";
 }
 
-function formatBusinessTime(
-  value: string | null,
-) {
+function formatBusinessTime(value: string | null) {
   if (!value) return null;
 
   const parts = value.split(":");
@@ -248,9 +283,7 @@ function formatBusinessTime(
   )} ${suffix}`;
 }
 
-function isBusinessVerified(
-  status: string | null,
-) {
+function isBusinessVerified(status: string | null) {
   if (!status) return false;
 
   const normalized = status
@@ -295,9 +328,7 @@ function StarRating({
       {[1, 2, 3, 4, 5].map((star) => (
         <span
           key={star}
-          className={
-            star <= rounded ? "filled" : ""
-          }
+          className={star <= rounded ? "filled" : ""}
         >
           ★
         </span>
@@ -379,20 +410,17 @@ export default function BusinessProfilePage() {
   const [hours, setHours] =
     useState<GenericRow[]>([]);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
 
   const [notFound, setNotFound] =
     useState(false);
 
-  const [error, setError] =
-    useState("");
+  const [error, setError] = useState("");
 
   const [showShare, setShowShare] =
     useState(false);
 
-  const [copied, setCopied] =
-    useState(false);
+  const [copied, setCopied] = useState(false);
 
   const [reviewerName, setReviewerName] =
     useState("");
@@ -423,12 +451,73 @@ export default function BusinessProfilePage() {
 
   /*
    * This controls the actual navigation.
-   *
    * Clicking a tab changes the displayed section.
    * It does NOT scroll down the page.
    */
   const [activeSection, setActiveSection] =
     useState<ProfileSection>("about");
+
+  /*
+   * Track a profile view once for each business ID
+   * during this component's lifetime.
+   */
+  const trackedProfileViews = useRef<Set<string>>(
+    new Set(),
+  );
+
+  /*
+   * Send analytics to the existing API endpoint.
+   * Errors are deliberately swallowed so analytics
+   * cannot break the business profile.
+   */
+  const trackEvent = useCallback(
+    async (
+      businessId: string,
+      eventType: string,
+      metadata: AnalyticsMetadata = {},
+    ) => {
+      if (
+        typeof window === "undefined" ||
+        !businessId
+      ) {
+        return;
+      }
+
+      try {
+        const visitorId = getAnalyticsId(
+          window.localStorage,
+          "ifc_bizgrowth_visitor_id",
+        );
+
+        const sessionId = getAnalyticsId(
+          window.sessionStorage,
+          "ifc_bizgrowth_session_id",
+        );
+
+        await fetch("/api/analytics/business", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          keepalive: true,
+          body: JSON.stringify({
+            business_id: businessId,
+            event_type: eventType,
+            visitor_id: visitorId,
+            session_id: sessionId,
+            metadata: {
+              ...metadata,
+              page_path: window.location.pathname,
+              page_url: window.location.href,
+            },
+          }),
+        });
+      } catch {
+        // Analytics must never interrupt normal functionality.
+      }
+    },
+    [],
+  );
 
   const loadBusiness = useCallback(
     async () => {
@@ -475,12 +564,30 @@ export default function BusinessProfilePage() {
           return;
         }
 
-        setBusiness(
-          businessData as Business,
-        );
+        setBusiness(businessData as Business);
 
-        const businessId =
-          businessData.id;
+        const businessId = businessData.id;
+
+        /*
+         * ANALYTICS: Record a profile view.
+         * The ref prevents repeat tracking when loadBusiness
+         * runs again after a review is submitted.
+         */
+        if (!trackedProfileViews.current.has(businessId)) {
+          trackedProfileViews.current.add(businessId);
+
+          void trackEvent(
+            businessId,
+            "profile_view",
+            {
+              business_slug: businessData.slug,
+              business_name: businessData.name,
+              source: document.referrer
+                ? "external_or_previous_page"
+                : "direct",
+            },
+          );
+        }
 
         const [
           locationResult,
@@ -524,26 +631,17 @@ export default function BusinessProfilePage() {
           supabase
             .from("business_products")
             .select("*")
-            .eq(
-              "business_id",
-              businessId,
-            ),
+            .eq("business_id", businessId),
 
           supabase
             .from("business_services")
             .select("*")
-            .eq(
-              "business_id",
-              businessId,
-            ),
+            .eq("business_id", businessId),
 
           supabase
             .from("business_media")
             .select("*")
-            .eq(
-              "business_id",
-              businessId,
-            )
+            .eq("business_id", businessId)
             .eq("is_active", true)
             .order("sort_order", {
               ascending: true,
@@ -552,77 +650,52 @@ export default function BusinessProfilePage() {
           supabase
             .from("business_social_links")
             .select("*")
-            .eq(
-              "business_id",
-              businessId,
-            ),
+            .eq("business_id", businessId),
 
           supabase
             .from("business_promotions")
             .select("*")
-            .eq(
-              "business_id",
-              businessId,
-            ),
+            .eq("business_id", businessId),
 
           supabase
             .from("business_hours")
             .select("*")
-            .eq(
-              "business_id",
-              businessId,
-            )
+            .eq("business_id", businessId)
             .order("day_of_week", {
               ascending: true,
             }),
         ]);
 
         if (locationResult.error) {
-          console.error(
-            locationResult.error,
-          );
+          console.error(locationResult.error);
         }
 
         if (reviewsResult.error) {
-          console.error(
-            reviewsResult.error,
-          );
+          console.error(reviewsResult.error);
         }
 
         if (productsResult.error) {
-          console.error(
-            productsResult.error,
-          );
+          console.error(productsResult.error);
         }
 
         if (servicesResult.error) {
-          console.error(
-            servicesResult.error,
-          );
+          console.error(servicesResult.error);
         }
 
         if (mediaResult.error) {
-          console.error(
-            mediaResult.error,
-          );
+          console.error(mediaResult.error);
         }
 
         if (socialResult.error) {
-          console.error(
-            socialResult.error,
-          );
+          console.error(socialResult.error);
         }
 
         if (promotionsResult.error) {
-          console.error(
-            promotionsResult.error,
-          );
+          console.error(promotionsResult.error);
         }
 
         if (hoursResult.error) {
-          console.error(
-            hoursResult.error,
-          );
+          console.error(hoursResult.error);
         }
 
         setLocation(
@@ -631,26 +704,22 @@ export default function BusinessProfilePage() {
         );
 
         setReviews(
-          (reviewsResult.data as Review[]) ??
-            [],
+          (reviewsResult.data as Review[]) ?? [],
         );
 
-        const ratingData =
-          Array.isArray(ratingResult.data)
-            ? ratingResult.data[0]
-            : ratingResult.data;
+        const ratingData = Array.isArray(
+          ratingResult.data,
+        )
+          ? ratingResult.data[0]
+          : ratingResult.data;
 
         if (ratingData) {
           setRating({
             average_rating:
-              Number(
-                ratingData.average_rating,
-              ) || 0,
+              Number(ratingData.average_rating) || 0,
 
             review_count:
-              Number(
-                ratingData.review_count,
-              ) || 0,
+              Number(ratingData.review_count) || 0,
           });
         } else {
           setRating({
@@ -660,33 +729,27 @@ export default function BusinessProfilePage() {
         }
 
         setProducts(
-          (productsResult.data as GenericRow[]) ??
-            [],
+          (productsResult.data as GenericRow[]) ?? [],
         );
 
         setServices(
-          (servicesResult.data as GenericRow[]) ??
-            [],
+          (servicesResult.data as GenericRow[]) ?? [],
         );
 
         setMedia(
-          (mediaResult.data as GenericRow[]) ??
-            [],
+          (mediaResult.data as GenericRow[]) ?? [],
         );
 
         setSocialLinks(
-          (socialResult.data as GenericRow[]) ??
-            [],
+          (socialResult.data as GenericRow[]) ?? [],
         );
 
         setPromotions(
-          (promotionsResult.data as GenericRow[]) ??
-            [],
+          (promotionsResult.data as GenericRow[]) ?? [],
         );
 
         setHours(
-          (hoursResult.data as GenericRow[]) ??
-            [],
+          (hoursResult.data as GenericRow[]) ?? [],
         );
       } catch (err) {
         console.error(err);
@@ -698,19 +761,17 @@ export default function BusinessProfilePage() {
         setLoading(false);
       }
     },
-    [slug, supabase],
+    [slug, supabase, trackEvent],
   );
 
   useEffect(() => {
-    loadBusiness();
+    void loadBusiness();
   }, [loadBusiness]);
 
   useEffect(() => {
     return () => {
       if (reviewImagePreview) {
-        URL.revokeObjectURL(
-          reviewImagePreview,
-        );
+        URL.revokeObjectURL(reviewImagePreview);
       }
     };
   }, [reviewImagePreview]);
@@ -722,15 +783,29 @@ export default function BusinessProfilePage() {
     setActiveSection("about");
   }, [slug]);
 
+  /*
+   * ANALYTICS: Track visits to profile sections.
+   */
+  useEffect(() => {
+    if (!business?.id) return;
+
+    void trackEvent(
+      business.id,
+      "section_view",
+      {
+        section: activeSection,
+      },
+    );
+  }, [business?.id, activeSection, trackEvent]);
+
   const logoUrl = getLogoUrl(
     business?.logo_url ?? null,
   );
 
-  const whatsappUrl =
-    getWhatsAppUrl(
-      business?.phone ?? null,
-      business?.name ?? "",
-    );
+  const whatsappUrl = getWhatsAppUrl(
+    business?.phone ?? null,
+    business?.name ?? "",
+  );
 
   const address = useMemo(() => {
     if (!location) return "";
@@ -751,10 +826,8 @@ export default function BusinessProfilePage() {
     if (!location) return null;
 
     if (
-      typeof location.latitude ===
-        "number" &&
-      typeof location.longitude ===
-        "number"
+      typeof location.latitude === "number" &&
+      typeof location.longitude === "number"
     ) {
       return `https://www.google.com/maps/dir/?api=1&destination=${location.latitude},${location.longitude}`;
     }
@@ -773,51 +846,53 @@ export default function BusinessProfilePage() {
       ? window.location.href
       : "";
 
-  const encodedPageUrl =
-    encodeURIComponent(pageUrl);
+  const encodedPageUrl = encodeURIComponent(pageUrl);
 
-  const encodedShareText =
-    encodeURIComponent(
-      business
-        ? `Check out ${business.name} on IFC BIZGROWTH.`
-        : "Check out this business on IFC BIZGROWTH.",
-    );
+  const encodedShareText = encodeURIComponent(
+    business
+      ? `Check out ${business.name} on IFC BIZGROWTH.`
+      : "Check out this business on IFC BIZGROWTH.",
+  );
 
-  const shareBusiness =
-    async () => {
-      if (!business) return;
+  const shareBusiness = async () => {
+    if (!business) return;
 
-      const shareData = {
-        title: business.name,
-        text:
-          business.description ||
-          `Check out ${business.name} on IFC BIZGROWTH.`,
-        url: pageUrl,
-      };
+    void trackEvent(business.id, "share_click", {
+      method: "native_or_share_menu",
+    });
 
-      try {
-        if (
-          typeof navigator !==
-            "undefined" &&
-          navigator.share
-        ) {
-          await navigator.share(
-            shareData,
-          );
-          return;
-        }
-
-        setShowShare(true);
-      } catch {
-        // User cancelled sharing.
-      }
+    const shareData = {
+      title: business.name,
+      text:
+        business.description ||
+        `Check out ${business.name} on IFC BIZGROWTH.`,
+      url: pageUrl,
     };
+
+    try {
+      if (
+        typeof navigator !== "undefined" &&
+        navigator.share
+      ) {
+        await navigator.share(shareData);
+        return;
+      }
+
+      setShowShare(true);
+    } catch {
+      // User cancelled sharing.
+    }
+  };
 
   const copyLink = async () => {
     try {
-      await navigator.clipboard.writeText(
-        pageUrl,
-      );
+      await navigator.clipboard.writeText(pageUrl);
+
+      if (business) {
+        void trackEvent(business.id, "share_click", {
+          method: "copy_link",
+        });
+      }
 
       setCopied(true);
 
@@ -825,44 +900,44 @@ export default function BusinessProfilePage() {
         setCopied(false);
       }, 2000);
     } catch {
-      setError(
-        "Unable to copy the business link.",
+      setError("Unable to copy the business link.");
+    }
+  };
+
+  const shareToTikTok = async () => {
+    if (business) {
+      void trackEvent(business.id, "share_click", {
+        method: "tiktok",
+      });
+    }
+
+    try {
+      await navigator.clipboard.writeText(pageUrl);
+
+      setCopied(true);
+
+      window.setTimeout(() => {
+        setCopied(false);
+      }, 2000);
+
+      window.open(
+        "https://www.tiktok.com/",
+        "_blank",
+        "noopener,noreferrer",
+      );
+    } catch {
+      window.open(
+        "https://www.tiktok.com/",
+        "_blank",
+        "noopener,noreferrer",
       );
     }
   };
 
-  const shareToTikTok =
-    async () => {
-      try {
-        await navigator.clipboard.writeText(
-          pageUrl,
-        );
-
-        setCopied(true);
-
-        window.setTimeout(() => {
-          setCopied(false);
-        }, 2000);
-
-        window.open(
-          "https://www.tiktok.com/",
-          "_blank",
-          "noopener,noreferrer",
-        );
-      } catch {
-        window.open(
-          "https://www.tiktok.com/",
-          "_blank",
-          "noopener,noreferrer",
-        );
-      }
-    };
-
   const handleReviewImage = (
     event: ChangeEvent<HTMLInputElement>,
   ) => {
-    const file =
-      event.target.files?.[0];
+    const file = event.target.files?.[0];
 
     if (!file) return;
 
@@ -881,10 +956,7 @@ export default function BusinessProfilePage() {
       return;
     }
 
-    if (
-      file.size >
-      2 * 1024 * 1024
-    ) {
+    if (file.size > 2 * 1024 * 1024) {
       setReviewMessage(
         "Your picture must be 2 MB or smaller.",
       );
@@ -894,20 +966,15 @@ export default function BusinessProfilePage() {
     }
 
     if (reviewImagePreview) {
-      URL.revokeObjectURL(
-        reviewImagePreview,
-      );
+      URL.revokeObjectURL(reviewImagePreview);
     }
 
     setReviewImage(file);
     setReviewMessage("");
 
-    const previewUrl =
-      URL.createObjectURL(file);
+    const previewUrl = URL.createObjectURL(file);
 
-    setReviewImagePreview(
-      previewUrl,
-    );
+    setReviewImagePreview(previewUrl);
   };
 
   const submitReview = async (
@@ -919,56 +986,41 @@ export default function BusinessProfilePage() {
 
     setReviewMessage("");
 
-    if (
-      reviewerName.trim().length < 2
-    ) {
-      setReviewMessage(
-        "Please enter your name.",
-      );
+    if (reviewerName.trim().length < 2) {
+      setReviewMessage("Please enter your name.");
       return;
     }
 
     if (!reviewRating) {
-      setReviewMessage(
-        "Please select a rating.",
-      );
+      setReviewMessage("Please select a rating.");
       return;
     }
 
     setSubmittingReview(true);
 
     try {
-      let avatarPath: string | null =
-        null;
+      let avatarPath: string | null = null;
 
       if (reviewImage) {
         const extension =
           reviewImage.name
             .split(".")
             .pop()
-            ?.toLowerCase() ||
-          "jpg";
+            ?.toLowerCase() || "jpg";
 
-        const randomPart =
-          crypto.randomUUID();
+        const randomPart = crypto.randomUUID();
 
         const filePath =
           `reviews/${business.id}/${randomPart}.${extension}`;
 
-        const {
-          error: uploadError,
-        } = await supabase.storage
-          .from("customer-logo")
-          .upload(
-            filePath,
-            reviewImage,
-            {
+        const { error: uploadError } =
+          await supabase.storage
+            .from("customer-logo")
+            .upload(filePath, reviewImage, {
               cacheControl: "3600",
               upsert: false,
-              contentType:
-                reviewImage.type,
-            },
-          );
+              contentType: reviewImage.type,
+            });
 
         if (uploadError) {
           throw uploadError;
@@ -977,32 +1029,35 @@ export default function BusinessProfilePage() {
         avatarPath = filePath;
       }
 
-      const {
-        error: reviewError,
-      } = await supabase.rpc(
-        "submit_public_business_review",
-        {
-          p_business_id:
-            business.id,
-
-          p_reviewer_name:
-            reviewerName.trim(),
-
-          p_reviewer_avatar_url:
-            avatarPath,
-
-          p_rating:
-            reviewRating,
-
-          p_review_text:
-            reviewText.trim() ||
-            null,
-        },
-      );
+      const { error: reviewError } =
+        await supabase.rpc(
+          "submit_public_business_review",
+          {
+            p_business_id: business.id,
+            p_reviewer_name: reviewerName.trim(),
+            p_reviewer_avatar_url: avatarPath,
+            p_rating: reviewRating,
+            p_review_text: reviewText.trim() || null,
+          },
+        );
 
       if (reviewError) {
         throw reviewError;
       }
+
+      /*
+       * ANALYTICS: Track only successful submissions.
+       * Do not send the reviewer's name or review text.
+       */
+      void trackEvent(
+        business.id,
+        "review_submitted",
+        {
+          rating: reviewRating,
+          included_text: reviewText.trim().length > 0,
+          included_image: Boolean(reviewImage),
+        },
+      );
 
       setReviewerName("");
       setReviewText("");
@@ -1010,9 +1065,7 @@ export default function BusinessProfilePage() {
       setReviewImage(null);
 
       if (reviewImagePreview) {
-        URL.revokeObjectURL(
-          reviewImagePreview,
-        );
+        URL.revokeObjectURL(reviewImagePreview);
       }
 
       setReviewImagePreview(null);
@@ -1085,15 +1138,15 @@ export default function BusinessProfilePage() {
       }
 
       if (
-  address ||
-  business?.phone ||
-  business?.email ||
-  business?.website_url
-) {
-  items.push({
-    id: "contact",
-    label: "Contact",
-  });
+        address ||
+        business?.phone ||
+        business?.email ||
+        business?.website_url
+      ) {
+        items.push({
+          id: "contact",
+          label: "Contact",
+        });
       }
 
       if (hours.length > 0) {
@@ -1125,8 +1178,8 @@ export default function BusinessProfilePage() {
       media.length,
       address,
       business?.phone,
-business?.email,
-business?.website_url,
+      business?.email,
+      business?.website_url,
       hours.length,
       socialLinks.length,
       rating.review_count,
@@ -1138,10 +1191,7 @@ business?.website_url,
       <main className="bp-page">
         <div className="bp-loading">
           <div className="bp-spinner" />
-
-          <p>
-            Loading business...
-          </p>
+          <p>Loading business...</p>
         </div>
       </main>
     );
@@ -1151,17 +1201,13 @@ business?.website_url,
     return (
       <main className="bp-page">
         <div className="bp-empty">
-          <div className="bp-empty-icon">
-            ?
-          </div>
+          <div className="bp-empty-icon">?</div>
 
-          <h1>
-            Business not found
-          </h1>
+          <h1>Business not found</h1>
 
           <p>
-            This business may no longer
-            be publicly available.
+            This business may no longer be publicly
+            available.
           </p>
 
           <Link
@@ -1197,11 +1243,14 @@ business?.website_url,
           <button
             type="button"
             className="bp-share-top"
-            onClick={() =>
-              setShowShare(
-                (value) => !value,
-              )
-            }
+            onClick={() => {
+              void trackEvent(
+                business.id,
+                "share_menu_open",
+              );
+
+              setShowShare((value) => !value);
+            }}
             aria-label="Share business"
           >
             ↗
@@ -1211,15 +1260,11 @@ business?.website_url,
         {showShare && (
           <div className="bp-share-menu">
             <div className="bp-share-title">
-              <strong>
-                Share business
-              </strong>
+              <strong>Share business</strong>
 
               <button
                 type="button"
-                onClick={() =>
-                  setShowShare(false)
-                }
+                onClick={() => setShowShare(false)}
                 aria-label="Close share menu"
               >
                 ×
@@ -1235,11 +1280,16 @@ business?.website_url,
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bp-share-option whatsapp"
+                onClick={() =>
+                  void trackEvent(
+                    business.id,
+                    "share_click",
+                    { method: "whatsapp" },
+                  )
+                }
               >
                 <span>◉</span>
-                <small>
-                  WhatsApp
-                </small>
+                <small>WhatsApp</small>
               </a>
 
               <a
@@ -1247,11 +1297,16 @@ business?.website_url,
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bp-share-option facebook"
+                onClick={() =>
+                  void trackEvent(
+                    business.id,
+                    "share_click",
+                    { method: "facebook" },
+                  )
+                }
               >
                 <span>f</span>
-                <small>
-                  Facebook
-                </small>
+                <small>Facebook</small>
               </a>
 
               <button
@@ -1260,9 +1315,7 @@ business?.website_url,
                 className="bp-share-option tiktok"
               >
                 <span>♪</span>
-                <small>
-                  TikTok
-                </small>
+                <small>TikTok</small>
               </button>
 
               <a
@@ -1270,6 +1323,13 @@ business?.website_url,
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bp-share-option x"
+                onClick={() =>
+                  void trackEvent(
+                    business.id,
+                    "share_click",
+                    { method: "x" },
+                  )
+                }
               >
                 <span>𝕏</span>
                 <small>X</small>
@@ -1280,21 +1340,31 @@ business?.website_url,
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bp-share-option telegram"
+                onClick={() =>
+                  void trackEvent(
+                    business.id,
+                    "share_click",
+                    { method: "telegram" },
+                  )
+                }
               >
                 <span>➤</span>
-                <small>
-                  Telegram
-                </small>
+                <small>Telegram</small>
               </a>
 
               <a
                 href={`mailto:?subject=${encodedShareText}&body=${encodedShareText}%0A${encodedPageUrl}`}
                 className="bp-share-option email"
+                onClick={() =>
+                  void trackEvent(
+                    business.id,
+                    "share_click",
+                    { method: "email" },
+                  )
+                }
               >
                 <span>@</span>
-                <small>
-                  Email
-                </small>
+                <small>Email</small>
               </a>
 
               <button
@@ -1304,9 +1374,7 @@ business?.website_url,
               >
                 <span>⌘</span>
                 <small>
-                  {copied
-                    ? "Copied"
-                    : "Copy link"}
+                  {copied ? "Copied" : "Copy link"}
                 </small>
               </button>
             </div>
@@ -1326,9 +1394,7 @@ business?.website_url,
 
             <div className="bp-business-heading-content">
               <div className="bp-name-row">
-                <h1>
-                  {business.name}
-                </h1>
+                <h1>{business.name}</h1>
 
                 {isBusinessVerified(
                   business.verification_status,
@@ -1362,10 +1428,7 @@ business?.website_url,
 
               <div className="bp-rating-row">
                 <StarRating
-                  rating={
-                    rating.average_rating ??
-                    0
-                  }
+                  rating={rating.average_rating ?? 0}
                   size="medium"
                 />
 
@@ -1378,10 +1441,7 @@ business?.website_url,
                 </strong>
 
                 <span>
-                  (
-                  {rating.review_count ??
-                    0}{" "}
-                  reviews)
+                  ({rating.review_count ?? 0} reviews)
                 </span>
               </div>
 
@@ -1408,6 +1468,13 @@ business?.website_url,
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bp-action bp-whatsapp"
+                onClick={() =>
+                  void trackEvent(
+                    business.id,
+                    "whatsapp_click",
+                    { placement: "hero" },
+                  )
+                }
               >
                 <span>◉</span>
                 WhatsApp
@@ -1418,6 +1485,13 @@ business?.website_url,
               <a
                 href={`tel:${business.phone}`}
                 className="bp-action"
+                onClick={() =>
+                  void trackEvent(
+                    business.id,
+                    "phone_click",
+                    { placement: "hero" },
+                  )
+                }
               >
                 <span>☎</span>
                 Call
@@ -1427,15 +1501,20 @@ business?.website_url,
             {business.website_url && (
               <a
                 href={
-                  isValidUrl(
-                    business.website_url,
-                  )
+                  isValidUrl(business.website_url)
                     ? business.website_url
                     : `https://${business.website_url}`
                 }
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bp-action"
+                onClick={() =>
+                  void trackEvent(
+                    business.id,
+                    "website_click",
+                    { placement: "hero" },
+                  )
+                }
               >
                 <span>↗</span>
                 Website
@@ -1455,1219 +1534,917 @@ business?.website_url,
       </section>
 
       <div className="bp-container">
-        {/* =========================
-            SECTION NAVIGATION
-        ========================== */}
+        {/* SECTION NAVIGATION */}
         <nav
           className="bp-profile-nav"
           aria-label="Business sections"
         >
-          {navigationItems.map(
-            (item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={
-                  activeSection ===
-                  item.id
-                    ? "active"
-                    : ""
-                }
-                onClick={() =>
-                  setActiveSection(
-                    item.id,
-                  )
-                }
-                aria-current={
-                  activeSection ===
-                  item.id
-                    ? "page"
-                    : undefined
-                }
-              >
-                <span>
-                  {item.label}
-                </span>
+          {navigationItems.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={
+                activeSection === item.id
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                setActiveSection(item.id)
+              }
+              aria-current={
+                activeSection === item.id
+                  ? "page"
+                  : undefined
+              }
+            >
+              <span>{item.label}</span>
 
-                {typeof item.count ===
-                  "number" &&
-                  item.count > 0 && (
-                    <small>
-                      {item.count}
-                    </small>
-                  )}
-              </button>
-            ),
-          )}
+              {typeof item.count === "number" &&
+                item.count > 0 && (
+                  <small>{item.count}</small>
+                )}
+            </button>
+          ))}
         </nav>
 
-        {/* =========================
-            ACTIVE SECTION
-        ========================== */}
+        {/* ABOUT */}
+        {activeSection === "about" && (
+          <section className="bp-section bp-active-content">
+            <div className="bp-section-heading">
+              <h2>About</h2>
+            </div>
 
-        {activeSection ===
-          "about" && (
-            <section className="bp-section bp-active-content">
-              <div className="bp-section-heading">
-                <h2>About</h2>
-              </div>
+            <div className="bp-about-content">
+              <p>
+                {business.description ||
+                  `Learn more about ${business.name}.`}
+              </p>
+            </div>
+          </section>
+        )}
 
-              <div className="bp-about-content">
-                <p>
-                  {business.description ||
-                    `Learn more about ${business.name}.`}
+        {/* PRODUCTS */}
+        {activeSection === "products" && (
+          <section className="bp-section bp-active-content">
+            <div className="bp-section-heading">
+              <div>
+                <h2>Products</h2>
+
+                <p className="bp-section-subtitle">
+                  Products offered by {business.name}
                 </p>
               </div>
-            </section>
-          )}
+            </div>
 
-        {/* =========================
-            PRODUCTS
-        ========================== */}
+            {products.length > 0 ? (
+              <div className="bp-product-grid">
+                {products.map((product, index) => {
+                  const name =
+                    getRowText(product, [
+                      "product_name",
+                      "name",
+                      "title",
+                    ]) || "Product";
 
-        {activeSection ===
-          "products" && (
-            <section className="bp-section bp-active-content">
-              <div className="bp-section-heading">
-                <div>
-                  <h2>Products</h2>
+                  const description =
+                    getRowText(product, [
+                      "description",
+                      "product_description",
+                    ]);
 
-                  <p className="bp-section-subtitle">
-                    Products offered by{" "}
-                    {business.name}
-                  </p>
-                </div>
-              </div>
+                  const imagePath =
+                    getMediaPath(product);
 
-              {products.length > 0 ? (
-                <div className="bp-product-grid">
-                  {products.map(
-                    (
-                      product,
-                      index,
-                    ) => {
-                      const name =
-                        getRowText(
-                          product,
-                          [
-                            "product_name",
-                            "name",
-                            "title",
-                          ],
-                        ) ||
-                        "Product";
+                  /*
+                   * Products use product-media.
+                   */
+                  const imageUrl =
+                    getProductMediaUrl(imagePath);
 
-                      const description =
-                        getRowText(
-                          product,
-                          [
-                            "description",
-                            "product_description",
-                          ],
-                        );
+                  const price = getRowText(product, [
+                    "price",
+                    "display_price",
+                    "price_text",
+                  ]);
 
-                      const imagePath =
-                        getMediaPath(
-                          product,
-                        );
-
-                      /*
-                       * IMPORTANT:
-                       * Products use product-media.
-                       */
-                      const imageUrl =
-                        getProductMediaUrl(
-                          imagePath,
-                        );
-
-                      const price =
-                        getRowText(
-                          product,
-                          [
-                            "price",
-                            "display_price",
-                            "price_text",
-                          ],
-                        );
-
-                      return (
-                        <article
-                          className="bp-product-card"
-                          key={
-                            getRowText(
-                              product,
-                              ["id"],
-                            ) ||
-                            `${name}-${index}`
-                          }
-                        >
-                          {imageUrl ? (
-                            <div className="bp-product-image-wrap">
-                              <img
-                                src={
-                                  imageUrl
-                                }
-                                alt={
-                                  name
-                                }
-                                className="bp-product-image"
-                                loading="lazy"
-                              />
-                            </div>
-                          ) : (
-                            <div className="bp-product-image-placeholder">
-                              <span>
-                                {getInitials(
-                                  name,
-                                )}
-                              </span>
-                            </div>
-                          )}
-
-                          <div className="bp-product-content">
-                            <h3>
-                              {name}
-                            </h3>
-
-                            {description && (
-                              <p>
-                                {
-                                  description
-                                }
-                              </p>
-                            )}
-
-                            {price && (
-                              <strong className="bp-product-price">
-                                {
-                                  price
-                                }
-                              </strong>
-                            )}
-                          </div>
-                        </article>
-                      );
-                    },
-                  )}
-                </div>
-              ) : (
-                <div className="bp-empty-section">
-                  <h3>
-                    No products available
-                  </h3>
-
-                  <p>
-                    This business has not
-                    added any products yet.
-                  </p>
-                </div>
-              )}
-            </section>
-          )}
-
-        {/* =========================
-            SERVICES
-        ========================== */}
-
-        {activeSection ===
-          "services" && (
-            <section className="bp-section bp-active-content">
-              <div className="bp-section-heading">
-                <div>
-                  <h2>Services</h2>
-
-                  <p className="bp-section-subtitle">
-                    Services provided by{" "}
-                    {business.name}
-                  </p>
-                </div>
-              </div>
-
-              {services.length > 0 ? (
-                <div className="bp-service-grid">
-                  {services.map(
-                    (
-                      service,
-                      index,
-                    ) => {
-                      const name =
-                        getRowText(
-                          service,
-                          [
-                            "service_name",
-                            "name",
-                            "title",
-                          ],
-                        ) ||
-                        "Service";
-
-                      const description =
-                        getRowText(
-                          service,
-                          [
-                            "description",
-                            "service_description",
-                          ],
-                        );
-
-                      /*
-                       * Services use business-media.
-                       */
-                      const imagePath =
-                        getMediaPath(
-                          service,
-                        );
-
-                      const imageUrl =
-                        getBusinessMediaUrl(
-                          imagePath,
-                        );
-
-                      return (
-                        <article
-                          className="bp-service-card"
-                          key={
-                            getRowText(
-                              service,
-                              ["id"],
-                            ) ||
-                            `${name}-${index}`
-                          }
-                        >
-                          {imageUrl ? (
-                            <div className="bp-service-image-wrap">
-                              <img
-                                src={
-                                  imageUrl
-                                }
-                                alt={
-                                  name
-                                }
-                                className="bp-service-image"
-                                loading="lazy"
-                              />
-                            </div>
-                          ) : (
-                            <div className="bp-service-image-placeholder">
-                              <span>
-                                {getInitials(
-                                  name,
-                                )}
-                              </span>
-                            </div>
-                          )}
-
-                          <div className="bp-service-content">
-                            <h3>
-                              {name}
-                            </h3>
-
-                            {description && (
-                              <p>
-                                {
-                                  description
-                                }
-                              </p>
-                            )}
-                          </div>
-                        </article>
-                      );
-                    },
-                  )}
-                </div>
-              ) : (
-                <div className="bp-empty-section">
-                  <h3>
-                    No services available
-                  </h3>
-
-                  <p>
-                    This business has not
-                    added any services yet.
-                  </p>
-                </div>
-              )}
-            </section>
-          )}
-
-        {/* =========================
-            PROMOTIONS
-        ========================== */}
-
-        {activeSection ===
-          "promotions" && (
-            <section className="bp-section bp-active-content">
-              <div className="bp-section-heading">
-                <div>
-                  <h2>Promotions</h2>
-
-                  <p className="bp-section-subtitle">
-                    Current offers from{" "}
-                    {business.name}
-                  </p>
-                </div>
-              </div>
-
-              {promotions.length > 0 ? (
-                <div className="bp-offers">
-                  {promotions.map(
-                    (
-                      promotion,
-                      index,
-                    ) => {
-                      const title =
-                        getRowText(
-                          promotion,
-                          [
-                            "title",
-                            "name",
-                            "promotion_name",
-                          ],
-                        ) ||
-                        "Special offer";
-
-                      const description =
-                        getRowText(
-                          promotion,
-                          [
-                            "description",
-                            "details",
-                            "offer_description",
-                          ],
-                        );
-
-                      const discount =
-                        getRowText(
-                          promotion,
-                          [
-                            "discount",
-                            "discount_text",
-                            "offer",
-                          ],
-                        );
-
-                      const imagePath =
-                        getMediaPath(
-                          promotion,
-                        );
-
-                      /*
-                       * Promotions use business-media.
-                       */
-                      const imageUrl =
-                        getBusinessMediaUrl(
-                          imagePath,
-                        );
-
-                      return (
-                        <article
-                          className="bp-offer"
-                          key={
-                            getRowText(
-                              promotion,
-                              ["id"],
-                            ) ||
-                            `${title}-${index}`
-                          }
-                        >
-                          {imageUrl ? (
-                            <div className="bp-offer-image-wrap">
-                              <img
-                                src={
-                                  imageUrl
-                                }
-                                alt={
-                                  title
-                                }
-                                className="bp-offer-image"
-                                loading="lazy"
-                              />
-                            </div>
-                          ) : (
-                            <div className="bp-offer-icon">
-                              %
-                            </div>
-                          )}
-
-                          <div className="bp-offer-content">
-                            <h3>
-                              {title}
-                            </h3>
-
-                            {discount && (
-                              <strong>
-                                {
-                                  discount
-                                }
-                              </strong>
-                            )}
-
-                            {description && (
-                              <p>
-                                {
-                                  description
-                                }
-                              </p>
-                            )}
-                          </div>
-                        </article>
-                      );
-                    },
-                  )}
-                </div>
-              ) : (
-                <div className="bp-empty-section">
-                  <h3>
-                    No promotions available
-                  </h3>
-
-                  <p>
-                    This business has no
-                    active promotions.
-                  </p>
-                </div>
-              )}
-            </section>
-          )}
-
-        {/* =========================
-            PHOTOS
-        ========================== */}
-
-        {activeSection ===
-          "photos" && (
-            <section className="bp-section bp-active-content">
-              <div className="bp-section-heading">
-                <div>
-                  <h2>Photos</h2>
-
-                  <p className="bp-section-subtitle">
-                    Photos from{" "}
-                    {business.name}
-                  </p>
-                </div>
-              </div>
-
-              {media.length > 0 ? (
-                <div className="bp-gallery">
-                  {media.map(
-                    (
-                      item,
-                      index,
-                    ) => {
-                      const path =
-                        getMediaPath(
-                          item,
-                        );
-
-                      if (!path)
-                        return null;
-
-                      const imageUrl =
-                        getBusinessMediaUrl(
-                          path,
-                        );
-
-                      if (!imageUrl)
-                        return null;
-
-                      return (
-                        <a
-                          href={
-                            imageUrl
-                          }
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          key={
-                            getRowText(
-                              item,
-                              ["id"],
-                            ) ||
-                            `${path}-${index}`
-                          }
-                          className="bp-gallery-item"
-                        >
+                  return (
+                    <article
+                      className="bp-product-card"
+                      key={
+                        getRowText(product, ["id"]) ||
+                        `${name}-${index}`
+                      }
+                    >
+                      {imageUrl ? (
+                        <div className="bp-product-image-wrap">
                           <img
-                            src={
-                              imageUrl
-                            }
-                            alt={
-                              getRowText(
-                                item,
-                                [
-                                  "title",
-                                  "description",
-                                ],
-                              ) ||
-                              `${business.name} photo`
-                            }
+                            src={imageUrl}
+                            alt={name}
+                            className="bp-product-image"
                             loading="lazy"
                           />
-                        </a>
-                      );
-                    },
-                  )}
-                </div>
-              ) : (
-                <div className="bp-empty-section">
-                  <h3>
-                    No photos available
-                  </h3>
-
-                  <p>
-                    This business has not
-                    added any photos yet.
-                  </p>
-                </div>
-              )}
-            </section>
-          )}
-
-        {/* =========================
-            CONTACT
-        ========================== */}
-
-        {activeSection ===
-          "contact" && (
-            <section className="bp-section bp-active-content">
-              <div className="bp-section-heading">
-                <div>
-                  <h2>Contact</h2>
-
-                  <p className="bp-section-subtitle">
-                    Contact{" "}
-                    {business.name}
-                  </p>
-                </div>
-              </div>
-
-              <div className="bp-contact-card">
-                {address && (
-                  <div className="bp-contact-item">
-                    <span className="bp-contact-icon">
-                      ⌖
-                    </span>
-
-                    <div>
-                      <strong>
-                        Address
-                      </strong>
-
-                      <p>
-                        {address}
-                      </p>
-
-                      {mapUrl && (
-                        <a
-                          href={mapUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="bp-directions"
-                        >
-                          <span className="bp-paper-plane">
-                            ➤
-                          </span>
-
-                          <span>
-                            Get directions
-                          </span>
-                        </a>
+                        </div>
+                      ) : (
+                        <div className="bp-product-image-placeholder">
+                          <span>{getInitials(name)}</span>
+                        </div>
                       )}
-                    </div>
-                  </div>
-                )}
 
-                {business.phone && (
-                  <div className="bp-contact-item">
-                    <span className="bp-contact-icon">
-                      ☎
-                    </span>
+                      <div className="bp-product-content">
+                        <h3>{name}</h3>
 
-                    <div>
-                      <strong>
-                        Phone
-                      </strong>
+                        {description && (
+                          <p>{description}</p>
+                        )}
 
-                      <a
-                        href={`tel:${business.phone}`}
-                      >
-                        {
-                          business.phone
-                        }
-                      </a>
-                    </div>
-                  </div>
-                )}
-
-                {business.email && (
-                  <div className="bp-contact-item">
-                    <span className="bp-contact-icon">
-                      @
-                    </span>
-
-                    <div>
-                      <strong>
-                        Email
-                      </strong>
-
-                      <a
-                        href={`mailto:${business.email}`}
-                      >
-                        {
-                          business.email
-                        }
-                      </a>
-                    </div>
-                  </div>
-                )}
-
-                {business.website_url && (
-                  <div className="bp-contact-item">
-                    <span className="bp-contact-icon">
-                      ↗
-                    </span>
-
-                    <div>
-                      <strong>
-                        Website
-                      </strong>
-
-                      <a
-                        href={
-                          isValidUrl(
-                            business.website_url,
-                          )
-                            ? business.website_url
-                            : `https://${business.website_url}`
-                        }
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Visit website
-                      </a>
-                    </div>
-                  </div>
-                )}
-
-                {whatsappUrl && (
-                  <a
-                    href={whatsappUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bp-whatsapp-large"
-                  >
-                    <span>◉</span>
-                    Contact on WhatsApp
-                  </a>
-                )}
+                        {price && (
+                          <strong className="bp-product-price">
+                            {price}
+                          </strong>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
-            </section>
-          )}
+            ) : (
+              <div className="bp-empty-section">
+                <h3>No products available</h3>
 
-        {/* =========================
-            BUSINESS HOURS
-        ========================== */}
-
-        {activeSection ===
-          "hours" && (
-            <section className="bp-section bp-active-content">
-              <div className="bp-section-heading">
-                <div>
-                  <h2>
-                    Business Hours
-                  </h2>
-
-                  <p className="bp-section-subtitle">
-                    Opening hours for{" "}
-                    {business.name}
-                  </p>
-                </div>
+                <p>
+                  This business has not added any products
+                  yet.
+                </p>
               </div>
+            )}
+          </section>
+        )}
 
-              <div className="bp-hours">
-                {hours.map(
-                  (
-                    item,
-                    index,
-                  ) => {
-                    const rawDay =
-                      item.day_of_week;
+        {/* SERVICES */}
+        {activeSection === "services" && (
+          <section className="bp-section bp-active-content">
+            <div className="bp-section-heading">
+              <div>
+                <h2>Services</h2>
 
-                    const day =
-                      getDayName(
-                        rawDay,
-                      );
+                <p className="bp-section-subtitle">
+                  Services provided by {business.name}
+                </p>
+              </div>
+            </div>
 
-                    const open =
-                      getRowText(
-                        item,
-                        [
-                          "open_time",
-                          "opening_time",
-                          "opens_at",
-                        ],
-                      );
+            {services.length > 0 ? (
+              <div className="bp-service-grid">
+                {services.map((service, index) => {
+                  const name =
+                    getRowText(service, [
+                      "service_name",
+                      "name",
+                      "title",
+                    ]) || "Service";
 
-                    const close =
-                      getRowText(
-                        item,
-                        [
-                          "close_time",
-                          "closing_time",
-                          "closes_at",
-                        ],
-                      );
+                  const description =
+                    getRowText(service, [
+                      "description",
+                      "service_description",
+                    ]);
 
-                    const closedValue =
-                      getRowText(
-                        item,
-                        [
-                          "is_closed",
-                          "closed",
-                        ],
-                      );
+                  /*
+                   * Services use business-media.
+                   */
+                  const imagePath =
+                    getMediaPath(service);
 
-                    const closed =
-                      closedValue ===
-                        "true" ||
-                      closedValue === "1";
+                  const imageUrl =
+                    getBusinessMediaUrl(imagePath);
 
-                    const twentyFourHours =
-                      (open ===
-                        "00:00:00" ||
-                        open ===
-                          "00:00") &&
-                      (close ===
-                        "23:59:00" ||
-                        close ===
-                          "23:59");
+                  return (
+                    <article
+                      className="bp-service-card"
+                      key={
+                        getRowText(service, ["id"]) ||
+                        `${name}-${index}`
+                      }
+                    >
+                      {imageUrl ? (
+                        <div className="bp-service-image-wrap">
+                          <img
+                            src={imageUrl}
+                            alt={name}
+                            className="bp-service-image"
+                            loading="lazy"
+                          />
+                        </div>
+                      ) : (
+                        <div className="bp-service-image-placeholder">
+                          <span>{getInitials(name)}</span>
+                        </div>
+                      )}
+
+                      <div className="bp-service-content">
+                        <h3>{name}</h3>
+
+                        {description && (
+                          <p>{description}</p>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="bp-empty-section">
+                <h3>No services available</h3>
+
+                <p>
+                  This business has not added any services
+                  yet.
+                </p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* PROMOTIONS */}
+        {activeSection === "promotions" && (
+          <section className="bp-section bp-active-content">
+            <div className="bp-section-heading">
+              <div>
+                <h2>Promotions</h2>
+
+                <p className="bp-section-subtitle">
+                  Current offers from {business.name}
+                </p>
+              </div>
+            </div>
+
+            {promotions.length > 0 ? (
+              <div className="bp-offers">
+                {promotions.map(
+                  (promotion, index) => {
+                    const title =
+                      getRowText(promotion, [
+                        "title",
+                        "name",
+                        "promotion_name",
+                      ]) || "Special offer";
+
+                    const description =
+                      getRowText(promotion, [
+                        "description",
+                        "details",
+                        "offer_description",
+                      ]);
+
+                    const discount =
+                      getRowText(promotion, [
+                        "discount",
+                        "discount_text",
+                        "offer",
+                      ]);
+
+                    const imagePath =
+                      getMediaPath(promotion);
+
+                    /*
+                     * Promotions use business-media.
+                     */
+                    const imageUrl =
+                      getBusinessMediaUrl(imagePath);
 
                     return (
-                      <div
-                        className="bp-hours-row"
+                      <article
+                        className="bp-offer"
                         key={
-                          getRowText(
-                            item,
-                            ["id"],
-                          ) ||
-                          `${day}-${index}`
+                          getRowText(promotion, ["id"]) ||
+                          `${title}-${index}`
                         }
                       >
-                        <span>
-                          {day}
+                        {imageUrl ? (
+                          <div className="bp-offer-image-wrap">
+                            <img
+                              src={imageUrl}
+                              alt={title}
+                              className="bp-offer-image"
+                              loading="lazy"
+                            />
+                          </div>
+                        ) : (
+                          <div className="bp-offer-icon">
+                            %
+                          </div>
+                        )}
+
+                        <div className="bp-offer-content">
+                          <h3>{title}</h3>
+
+                          {discount && (
+                            <strong>{discount}</strong>
+                          )}
+
+                          {description && (
+                            <p>{description}</p>
+                          )}
+                        </div>
+                      </article>
+                    );
+                  },
+                )}
+              </div>
+            ) : (
+              <div className="bp-empty-section">
+                <h3>No promotions available</h3>
+
+                <p>
+                  This business has no active promotions.
+                </p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* PHOTOS */}
+        {activeSection === "photos" && (
+          <section className="bp-section bp-active-content">
+            <div className="bp-section-heading">
+              <div>
+                <h2>Photos</h2>
+
+                <p className="bp-section-subtitle">
+                  Photos from {business.name}
+                </p>
+              </div>
+            </div>
+
+            {media.length > 0 ? (
+              <div className="bp-gallery">
+                {media.map((item, index) => {
+                  const path = getMediaPath(item);
+
+                  if (!path) return null;
+
+                  const imageUrl =
+                    getBusinessMediaUrl(path);
+
+                  if (!imageUrl) return null;
+
+                  return (
+                    <a
+                      href={imageUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      key={
+                        getRowText(item, ["id"]) ||
+                        `${path}-${index}`
+                      }
+                      className="bp-gallery-item"
+                      onClick={() =>
+                        void trackEvent(
+                          business.id,
+                          "photo_click",
+                        )
+                      }
+                    >
+                      <img
+                        src={imageUrl}
+                        alt={
+                          getRowText(item, [
+                            "title",
+                            "description",
+                          ]) || `${business.name} photo`
+                        }
+                        loading="lazy"
+                      />
+                    </a>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="bp-empty-section">
+                <h3>No photos available</h3>
+
+                <p>
+                  This business has not added any photos
+                  yet.
+                </p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* CONTACT */}
+        {activeSection === "contact" && (
+          <section className="bp-section bp-active-content">
+            <div className="bp-section-heading">
+              <div>
+                <h2>Contact</h2>
+
+                <p className="bp-section-subtitle">
+                  Contact {business.name}
+                </p>
+              </div>
+            </div>
+
+            <div className="bp-contact-card">
+              {address && (
+                <div className="bp-contact-item">
+                  <span className="bp-contact-icon">
+                    ⌖
+                  </span>
+
+                  <div>
+                    <strong>Address</strong>
+
+                    <p>{address}</p>
+
+                    {mapUrl && (
+                      <a
+                        href={mapUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bp-directions"
+                        onClick={() =>
+                          void trackEvent(
+                            business.id,
+                            "directions_click",
+                          )
+                        }
+                      >
+                        <span className="bp-paper-plane">
+                          ➤
                         </span>
 
-                        <strong
-                          className={
-                            closed
-                              ? "closed"
-                              : ""
-                          }
-                        >
-                          {closed
-                            ? "Closed"
-                            : twentyFourHours
-                              ? "Open 24 hours"
-                              : open &&
-                                  close
-                                ? `${formatBusinessTime(
-                                    open,
-                                  )} – ${formatBusinessTime(
-                                    close,
-                                  )}`
-                                : "Hours unavailable"}
-                        </strong>
-                      </div>
-                    );
-                  },
-                )}
-              </div>
-            </section>
-          )}
-
-        {/* =========================
-            SOCIAL
-        ========================== */}
-
-        {activeSection ===
-          "social" && (
-            <section className="bp-section bp-active-content">
-              <div className="bp-section-heading">
-                <div>
-                  <h2>
-                    Follow{" "}
-                    {business.name}
-                  </h2>
-
-                  <p className="bp-section-subtitle">
-                    Connect with this
-                    business online
-                  </p>
-                </div>
-              </div>
-
-              <div className="bp-socials">
-                {socialLinks.map(
-                  (
-                    social,
-                    index,
-                  ) => {
-                    const url =
-                      getRowText(
-                        social,
-                        [
-                          "url",
-                          "profile_url",
-                          "social_url",
-                          "link",
-                        ],
-                      );
-
-                    if (!url)
-                      return null;
-
-                    const platform =
-                      getRowText(
-                        social,
-                        [
-                          "platform",
-                          "platform_name",
-                          "name",
-                        ],
-                      ) ||
-                      "Social";
-
-                    return (
-                      <a
-                        href={
-                          isValidUrl(
-                            url,
-                          )
-                            ? url
-                            : `https://${url}`
-                        }
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bp-social"
-                        key={
-                          getRowText(
-                            social,
-                            ["id"],
-                          ) ||
-                          `${platform}-${index}`
-                        }
-                      >
-                        {platform}
+                        <span>Get directions</span>
                       </a>
-                    );
-                  },
-                )}
-              </div>
-            </section>
-          )}
-
-        {/* =========================
-            REVIEWS
-        ========================== */}
-
-        {activeSection ===
-          "reviews" && (
-            <section className="bp-section bp-reviews-section bp-active-content">
-              <div className="bp-section-heading bp-reviews-heading">
-                <div>
-                  <h2>Reviews</h2>
-
-                  <p className="bp-section-subtitle">
-                    What customers say
-                    about{" "}
-                    {business.name}
-                  </p>
-
-                  <div className="bp-rating-summary">
-                    <StarRating
-                      rating={
-                        rating.average_rating ??
-                        0
-                      }
-                      size="large"
-                    />
-
-                    <strong>
-                      {rating.average_rating
-                        ? Number(
-                            rating.average_rating,
-                          ).toFixed(1)
-                        : "0.0"}
-                    </strong>
-
-                    <span>
-                      {rating.review_count ??
-                        0}{" "}
-                      reviews
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bp-review-form-card">
-                <div className="bp-review-form-header">
-                  <h3>
-                    Write a review
-                  </h3>
-
-                  <p>
-                    No account is required.
-                    Tell others about your
-                    experience.
-                  </p>
-                </div>
-
-                <form
-                  onSubmit={submitReview}
-                >
-                  <div className="bp-form-group">
-                    <label htmlFor="reviewer-name">
-                      Your name
-                    </label>
-
-                    <input
-                      id="reviewer-name"
-                      type="text"
-                      value={
-                        reviewerName
-                      }
-                      onChange={(
-                        event,
-                      ) =>
-                        setReviewerName(
-                          event.target
-                            .value,
-                        )
-                      }
-                      placeholder="Enter your name"
-                      maxLength={100}
-                      required
-                    />
-                  </div>
-
-                  <div className="bp-form-group">
-                    <label>
-                      Your rating
-                    </label>
-
-                    <div className="bp-rating-input">
-                      {[
-                        1,
-                        2,
-                        3,
-                        4,
-                        5,
-                      ].map(
-                        (star) => (
-                          <button
-                            key={
-                              star
-                            }
-                            type="button"
-                            className={
-                              star <=
-                              reviewRating
-                                ? "selected"
-                                : ""
-                            }
-                            onClick={() =>
-                              setReviewRating(
-                                star,
-                              )
-                            }
-                            aria-label={`${star} star${
-                              star ===
-                              1
-                                ? ""
-                                : "s"
-                            }`}
-                          >
-                            ★
-                          </button>
-                        ),
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="bp-form-group">
-                    <label htmlFor="review-text">
-                      Your review
-                    </label>
-
-                    <textarea
-                      id="review-text"
-                      value={
-                        reviewText
-                      }
-                      onChange={(
-                        event,
-                      ) =>
-                        setReviewText(
-                          event.target
-                            .value,
-                        )
-                      }
-                      placeholder="Share your experience..."
-                      maxLength={2000}
-                      rows={5}
-                    />
-                  </div>
-
-                  <div className="bp-form-group">
-                    <label htmlFor="review-picture">
-                      Your picture
-                      <span>
-                        {" "}
-                        Optional
-                      </span>
-                    </label>
-
-                    <input
-                      id="review-picture"
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      onChange={
-                        handleReviewImage
-                      }
-                    />
-
-                    {reviewImagePreview && (
-                      <div className="bp-review-image-preview">
-                        <img
-                          src={
-                            reviewImagePreview
-                          }
-                          alt="Your review picture preview"
-                        />
-                      </div>
                     )}
-
-                    <small>
-                      JPG, PNG or WebP.
-                      Maximum 2 MB.
-                    </small>
                   </div>
-
-                  {reviewMessage && (
-                    <p className="bp-review-message">
-                      {
-                        reviewMessage
-                      }
-                    </p>
-                  )}
-
-                  <button
-                    type="submit"
-                    className="bp-primary-button"
-                    disabled={
-                      submittingReview
-                    }
-                  >
-                    {submittingReview
-                      ? "Submitting..."
-                      : "Submit review"}
-                  </button>
-                </form>
-              </div>
-
-              {reviews.length >
-              0 ? (
-                <div className="bp-reviews-list">
-                  {reviews.map(
-                    (review) => {
-                      const avatar =
-                        getCustomerAvatarUrl(
-                          review.reviewer_avatar_url,
-                        );
-
-                      const reviewer =
-                        review.reviewer_name ||
-                        "Customer";
-
-                      return (
-                        <article
-                          className="bp-review"
-                          key={
-                            review.id
-                          }
-                        >
-                          <div className="bp-review-top">
-                            {avatar ? (
-                              <img
-                                src={
-                                  avatar
-                                }
-                                alt={
-                                  reviewer
-                                }
-                                className="bp-review-avatar"
-                              />
-                            ) : (
-                              <div className="bp-review-avatar-fallback">
-                                {getInitials(
-                                  reviewer,
-                                )}
-                              </div>
-                            )}
-
-                            <div className="bp-review-author">
-                              <strong>
-                                {
-                                  reviewer
-                                }
-                              </strong>
-
-                              <div className="bp-review-meta">
-                                <StarRating
-                                  rating={
-                                    review.rating
-                                  }
-                                  size="small"
-                                />
-
-                                <span>
-                                  {formatDate(
-                                    review.created_at,
-                                  )}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {review.review_text && (
-                            <p className="bp-review-text">
-                              {
-                                review.review_text
-                              }
-                            </p>
-                          )}
-                        </article>
-                      );
-                    },
-                  )}
-                </div>
-              ) : (
-                <div className="bp-no-reviews">
-                  <div>★</div>
-
-                  <h3>
-                    No reviews yet
-                  </h3>
-
-                  <p>
-                    Be the first person
-                    to review this
-                    business.
-                  </p>
                 </div>
               )}
-            </section>
-          )}
+
+              {business.phone && (
+                <div className="bp-contact-item">
+                  <span className="bp-contact-icon">
+                    ☎
+                  </span>
+
+                  <div>
+                    <strong>Phone</strong>
+
+                    <a
+                      href={`tel:${business.phone}`}
+                      onClick={() =>
+                        void trackEvent(
+                          business.id,
+                          "phone_click",
+                          { placement: "contact" },
+                        )
+                      }
+                    >
+                      {business.phone}
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {business.email && (
+                <div className="bp-contact-item">
+                  <span className="bp-contact-icon">
+                    @
+                  </span>
+
+                  <div>
+                    <strong>Email</strong>
+
+                    <a
+                      href={`mailto:${business.email}`}
+                      onClick={() =>
+                        void trackEvent(
+                          business.id,
+                          "email_click",
+                        )
+                      }
+                    >
+                      {business.email}
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {business.website_url && (
+                <div className="bp-contact-item">
+                  <span className="bp-contact-icon">
+                    ↗
+                  </span>
+
+                  <div>
+                    <strong>Website</strong>
+
+                    <a
+                      href={
+                        isValidUrl(business.website_url)
+                          ? business.website_url
+                          : `https://${business.website_url}`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() =>
+                        void trackEvent(
+                          business.id,
+                          "website_click",
+                          { placement: "contact" },
+                        )
+                      }
+                    >
+                      Visit website
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {whatsappUrl && (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bp-whatsapp-large"
+                  onClick={() =>
+                    void trackEvent(
+                      business.id,
+                      "whatsapp_click",
+                      { placement: "contact" },
+                    )
+                  }
+                >
+                  <span>◉</span>
+                  Contact on WhatsApp
+                </a>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* BUSINESS HOURS */}
+        {activeSection === "hours" && (
+          <section className="bp-section bp-active-content">
+            <div className="bp-section-heading">
+              <div>
+                <h2>Business Hours</h2>
+
+                <p className="bp-section-subtitle">
+                  Opening hours for {business.name}
+                </p>
+              </div>
+            </div>
+
+            <div className="bp-hours">
+              {hours.map((item, index) => {
+                const rawDay = item.day_of_week;
+
+                const day = getDayName(rawDay);
+
+                const open = getRowText(item, [
+                  "open_time",
+                  "opening_time",
+                  "opens_at",
+                ]);
+
+                const close = getRowText(item, [
+                  "close_time",
+                  "closing_time",
+                  "closes_at",
+                ]);
+
+                const closedValue = getRowText(item, [
+                  "is_closed",
+                  "closed",
+                ]);
+
+                const closed =
+                  closedValue === "true" ||
+                  closedValue === "1";
+
+                const twentyFourHours =
+                  (open === "00:00:00" ||
+                    open === "00:00") &&
+                  (close === "23:59:00" ||
+                    close === "23:59");
+
+                return (
+                  <div
+                    className="bp-hours-row"
+                    key={
+                      getRowText(item, ["id"]) ||
+                      `${day}-${index}`
+                    }
+                  >
+                    <span>{day}</span>
+
+                    <strong
+                      className={closed ? "closed" : ""}
+                    >
+                      {closed
+                        ? "Closed"
+                        : twentyFourHours
+                          ? "Open 24 hours"
+                          : open && close
+                            ? `${formatBusinessTime(
+                                open,
+                              )} – ${formatBusinessTime(
+                                close,
+                              )}`
+                            : "Hours unavailable"}
+                    </strong>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* SOCIAL */}
+        {activeSection === "social" && (
+          <section className="bp-section bp-active-content">
+            <div className="bp-section-heading">
+              <div>
+                <h2>Follow {business.name}</h2>
+
+                <p className="bp-section-subtitle">
+                  Connect with this business online
+                </p>
+              </div>
+            </div>
+
+            <div className="bp-socials">
+              {socialLinks.map((social, index) => {
+                const url = getRowText(social, [
+                  "url",
+                  "profile_url",
+                  "social_url",
+                  "link",
+                ]);
+
+                if (!url) return null;
+
+                const platform =
+                  getRowText(social, [
+                    "platform",
+                    "platform_name",
+                    "name",
+                  ]) || "Social";
+
+                return (
+                  <a
+                    href={
+                      isValidUrl(url)
+                        ? url
+                        : `https://${url}`
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bp-social"
+                    key={
+                      getRowText(social, ["id"]) ||
+                      `${platform}-${index}`
+                    }
+                    onClick={() =>
+                      void trackEvent(
+                        business.id,
+                        "social_click",
+                        { platform },
+                      )
+                    }
+                  >
+                    {platform}
+                  </a>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* REVIEWS */}
+        {activeSection === "reviews" && (
+          <section className="bp-section bp-reviews-section bp-active-content">
+            <div className="bp-section-heading bp-reviews-heading">
+              <div>
+                <h2>Reviews</h2>
+
+                <p className="bp-section-subtitle">
+                  What customers say about {business.name}
+                </p>
+
+                <div className="bp-rating-summary">
+                  <StarRating
+                    rating={rating.average_rating ?? 0}
+                    size="large"
+                  />
+
+                  <strong>
+                    {rating.average_rating
+                      ? Number(
+                          rating.average_rating,
+                        ).toFixed(1)
+                      : "0.0"}
+                  </strong>
+
+                  <span>
+                    {rating.review_count ?? 0} reviews
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bp-review-form-card">
+              <div className="bp-review-form-header">
+                <h3>Write a review</h3>
+
+                <p>
+                  No account is required. Tell others
+                  about your experience.
+                </p>
+              </div>
+
+              <form onSubmit={submitReview}>
+                <div className="bp-form-group">
+                  <label htmlFor="reviewer-name">
+                    Your name
+                  </label>
+
+                  <input
+                    id="reviewer-name"
+                    type="text"
+                    value={reviewerName}
+                    onChange={(event) =>
+                      setReviewerName(
+                        event.target.value,
+                      )
+                    }
+                    placeholder="Enter your name"
+                    maxLength={100}
+                    required
+                  />
+                </div>
+
+                <div className="bp-form-group">
+                  <label>Your rating</label>
+
+                  <div className="bp-rating-input">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        className={
+                          star <= reviewRating
+                            ? "selected"
+                            : ""
+                        }
+                        onClick={() =>
+                          setReviewRating(star)
+                        }
+                        aria-label={`${star} star${
+                          star === 1 ? "" : "s"
+                        }`}
+                      >
+                        ★
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bp-form-group">
+                  <label htmlFor="review-text">
+                    Your review
+                  </label>
+
+                  <textarea
+                    id="review-text"
+                    value={reviewText}
+                    onChange={(event) =>
+                      setReviewText(
+                        event.target.value,
+                      )
+                    }
+                    placeholder="Share your experience..."
+                    maxLength={2000}
+                    rows={5}
+                  />
+                </div>
+
+                <div className="bp-form-group">
+                  <label htmlFor="review-picture">
+                    Your picture
+                    <span> Optional</span>
+                  </label>
+
+                  <input
+                    id="review-picture"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleReviewImage}
+                  />
+
+                  {reviewImagePreview && (
+                    <div className="bp-review-image-preview">
+                      <img
+                        src={reviewImagePreview}
+                        alt="Your review picture preview"
+                      />
+                    </div>
+                  )}
+
+                  <small>
+                    JPG, PNG or WebP. Maximum 2 MB.
+                  </small>
+                </div>
+
+                {reviewMessage && (
+                  <p className="bp-review-message">
+                    {reviewMessage}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  className="bp-primary-button"
+                  disabled={submittingReview}
+                >
+                  {submittingReview
+                    ? "Submitting..."
+                    : "Submit review"}
+                </button>
+              </form>
+            </div>
+
+            {reviews.length > 0 ? (
+              <div className="bp-reviews-list">
+                {reviews.map((review) => {
+                  const avatar =
+                    getCustomerAvatarUrl(
+                      review.reviewer_avatar_url,
+                    );
+
+                  const reviewer =
+                    review.reviewer_name || "Customer";
+
+                  return (
+                    <article
+                      className="bp-review"
+                      key={review.id}
+                    >
+                      <div className="bp-review-top">
+                        {avatar ? (
+                          <img
+                            src={avatar}
+                            alt={reviewer}
+                            className="bp-review-avatar"
+                          />
+                        ) : (
+                          <div className="bp-review-avatar-fallback">
+                            {getInitials(reviewer)}
+                          </div>
+                        )}
+
+                        <div className="bp-review-author">
+                          <strong>{reviewer}</strong>
+
+                          <div className="bp-review-meta">
+                            <StarRating
+                              rating={review.rating}
+                              size="small"
+                            />
+
+                            <span>
+                              {formatDate(
+                                review.created_at,
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {review.review_text && (
+                        <p className="bp-review-text">
+                          {review.review_text}
+                        </p>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="bp-no-reviews">
+                <div>★</div>
+
+                <h3>No reviews yet</h3>
+
+                <p>
+                  Be the first person to review this
+                  business.
+                </p>
+              </div>
+            )}
+          </section>
+        )}
       </div>
 
       {whatsappUrl && (
@@ -2677,14 +2454,19 @@ business?.website_url,
           rel="noopener noreferrer"
           className="bp-floating-whatsapp"
           aria-label="Contact this business on WhatsApp"
+          onClick={() =>
+            void trackEvent(
+              business.id,
+              "whatsapp_click",
+              { placement: "floating_button" },
+            )
+          }
         >
           <span>◉</span>
 
-          <strong>
-            WhatsApp
-          </strong>
+          <strong>WhatsApp</strong>
         </a>
       )}
     </main>
   );
-  }
+}
