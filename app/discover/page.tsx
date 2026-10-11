@@ -1708,16 +1708,20 @@ export default function DiscoverPage() {
         </div>
       </footer>
 
-    {/* Mobile Bottom Navigation */}
+   {/* Mobile Bottom Navigation /}
 <nav
 className="mobile-bottom-nav"
 aria-label="Mobile navigation"
 >
+{/ Home */}
 <Link
 href="/discover"
 className="active"
 >
-<span className="mobile-nav-icon" aria-hidden="true">
+<span
+className="mobile-nav-icon"
+aria-hidden="true"
+>
 <svg
 viewBox="0 0 24 24"
 width="20"
@@ -1733,11 +1737,15 @@ strokeLinejoin="round"
 <path d="M9 21v-6h6v6" />
 </svg>
 </span>
-<span>Discover</span>
+<span>Home</span>
 </Link>
 
-    <Link href="/categories">
-      <span className="mobile-nav-icon" aria-hidden="true">
+    {/* Search */}
+    <Link href="/businesses">
+      <span
+        className="mobile-nav-icon"
+        aria-hidden="true"
+      >
         <svg
           viewBox="0 0 24 24"
           width="20"
@@ -1748,17 +1756,44 @@ strokeLinejoin="round"
           strokeLinecap="round"
           strokeLinejoin="round"
         >
-          <rect x="3" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="3" width="7" height="7" rx="1" />
-          <rect x="3" y="14" width="7" height="7" rx="1" />
-          <rect x="14" y="14" width="7" height="7" rx="1" />
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-4-4" />
+        </svg>
+      </span>
+      <span>Search</span>
+    </Link>
+
+    {/* Categories */}
+    <Link href="/categories">
+      <span
+        className="mobile-nav-icon"
+        aria-hidden="true"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          width="20"
+          height="20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect x="4" y="4" width="6" height="6" rx="1" />
+          <rect x="14" y="4" width="6" height="6" rx="1" />
+          <rect x="4" y="14" width="6" height="6" rx="1" />
+          <rect x="14" y="14" width="6" height="6" rx="1" />
         </svg>
       </span>
       <span>Categories</span>
     </Link>
 
-    <Link href="/business/register">
-      <span className="mobile-nav-icon" aria-hidden="true">
+    {/* Nearby */}
+    <Link href="/businesses?nearby=true">
+      <span
+        className="mobile-nav-icon"
+        aria-hidden="true"
+      >
         <svg
           viewBox="0 0 24 24"
           width="20"
@@ -1769,35 +1804,34 @@ strokeLinejoin="round"
           strokeLinecap="round"
           strokeLinejoin="round"
         >
-          <path d="M3 21h18" />
-          <path d="M5 21V7l8-4v18" />
-          <path d="M13 10h6v11" />
-          <path d="M8 9h2M8 13h2M8 17h2M16 14h1M16 17h1" />
+          <path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Z" />
+          <circle cx="12" cy="9" r="2.5" />
         </svg>
       </span>
-      <span>Business</span>
+      <span>Nearby</span>
     </Link>
 
-    <Link href="/login">
-      <span className="mobile-nav-icon" aria-hidden="true">
+    {/* More */}
+    <Link href="/more">
+      <span
+        className="mobile-nav-icon mobile-nav-more"
+        aria-hidden="true"
+      >
         <svg
           viewBox="0 0 24 24"
           width="20"
           height="20"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+          fill="currentColor"
         >
-          <circle cx="12" cy="8" r="4" />
-          <path d="M5 21v-2a7 7 0 0 1 14 0v2" />
+          <circle cx="5" cy="12" r="1.7" />
+          <circle cx="12" cy="12" r="1.7" />
+          <circle cx="19" cy="12" r="1.7" />
         </svg>
       </span>
-      <span>Login</span>
+      <span>More</span>
     </Link>
   </nav>
 </main>
 
 );
-}
+        }
