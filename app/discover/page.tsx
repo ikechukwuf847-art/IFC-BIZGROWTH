@@ -6,6 +6,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import Link from "next/link";
@@ -13,6 +14,15 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import "./discover.css";
 
 const supabase = createSupabaseBrowserClient();
+
+/*
+ * Existing Supabase placement:
+ * ad_placements.name = "Featured Businesses"
+ */
+const FEATURED_PLACEMENT_ID =
+  "2aee1c00-0701-47a6-bb9e-45803a91011c";
+
+const FEATURED_PLACEMENT_NAME = "Featured Businesses";
 
 type DirectoryBusiness = {
   business_id: string;
@@ -70,6 +80,23 @@ type BusinessLocation = {
   business_count: number;
 };
 
+type Advertisement = {
+  id: string;
+  title: string | null;
+  description: string | null;
+  destination_url: string | null;
+  campaign_id: string;
+  business_id: string;
+  campaign_status: string;
+  starts_at: string | null;
+  ends_at: string | null;
+};
+
+type FeaturedAdvertisement = {
+  advertisement: Advertisement;
+  business: DirectoryBusiness;
+};
+
 function getInitials(name: string) {
   return name
     .trim()
@@ -90,11 +117,7 @@ function isDirectUrl(value: string | null) {
 }
 
 /*
- * Private business logo.
- *
- * The API route checks that the logo belongs to
- * an active/public business and creates the
- * signed Storage URL server-side.
+ * Returns a business logo URL.
  */
 function getLogoUrl(path: string | null) {
   if (!path) return null;
@@ -104,7 +127,7 @@ function getLogoUrl(path: string | null) {
   }
 
   return `https://iluczxsqdpohzgbknldh.supabase.co/storage/v1/object/public/business-logos/${path}`;
-    }
+}
 
 const BusinessLogo = memo(function BusinessLogo({
   business,
@@ -140,14 +163,16 @@ const BusinessLogo = memo(function BusinessLogo({
 function BusinessCard({
   business,
   media,
+  advertisement,
+  onAdvertisementClick,
 }: {
   business: DirectoryBusiness;
   media?: BusinessMedia;
+  advertisement?: Advertisement;
+  onAdvertisementClick?: (
+    advertisement: Advertisement
+  ) => void;
 }) {
-  /*
-   * business_media currently has no active rows,
-   * but this remains ready for future cover images.
-   */
   const coverUrl = media?.storage_path
     ? isDirectUrl(media.storage_path)
       ? media.storage_path
@@ -156,10 +181,31 @@ function BusinessCard({
 
   const logoUrl = getLogoUrl(business.logo_url);
 
+  const destination =
+    advertisement?.destination_url?.trim() ||
+    `/businesses/${business.business_slug}`;
+
+  const externalDestination =
+    Boolean(advertisement?.destination_url) &&
+    isDirectUrl(destination);
+
   return (
     <Link
-      href={`/businesses/${business.business_slug}`}
+      href={destination}
       className="business-card"
+      onClick={() => {
+        if (advertisement) {
+          onAdvertisementClick?.(advertisement);
+        }
+      }}
+      target={
+        externalDestination ? "_blank" : undefined
+      }
+      rel={
+        externalDestination
+          ? "noopener noreferrer"
+          : undefined
+      }
     >
       <div className="business-card-cover">
         {coverUrl ? (
@@ -177,10 +223,16 @@ function BusinessCard({
           </div>
         )}
 
-        {business.is_featured && (
+        {advertisement ? (
           <span className="featured-label">
-            Featured
+            Sponsored
           </span>
+        ) : (
+          business.is_featured && (
+            <span className="featured-label">
+              Featured
+            </span>
+          )
         )}
 
         <div className="business-card-logo">
@@ -195,7 +247,8 @@ function BusinessCard({
         <div className="business-title-row">
           <h3>{business.business_name}</h3>
 
-          {business.verification_status === "approved" && (
+          {business.verification_status ===
+            "approved" && (
             <span
               className="verification-badge"
               title="Verified business"
@@ -231,7 +284,9 @@ function BusinessCard({
 
           <span>
             {business.average_rating !== null
-              ? Number(business.average_rating).toFixed(1)
+              ? Number(
+                  business.average_rating
+                ).toFixed(1)
               : "New"}
           </span>
 
@@ -244,19 +299,31 @@ function BusinessCard({
 
           {business.distance_km !== null && (
             <span className="distance">
-              • {Number(business.distance_km).toFixed(1)} km
+              •{" "}
+              {Number(
+                business.distance_km
+              ).toFixed(1)}{" "}
+              km
             </span>
           )}
         </div>
 
-        {business.description && (
+        {advertisement?.description ? (
           <p className="business-description">
-            {business.description}
+            {advertisement.description}
           </p>
+        ) : (
+          business.description && (
+            <p className="business-description">
+              {business.description}
+            </p>
+          )
         )}
 
         <span className="view-business">
-          View business →
+          {advertisement
+            ? "Discover business →"
+            : "View business →"}
         </span>
       </div>
     </Link>
@@ -286,7 +353,12 @@ export default function DiscoverPage() {
   const [featuredBusinesses, setFeaturedBusinesses] =
     useState<DirectoryBusiness[]>([]);
 
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [featuredAdvertisements, setFeaturedAdvertisements] =
+    useState<FeaturedAdvertisement[]>([]);
+
+  const [categories, setCategories] = useState<Category[]>(
+    []
+  );
 
   const [locations, setLocations] = useState<
     BusinessLocation[]
@@ -321,6 +393,14 @@ export default function DiscoverPage() {
       latitude: number;
       longitude: number;
     } | null>(null);
+
+  /*
+   * Prevent repeated impression events for the same
+   * advertisement during this page visit.
+   */
+  const recordedImpressions = useRef<Set<string>>(
+    new Set()
+  );
 
   const loadCategories = useCallback(async () => {
     const { data, error: categoriesError } =
@@ -374,8 +454,7 @@ export default function DiscoverPage() {
     setLoading(true);
 
     const locationParts =
-      locationMode === "backend" &&
-      selectedLocation
+      locationMode === "backend" && selectedLocation
         ? selectedLocation.split("|")
         : null;
 
@@ -393,44 +472,31 @@ export default function DiscoverPage() {
       await supabase.rpc(
         "get_public_business_directory",
         {
-          p_search:
-            submittedSearch.trim() || null,
+          p_search: submittedSearch.trim() || null,
 
-          p_country_code:
-            selectedCountry,
+          p_country_code: selectedCountry,
 
-          p_city:
-            selectedCity,
+          p_city: selectedCity,
 
-          p_category_id:
-            null,
+          p_category_id: null,
 
-          p_subcategory_id:
-            null,
+          p_subcategory_id: null,
 
-          p_latitude:
-            isNearby
-              ? userCoordinates.latitude
-              : null,
+          p_latitude: isNearby
+            ? userCoordinates.latitude
+            : null,
 
-          p_longitude:
-            isNearby
-              ? userCoordinates.longitude
-              : null,
+          p_longitude: isNearby
+            ? userCoordinates.longitude
+            : null,
 
-          p_radius_km:
-            isNearby
-              ? 25
-              : null,
+          p_radius_km: isNearby ? 25 : null,
 
-          p_featured_only:
-            false,
+          p_featured_only: false,
 
-          p_limit:
-            100,
+          p_limit: 100,
 
-          p_offset:
-            0,
+          p_offset: 0,
         }
       );
 
@@ -440,9 +506,7 @@ export default function DiscoverPage() {
         businessesError
       );
 
-      setError(
-        "Unable to load businesses."
-      );
+      setError("Unable to load businesses.");
 
       setBusinesses([]);
 
@@ -463,8 +527,22 @@ export default function DiscoverPage() {
     userCoordinates,
   ]);
 
-  const loadFeaturedBusinesses =
-    useCallback(async () => {
+  /*
+   * Load regular featured businesses and paid
+   * advertisements into the SAME Featured Businesses
+   * section.
+   *
+   * Relationship:
+   * advertisements.campaign_id
+   *   -> ad_campaigns.id
+   *
+   * ad_campaigns.business_id
+   *   -> businesses.id
+   *
+   * No additional database tables are created.
+   */
+  const loadFeaturedBusinesses = useCallback(
+    async () => {
       setFeaturedLoading(true);
 
       const locationParts =
@@ -483,76 +561,280 @@ export default function DiscoverPage() {
         locationMode === "nearby" &&
         userCoordinates !== null;
 
+      const directoryParams = {
+        p_search: null,
+
+        p_country_code: selectedCountry,
+
+        p_city: selectedCity,
+
+        p_category_id: null,
+
+        p_subcategory_id: null,
+
+        p_latitude: isNearby
+          ? userCoordinates.latitude
+          : null,
+
+        p_longitude: isNearby
+          ? userCoordinates.longitude
+          : null,
+
+        p_radius_km: isNearby ? 25 : null,
+
+        p_featured_only: false,
+
+        p_limit: 1000,
+
+        p_offset: 0,
+      };
+
+      /*
+       * Load ordinary featured businesses.
+       */
       const {
-        data,
-        error: featuredError,
+        data: regularFeaturedData,
+        error: regularFeaturedError,
       } = await supabase.rpc(
         "get_public_business_directory",
         {
-          p_search:
-            null,
-
-          p_country_code:
-            selectedCountry,
-
-          p_city:
-            selectedCity,
-
-          p_category_id:
-            null,
-
-          p_subcategory_id:
-            null,
-
-          p_latitude:
-            isNearby
-              ? userCoordinates.latitude
-              : null,
-
-          p_longitude:
-            isNearby
-              ? userCoordinates.longitude
-              : null,
-
-          p_radius_km:
-            isNearby
-              ? 25
-              : null,
-
-          p_featured_only:
-            true,
-
-          p_limit:
-            8,
-
-          p_offset:
-            0,
+          ...directoryParams,
+          p_featured_only: true,
+          p_limit: 8,
         }
       );
 
-      if (featuredError) {
+      if (regularFeaturedError) {
         console.error(
           "Unable to load featured businesses:",
-          featuredError
+          regularFeaturedError
         );
-
-        setFeaturedBusinesses([]);
-
-        setFeaturedLoading(false);
-
-        return;
       }
 
+      const regularFeatured =
+        (regularFeaturedData ||
+          []) as DirectoryBusiness[];
+
+      /*
+       * Load active advertisements assigned to
+       * the existing Featured Businesses placement.
+       *
+       * The embedded campaign relation supplies
+       * the business_id and campaign schedule.
+       */
+      const {
+        data: advertisementRows,
+        error: advertisementsError,
+      } = await supabase
+        .from("advertisements")
+        .select(
+          `
+          id,
+          title,
+          description,
+          destination_url,
+          campaign_id,
+          ad_campaigns!inner (
+            business_id,
+            status,
+            starts_at,
+            ends_at
+          )
+        `
+        )
+        .eq(
+          "placement_id",
+          FEATURED_PLACEMENT_ID
+        )
+        .eq("status", "active")
+        .eq("ad_campaigns.status", "active");
+
+      if (advertisementsError) {
+        console.error(
+          "Unable to load featured advertisements:",
+          advertisementsError
+        );
+      }
+
+      /*
+       * Convert the Supabase joined rows into
+       * a predictable structure.
+       */
+      const now = Date.now();
+
+      const eligibleAdvertisements: Advertisement[] =
+        (advertisementRows || [])
+          .map((row: any) => {
+            const campaign = Array.isArray(
+              row.ad_campaigns
+            )
+              ? row.ad_campaigns[0]
+              : row.ad_campaigns;
+
+            if (!campaign?.business_id) {
+              return null;
+            }
+
+            return {
+              id: row.id,
+              title: row.title ?? null,
+              description: row.description ?? null,
+              destination_url:
+                row.destination_url ?? null,
+              campaign_id: row.campaign_id,
+              business_id: campaign.business_id,
+              campaign_status: campaign.status,
+              starts_at: campaign.starts_at ?? null,
+              ends_at: campaign.ends_at ?? null,
+            } satisfies Advertisement;
+          })
+          .filter(
+            (
+              advertisement
+            ): advertisement is Advertisement =>
+              advertisement !== null
+          )
+          .filter((advertisement) => {
+            if (
+              advertisement.starts_at &&
+              new Date(
+                advertisement.starts_at
+              ).getTime() > now
+            ) {
+              return false;
+            }
+
+            if (
+              advertisement.ends_at &&
+              new Date(
+                advertisement.ends_at
+              ).getTime() < now
+            ) {
+              return false;
+            }
+
+            return true;
+          });
+
+      /*
+       * Retrieve public directory records so we can
+       * match each campaign to its business.
+       *
+       * We use the public directory RPC instead of
+       * selecting private business fields directly.
+       */
+      let directoryForAds: DirectoryBusiness[] =
+        [];
+
+      if (eligibleAdvertisements.length > 0) {
+        const {
+          data: directoryData,
+          error: directoryError,
+        } = await supabase.rpc(
+          "get_public_business_directory",
+          directoryParams
+        );
+
+        if (directoryError) {
+          console.error(
+            "Unable to match advertisements to businesses:",
+            directoryError
+          );
+        } else {
+          directoryForAds =
+            (directoryData ||
+              []) as DirectoryBusiness[];
+        }
+      }
+
+      const directoryById = new Map<
+        string,
+        DirectoryBusiness
+      >();
+
+      /*
+       * Add ordinary featured businesses as a fallback
+       * for matching campaigns.
+       */
+      for (const business of regularFeatured) {
+        directoryById.set(
+          business.business_id,
+          business
+        );
+      }
+
+      for (const business of directoryForAds) {
+        directoryById.set(
+          business.business_id,
+          business
+        );
+      }
+
+      const matchedAdvertisements: FeaturedAdvertisement[] =
+        eligibleAdvertisements
+          .map((advertisement) => {
+            const business = directoryById.get(
+              advertisement.business_id
+            );
+
+            if (!business) {
+              return null;
+            }
+
+            return {
+              advertisement,
+              business,
+            };
+          })
+          .filter(
+            (
+              item
+            ): item is FeaturedAdvertisement =>
+              item !== null
+          );
+
+      /*
+       * Paid advertisements appear first.
+       * A business already shown as an advertisement
+       * is not duplicated as an ordinary featured card.
+       */
+      const advertisedBusinessIds = new Set(
+        matchedAdvertisements.map(
+          (item) => item.business.business_id
+        )
+      );
+
+      const remainingFeatured =
+        regularFeatured.filter(
+          (business) =>
+            !advertisedBusinessIds.has(
+              business.business_id
+            )
+        );
+
+      const combinedFeatured = [
+        ...matchedAdvertisements.map(
+          (item) => item.business
+        ),
+        ...remainingFeatured,
+      ];
+
+      setFeaturedAdvertisements(
+        matchedAdvertisements
+      );
+
       setFeaturedBusinesses(
-        (data || []) as DirectoryBusiness[]
+        combinedFeatured
       );
 
       setFeaturedLoading(false);
-    }, [
+    },
+    [
       selectedLocation,
       locationMode,
       userCoordinates,
-    ]);
+    ]
+  );
 
   const loadMedia = useCallback(
     async (businessIds: string[]) => {
@@ -569,21 +851,12 @@ export default function DiscoverPage() {
         .select(
           "id, business_id, storage_path, media_type, title, description, sort_order, is_featured, is_active"
         )
-        .in(
-          "business_id",
-          businessIds
-        )
-        .eq(
-          "is_active",
-          true
-        )
-        .order(
-          "sort_order",
-          {
-            ascending: true,
-            nullsFirst: false,
-          }
-        );
+        .in("business_id", businessIds)
+        .eq("is_active", true)
+        .order("sort_order", {
+          ascending: true,
+          nullsFirst: false,
+        });
 
       if (mediaError) {
         console.error(
@@ -602,6 +875,97 @@ export default function DiscoverPage() {
     },
     []
   );
+
+  /*
+   * Record an advertising impression.
+   *
+   * The database RPC is responsible for recording
+   * the event and updating advertising statistics.
+   */
+  const recordAdvertisementImpression =
+    useCallback(
+      async (advertisementId: string) => {
+        const { error: eventError } =
+          await supabase.rpc(
+            "record_advertising_event",
+            {
+              p_advertisement_id:
+                advertisementId,
+
+              p_event_type: "impression",
+
+              p_visitor_id: null,
+
+              p_session_id: null,
+
+              p_placement:
+                FEATURED_PLACEMENT_NAME,
+
+              p_page_url:
+                typeof window !== "undefined"
+                  ? window.location.href
+                  : null,
+
+              p_referrer:
+                typeof document !== "undefined"
+                  ? document.referrer || null
+                  : null,
+            }
+          );
+
+        if (eventError) {
+          console.error(
+            "Unable to record advertising impression:",
+            eventError
+          );
+        }
+      },
+      []
+    );
+
+  /*
+   * Record an advertising click.
+   */
+  const recordAdvertisementClick =
+    useCallback(
+      async (advertisement: Advertisement) => {
+        const { error: eventError } =
+          await supabase.rpc(
+            "record_advertising_event",
+            {
+              p_advertisement_id:
+                advertisement.id,
+
+              p_event_type: "click",
+
+              p_visitor_id: null,
+
+              p_session_id: null,
+
+              p_placement:
+                FEATURED_PLACEMENT_NAME,
+
+              p_page_url:
+                typeof window !== "undefined"
+                  ? window.location.href
+                  : null,
+
+              p_referrer:
+                typeof document !== "undefined"
+                  ? document.referrer || null
+                  : null,
+            }
+          );
+
+        if (eventError) {
+          console.error(
+            "Unable to record advertising click:",
+            eventError
+          );
+        }
+      },
+      []
+    );
 
   useEffect(() => {
     loadCategories();
@@ -703,16 +1067,46 @@ export default function DiscoverPage() {
     loadFeaturedBusinesses();
   }, [loadFeaturedBusinesses]);
 
+  /*
+   * Record impressions when advertisements are
+   * displayed in the existing Featured Businesses
+   * section. The ref prevents duplicate events
+   * during repeated renders.
+   */
+  useEffect(() => {
+    for (const item of featuredAdvertisements) {
+      const advertisementId =
+        item.advertisement.id;
+
+      if (
+        recordedImpressions.current.has(
+          advertisementId
+        )
+      ) {
+        continue;
+      }
+
+      recordedImpressions.current.add(
+        advertisementId
+      );
+
+      void recordAdvertisementImpression(
+        advertisementId
+      );
+    }
+  }, [
+    featuredAdvertisements,
+    recordAdvertisementImpression,
+  ]);
+
   useEffect(() => {
     const allIds = [
       ...businesses.map(
-        (business) =>
-          business.business_id
+        (business) => business.business_id
       ),
 
       ...featuredBusinesses.map(
-        (business) =>
-          business.business_id
+        (business) => business.business_id
       ),
     ];
 
@@ -728,22 +1122,32 @@ export default function DiscoverPage() {
   ]);
 
   const mediaByBusiness = useMemo(() => {
-    const map = new Map<
-      string,
-      BusinessMedia
-    >();
+    const map = new Map<string, BusinessMedia>();
 
     media.forEach((item) => {
       if (!map.has(item.business_id)) {
-        map.set(
-          item.business_id,
-          item
-        );
+        map.set(item.business_id, item);
       }
     });
 
     return map;
   }, [media]);
+
+  const advertisementByBusiness = useMemo(() => {
+    const map = new Map<
+      string,
+      Advertisement
+    >();
+
+    for (const item of featuredAdvertisements) {
+      map.set(
+        item.business.business_id,
+        item.advertisement
+      );
+    }
+
+    return map;
+  }, [featuredAdvertisements]);
 
   const nearbyBusinesses = useMemo(() => {
     if (!userCoordinates) {
@@ -757,12 +1161,8 @@ export default function DiscoverPage() {
       )
       .sort(
         (a, b) =>
-          Number(
-            a.distance_km ?? 999999
-          ) -
-          Number(
-            b.distance_km ?? 999999
-          )
+          Number(a.distance_km ?? 999999) -
+          Number(b.distance_km ?? 999999)
       )
       .slice(0, 8);
   }, [
@@ -773,36 +1173,25 @@ export default function DiscoverPage() {
   /*
    * Popular Businesses is intentionally independent
    * from Nearby Businesses.
-   *
-   * A business can therefore appear in both sections
-   * when it is both nearby and popular.
    */
   const popularBusinesses = useMemo(() => {
     return [...businesses]
       .sort((a, b) => {
-        const ratingA =
-          Number(
-            a.average_rating || 0
-          );
+        const ratingA = Number(
+          a.average_rating || 0
+        );
 
-        const ratingB =
-          Number(
-            b.average_rating || 0
-          );
+        const ratingB = Number(
+          b.average_rating || 0
+        );
 
         if (ratingB !== ratingA) {
-          return (
-            ratingB - ratingA
-          );
+          return ratingB - ratingA;
         }
 
         return (
-          Number(
-            b.review_count || 0
-          ) -
-          Number(
-            a.review_count || 0
-          )
+          Number(b.review_count || 0) -
+          Number(a.review_count || 0)
         );
       })
       .slice(0, 8);
@@ -813,9 +1202,7 @@ export default function DiscoverPage() {
   ) => {
     event.preventDefault();
 
-    setSubmittedSearch(
-      search.trim()
-    );
+    setSubmittedSearch(search.trim());
   };
 
   const handleLocationChange = (
@@ -832,9 +1219,7 @@ export default function DiscoverPage() {
 
   const selectedLocationLabel =
     useMemo(() => {
-      if (
-        locationMode === "nearby"
-      ) {
+      if (locationMode === "nearby") {
         return "Near me";
       }
 
@@ -842,19 +1227,13 @@ export default function DiscoverPage() {
         return "Select location";
       }
 
-      const parts =
-        selectedLocation.split("|");
+      const parts = selectedLocation.split("|");
 
-      const country =
-        parts[0];
+      const country = parts[0];
 
-      const city =
-        parts[1];
+      const city = parts[1];
 
-      return [
-        city,
-        country,
-      ]
+      return [city, country]
         .filter(Boolean)
         .join(", ");
     }, [
@@ -875,9 +1254,7 @@ export default function DiscoverPage() {
             </span>
 
             <span className="brand-text">
-              <strong>
-                BIZGROWTH
-              </strong>
+              <strong>BIZGROWTH</strong>
 
               <small>
                 African Business Growth
@@ -933,15 +1310,12 @@ export default function DiscoverPage() {
           <h1>
             Discover businesses.
             <br />
-            <span>
-              Grow with Africa.
-            </span>
+            <span>Grow with Africa.</span>
           </h1>
 
           <p className="hero-description">
-            Find businesses, services and
-            brands around you and across
-            Africa.
+            Find businesses, services and brands
+            around you and across Africa.
           </p>
 
           <form
@@ -957,9 +1331,7 @@ export default function DiscoverPage() {
                 type="search"
                 value={search}
                 onChange={(event) =>
-                  setSearch(
-                    event.target.value
-                  )
+                  setSearch(event.target.value)
                 }
                 placeholder="Search businesses, services..."
               />
@@ -979,22 +1351,17 @@ export default function DiscoverPage() {
                   event.target.value
                 )
               }
-              disabled={
-                locationLoading
-              }
+              disabled={locationLoading}
             >
               <option value="">
                 {selectedLocationLabel}
               </option>
 
               {locations.map(
-                (
-                  location,
-                  index
-                ) => {
-                  const value = `${location.country_code}|${
-                    location.city || ""
-                  }`;
+                (location, index) => {
+                  const value = `${
+                    location.country_code
+                  }|${location.city || ""}`;
 
                   const label = [
                     location.city,
@@ -1010,10 +1377,7 @@ export default function DiscoverPage() {
                       key={`${value}-${index}`}
                     >
                       {label} (
-                      {
-                        location.business_count
-                      }
-                      )
+                      {location.business_count})
                     </option>
                   );
                 }
@@ -1023,17 +1387,11 @@ export default function DiscoverPage() {
             <button
               type="button"
               className="location-nearby-button"
-              onClick={
-                handleUseLocation
-              }
-              disabled={
-                locationLoading
-              }
+              onClick={handleUseLocation}
+              disabled={locationLoading}
               title="Use my current location"
             >
-              {locationLoading
-                ? "..."
-                : "📍"}
+              {locationLoading ? "..." : "📍"}
             </button>
 
             <button
@@ -1061,9 +1419,7 @@ export default function DiscoverPage() {
                 Explore
               </span>
 
-              <h2>
-                Browse by category
-              </h2>
+              <h2>Browse by category</h2>
             </div>
 
             <Link
@@ -1077,21 +1433,19 @@ export default function DiscoverPage() {
           <div className="category-scroll">
             {categories
               .slice(0, 8)
-              .map(
-                (category) => (
-                  <Link
-                    href={`/categories/${category.slug}`}
-                    key={category.id}
-                    className="category-chip"
-                  >
-                    {category.name}
-                  </Link>
-                )
-              )}
+              .map((category) => (
+                <Link
+                  href={`/categories/${category.slug}`}
+                  key={category.id}
+                  className="category-chip"
+                >
+                  {category.name}
+                </Link>
+              ))}
           </div>
         </section>
 
-        {/* Featured Businesses */}
+        {/* Featured Businesses — existing advertising placement */}
         <section className="discover-section">
           <div className="section-heading">
             <div>
@@ -1099,17 +1453,13 @@ export default function DiscoverPage() {
                 Featured
               </span>
 
-              <h2>
-                Featured Businesses
-              </h2>
+              <h2>Featured Businesses</h2>
             </div>
           </div>
 
           {featuredLoading ? (
             <div className="business-grid">
-              {Array.from({
-                length: 4,
-              }).map(
+              {Array.from({ length: 4 }).map(
                 (_, index) => (
                   <BusinessCardSkeleton
                     key={index}
@@ -1117,28 +1467,33 @@ export default function DiscoverPage() {
                 )
               )}
             </div>
-          ) : featuredBusinesses.length ===
-            0 ? (
+          ) : featuredBusinesses.length === 0 ? (
             <div className="empty-section">
-              No featured businesses
-              available yet.
+              No featured businesses available yet.
             </div>
           ) : (
             <div className="business-grid">
               {featuredBusinesses.map(
-                (business) => (
-                  <BusinessCard
-                    key={
+                (business) => {
+                  const advertisement =
+                    advertisementByBusiness.get(
                       business.business_id
-                    }
-                    business={
-                      business
-                    }
-                    media={mediaByBusiness.get(
-                      business.business_id
-                    )}
-                  />
-                )
+                    );
+
+                  return (
+                    <BusinessCard
+                      key={business.business_id}
+                      business={business}
+                      media={mediaByBusiness.get(
+                        business.business_id
+                      )}
+                      advertisement={advertisement}
+                      onAdvertisementClick={
+                        recordAdvertisementClick
+                      }
+                    />
+                  );
+                }
               )}
             </div>
           )}
@@ -1152,54 +1507,41 @@ export default function DiscoverPage() {
                 Around you
               </span>
 
-              <h2>
-                Businesses Near You
-              </h2>
+              <h2>Businesses Near You</h2>
             </div>
 
             <button
               type="button"
               className="view-all location-button"
-              onClick={
-                handleUseLocation
-              }
-              disabled={
-                locationLoading
-              }
+              onClick={handleUseLocation}
+              disabled={locationLoading}
             >
               📍{" "}
               {locationLoading
                 ? "Locating..."
-                : locationMode ===
-                  "nearby"
-                ? "Near me"
-                : "Find nearby"}
+                : locationMode === "nearby"
+                  ? "Near me"
+                  : "Find nearby"}
             </button>
           </div>
 
           {!userCoordinates ? (
             <div className="empty-section">
-              Use your location to
-              discover businesses near
-              you.
+              Use your location to discover
+              businesses near you.
             </div>
-          ) : nearbyBusinesses.length ===
-            0 ? (
+          ) : nearbyBusinesses.length === 0 ? (
             <div className="empty-section">
-              No businesses found within
-              25 km of your location.
+              No businesses found within 25 km
+              of your location.
             </div>
           ) : (
             <div className="business-grid">
               {nearbyBusinesses.map(
                 (business) => (
                   <BusinessCard
-                    key={
-                      business.business_id
-                    }
-                    business={
-                      business
-                    }
+                    key={business.business_id}
+                    business={business}
                     media={mediaByBusiness.get(
                       business.business_id
                     )}
@@ -1218,9 +1560,7 @@ export default function DiscoverPage() {
                 Popular
               </span>
 
-              <h2>
-                Popular Businesses
-              </h2>
+              <h2>Popular Businesses</h2>
             </div>
 
             <Link
@@ -1233,9 +1573,7 @@ export default function DiscoverPage() {
 
           {loading ? (
             <div className="business-grid">
-              {Array.from({
-                length: 4,
-              }).map(
+              {Array.from({ length: 4 }).map(
                 (_, index) => (
                   <BusinessCardSkeleton
                     key={index}
@@ -1243,8 +1581,7 @@ export default function DiscoverPage() {
                 )
               )}
             </div>
-          ) : popularBusinesses.length ===
-            0 ? (
+          ) : popularBusinesses.length === 0 ? (
             <div className="empty-section">
               No businesses found.
             </div>
@@ -1253,12 +1590,8 @@ export default function DiscoverPage() {
               {popularBusinesses.map(
                 (business) => (
                   <BusinessCard
-                    key={
-                      business.business_id
-                    }
-                    business={
-                      business
-                    }
+                    key={business.business_id}
+                    business={business}
                     media={mediaByBusiness.get(
                       business.business_id
                     )}
@@ -1277,32 +1610,26 @@ export default function DiscoverPage() {
                 Explore more
               </span>
 
-              <h2>
-                Popular Categories
-              </h2>
+              <h2>Popular Categories</h2>
             </div>
           </div>
 
           <div className="popular-category-grid">
             {categories
               .slice(0, 6)
-              .map(
-                (category) => (
-                  <Link
-                    href={`/categories/${category.slug}`}
-                    key={category.id}
-                    className="popular-category-card"
-                  >
-                    <strong>
-                      {category.name}
-                    </strong>
+              .map((category) => (
+                <Link
+                  href={`/categories/${category.slug}`}
+                  key={category.id}
+                  className="popular-category-card"
+                >
+                  <strong>
+                    {category.name}
+                  </strong>
 
-                    <span>
-                      Explore →
-                    </span>
-                  </Link>
-                )
-              )}
+                  <span>Explore →</span>
+                </Link>
+              ))}
           </div>
         </section>
 
@@ -1319,9 +1646,8 @@ export default function DiscoverPage() {
             </h2>
 
             <p>
-              Create your business profile
-              and let customers discover
-              your brand.
+              Create your business profile and
+              let customers discover your brand.
             </p>
 
             <Link
@@ -1347,9 +1673,7 @@ export default function DiscoverPage() {
               </span>
 
               <span className="brand-text">
-                <strong>
-                  BIZGROWTH
-                </strong>
+                <strong>BIZGROWTH</strong>
 
                 <small>
                   African Business Growth
@@ -1358,10 +1682,9 @@ export default function DiscoverPage() {
             </Link>
 
             <p>
-              Helping African businesses
-              become more visible,
-              discoverable and connected
-              to customers.
+              Helping African businesses become
+              more visible, discoverable and
+              connected to customers.
             </p>
           </div>
 
@@ -1412,146 +1735,4 @@ export default function DiscoverPage() {
               <path d="M5 9.5V21h14V9.5" />
               <path d="M9 21v-6h6v6" />
             </svg>
-          </span>
-
-          <span>Home</span>
-        </Link>
-
-        <Link href="/businesses">
-          <span
-            className="mobile-nav-icon"
-            aria-hidden="true"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              width="20"
-              height="20"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle
-                cx="11"
-                cy="11"
-                r="7"
-              />
-              <path d="m20 20-4-4" />
-            </svg>
-          </span>
-
-          <span>Search</span>
-        </Link>
-
-        <Link href="/categories">
-          <span
-            className="mobile-nav-icon"
-            aria-hidden="true"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              width="20"
-              height="20"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect
-                x="4"
-                y="4"
-                width="6"
-                height="6"
-                rx="1"
-              />
-              <rect
-                x="14"
-                y="4"
-                width="6"
-                height="6"
-                rx="1"
-              />
-              <rect
-                x="4"
-                y="14"
-                width="6"
-                height="6"
-                rx="1"
-              />
-              <rect
-                x="14"
-                y="14"
-                width="6"
-                height="6"
-                rx="1"
-              />
-            </svg>
-          </span>
-
-          <span>Categories</span>
-        </Link>
-
-        <Link href="/businesses?nearby=true">
-          <span
-            className="mobile-nav-icon"
-            aria-hidden="true"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              width="20"
-              height="20"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Z" />
-              <circle
-                cx="12"
-                cy="9"
-                r="2.5"
-              />
-            </svg>
-          </span>
-
-          <span>Nearby</span>
-        </Link>
-
-        <Link href="/more">
-          <span
-            className="mobile-nav-icon mobile-nav-more"
-            aria-hidden="true"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              width="20"
-              height="20"
-              fill="currentColor"
-            >
-              <circle
-                cx="5"
-                cy="12"
-                r="1.7"
-              />
-              <circle
-                cx="12"
-                cy="12"
-                r="1.7"
-              />
-              <circle
-                cx="19"
-                cy="12"
-                r="1.7"
-              />
-            </svg>
-          </span>
-
-          <span>More</span>
-        </Link>
-      </nav>
-    </main>
-  );
-  }
+         
