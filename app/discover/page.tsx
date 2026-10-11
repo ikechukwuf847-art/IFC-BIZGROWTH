@@ -1710,12 +1710,12 @@ export default function DiscoverPage() {
         </div>
       </footer>
 
-   {/* Mobile Bottom Navigation /}
+     {/* Mobile Bottom Navigation */}
 <nav
 className="mobile-bottom-nav"
 aria-label="Mobile navigation"
 >
-{/ Home */}
+  {/* Home */}
 <Link
 href="/discover"
 className="active"
