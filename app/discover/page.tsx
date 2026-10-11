@@ -1833,6 +1833,5 @@ strokeLinejoin="round"
       <span>More</span>
     </Link>
   </nav>
-    </main>
-  );
-}
+  </main>
+);}
