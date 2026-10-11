@@ -67,50 +67,31 @@ type Advertisement = {
   status: string;
 };
 
-type Stat = {
-  id: string;
+type AdEvent = {
+  id: number;
   advertisement_id: string;
   campaign_id: string | null;
-  stat_date: string;
-  impressions: number;
-  clicks: number;
-  contacts: number;
-  conversions: number;
-  whatsapp_clicks: number;
-  phone_clicks: number;
-  website_clicks: number;
+  event_type: string;
+  visitor_id: string | null;
+  created_at: string;
 };
 
 type DateRange = "today" | "7d" | "30d" | "all";
 
-type Analytics = {
+type Tab = "campaigns" | "active" | "stats";
+
+type EventTotals = {
   impressions: number;
   clicks: number;
-  contacts: number;
-  conversions: number;
-  whatsapp_clicks: number;
-  phone_clicks: number;
-  website_clicks: number;
-  reach: number | null;
-  event_count: number;
-  daily_stats: Stat[];
+  reach: number;
 };
-
-type Tab = "campaigns" | "active" | "stats";
 
 const supabase = createSupabaseBrowserClient();
 
-const EMPTY_ANALYTICS: Analytics = {
+const EMPTY_TOTALS: EventTotals = {
   impressions: 0,
   clicks: 0,
-  contacts: 0,
-  conversions: 0,
-  whatsapp_clicks: 0,
-  phone_clicks: 0,
-  website_clicks: 0,
-  reach: null,
-  event_count: 0,
-  daily_stats: [],
+  reach: 0,
 };
 
 function formatMoney(amount: number, currency: string) {
@@ -152,6 +133,7 @@ function getDateBounds(range: DateRange) {
   }
 
   const now = new Date();
+
   const endDate = [
     now.getFullYear(),
     String(now.getMonth() + 1).padStart(2, "0"),
@@ -176,32 +158,6 @@ function getDateBounds(range: DateRange) {
   return { startDate, endDate };
 }
 
-function sumStats(items: Stat[]) {
-  return items.reduce(
-    (total, item) => ({
-      impressions: total.impressions + Number(item.impressions || 0),
-      clicks: total.clicks + Number(item.clicks || 0),
-      contacts: total.contacts + Number(item.contacts || 0),
-      conversions: total.conversions + Number(item.conversions || 0),
-      whatsapp_clicks:
-        total.whatsapp_clicks + Number(item.whatsapp_clicks || 0),
-      phone_clicks:
-        total.phone_clicks + Number(item.phone_clicks || 0),
-      website_clicks:
-        total.website_clicks + Number(item.website_clicks || 0),
-    }),
-    {
-      impressions: 0,
-      clicks: 0,
-      contacts: 0,
-      conversions: 0,
-      whatsapp_clicks: 0,
-      phone_clicks: 0,
-      website_clicks: 0,
-    }
-  );
-}
-
 function calculateCTR(impressions: number, clicks: number) {
   if (impressions <= 0) {
     return "0.00%";
@@ -210,8 +166,36 @@ function calculateCTR(impressions: number, clicks: number) {
   return `${((clicks / impressions) * 100).toFixed(2)}%`;
 }
 
+function calculateEventTotals(events: AdEvent[]): EventTotals {
+  const visitors = new Set<string>();
+
+  let impressions = 0;
+  let clicks = 0;
+
+  for (const event of events) {
+    if (event.event_type === "impression") {
+      impressions += 1;
+    }
+
+    if (event.event_type === "click") {
+      clicks += 1;
+    }
+
+    if (event.visitor_id) {
+      visitors.add(event.visitor_id);
+    }
+  }
+
+  return {
+    impressions,
+    clicks,
+    reach: visitors.size,
+  };
+}
+
 export default function AdvertisingPage() {
   const [business, setBusiness] = useState<Business | null>(null);
+
   const [packages, setPackages] = useState<Package[]>([]);
 
   const [localizedPrices, setLocalizedPrices] = useState<
@@ -219,20 +203,28 @@ export default function AdvertisingPage() {
   >({});
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
-  const [stats, setStats] = useState<Stat[]>([]);
 
-  const [analytics, setAnalytics] =
-    useState<Analytics>(EMPTY_ANALYTICS);
+  const [advertisements, setAdvertisements] = useState<
+    Advertisement[]
+  >([]);
+
+  const [adEvents, setAdEvents] = useState<AdEvent[]>([]);
 
   const [analyticsError, setAnalyticsError] = useState("");
+
   const [range, setRange] = useState<DateRange>("30d");
+
   const [tab, setTab] = useState<Tab>("campaigns");
 
   const [loading, setLoading] = useState(true);
+
   const [refreshing, setRefreshing] = useState(false);
+
   const [creating, setCreating] = useState(false);
+
   const [pricingLoading, setPricingLoading] = useState(false);
+
+  const [eventsLoading, setEventsLoading] = useState(false);
 
   const [error, setError] = useState("");
 
@@ -240,6 +232,7 @@ export default function AdvertisingPage() {
     useState<Package | null>(null);
 
   const [campaignName, setCampaignName] = useState("");
+
   const [objective, setObjective] = useState("visibility");
 
   const loadLocalizedPrices = useCallback(
@@ -291,7 +284,9 @@ export default function AdvertisingPage() {
         }
 
         if (!Array.isArray(data?.prices)) {
-          throw new Error("Invalid pricing response from the server.");
+          throw new Error(
+            "Invalid pricing response from the server."
+          );
         }
 
         const priceMap: Record<string, LocalizedPrice> = {};
@@ -322,6 +317,46 @@ export default function AdvertisingPage() {
         return priceMap;
       } finally {
         setPricingLoading(false);
+      }
+    },
+    []
+  );
+
+  const loadAdEvents = useCallback(
+    async (advertisementIds: string[]) => {
+      if (advertisementIds.length === 0) {
+        setAdEvents([]);
+        setAnalyticsError("");
+        return;
+      }
+
+      setEventsLoading(true);
+      setAnalyticsError("");
+
+      try {
+        const { data, error: eventsError } = await supabase
+          .from("ad_events")
+          .select(
+            "id,advertisement_id,campaign_id,event_type,visitor_id,created_at"
+          )
+          .in("advertisement_id", advertisementIds)
+          .order("created_at", { ascending: false });
+
+        if (eventsError) {
+          throw new Error(eventsError.message);
+        }
+
+        setAdEvents((data || []) as AdEvent[]);
+      } catch (err) {
+        setAdEvents([]);
+
+        setAnalyticsError(
+          err instanceof Error
+            ? err.message
+            : "Unable to load advertising events."
+        );
+      } finally {
+        setEventsLoading(false);
       }
     },
     []
@@ -412,7 +447,9 @@ export default function AdvertisingPage() {
       }
 
       if (!availableBusinesses?.length) {
-        throw new Error("No accessible business account was found.");
+        throw new Error(
+          "No accessible business account was found."
+        );
       }
 
       const selectedBusiness =
@@ -427,15 +464,19 @@ export default function AdvertisingPage() {
         availableBusinesses[0];
 
       if (!selectedBusiness) {
-        throw new Error("No active business account was found.");
+        throw new Error(
+          "No active business account was found."
+        );
       }
 
-      const { data: countryData, error: countryError } =
-        await supabase
-          .from("countries")
-          .select("code,currency_code")
-          .eq("code", selectedBusiness.country_code)
-          .maybeSingle();
+      const {
+        data: countryData,
+        error: countryError,
+      } = await supabase
+        .from("countries")
+        .select("code,currency_code")
+        .eq("code", selectedBusiness.country_code)
+        .maybeSingle();
 
       if (countryError) {
         throw new Error(
@@ -454,7 +495,9 @@ export default function AdvertisingPage() {
         name: selectedBusiness.name,
         email: selectedBusiness.email,
         country_code: selectedBusiness.country_code,
-        countries: [{ currency_code: countryData.currency_code }],
+        countries: [
+          { currency_code: countryData.currency_code },
+        ],
       });
 
       const {
@@ -475,6 +518,7 @@ export default function AdvertisingPage() {
       }
 
       const loadedPackages = (packagesData || []) as Package[];
+
       setPackages(loadedPackages);
 
       const {
@@ -530,8 +574,8 @@ export default function AdvertisingPage() {
 
       if (campaignIds.length === 0) {
         setAdvertisements([]);
-        setStats([]);
-        setAnalytics(EMPTY_ANALYTICS);
+        setAdEvents([]);
+        setAnalyticsError("");
         return;
       }
 
@@ -560,120 +604,34 @@ export default function AdvertisingPage() {
         (advertisement) => advertisement.id
       );
 
-      if (advertisementIds.length === 0) {
-        setStats([]);
-        setAnalytics(EMPTY_ANALYTICS);
-        return;
-      }
-
-      const {
-        data: statsData,
-        error: statsError,
-      } = await supabase
-        .from("ad_daily_stats")
-        .select(
-          "id,advertisement_id,campaign_id,stat_date,impressions,clicks,contacts,conversions,whatsapp_clicks,phone_clicks,website_clicks"
-        )
-        .in("advertisement_id", advertisementIds)
-        .order("stat_date", { ascending: false });
-
-      if (statsError) {
-        throw new Error(
-          `Unable to load advertising statistics: ${statsError.message}`
-        );
-      }
-
-      setStats((statsData || []) as Stat[]);
+      await loadAdEvents(advertisementIds);
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
           : "Unable to load advertising data."
       );
+
+      setBusiness(null);
+      setPackages([]);
+      setCampaigns([]);
+      setAdvertisements([]);
+      setAdEvents([]);
+      setLocalizedPrices({});
     } finally {
       setLoading(false);
     }
-  }, [loadLocalizedPrices]);
-
-  const loadAnalytics = useCallback(async () => {
-    if (!business?.id) {
-      return;
-    }
-
-    setRefreshing(true);
-    setAnalyticsError("");
-
-    try {
-      const { startDate, endDate } = getDateBounds(range);
-
-      const { data, error: rpcError } = await supabase.rpc(
-        "get_advertising_analytics",
-        {
-          p_business_id: business.id,
-          p_start_date: startDate,
-          p_end_date: endDate,
-        }
-      );
-
-      if (rpcError) {
-        throw new Error(rpcError.message);
-      }
-
-      if (!data || typeof data !== "object") {
-        throw new Error("The analytics response is invalid.");
-      }
-
-      const result = data as Partial<Analytics>;
-
-      setAnalytics({
-        impressions: Number(result.impressions || 0),
-        clicks: Number(result.clicks || 0),
-        contacts: Number(result.contacts || 0),
-        conversions: Number(result.conversions || 0),
-        whatsapp_clicks: Number(result.whatsapp_clicks || 0),
-        phone_clicks: Number(result.phone_clicks || 0),
-        website_clicks: Number(result.website_clicks || 0),
-        reach:
-          result.reach === null || result.reach === undefined
-            ? null
-            : Number(result.reach),
-        event_count: Number(result.event_count || 0),
-        daily_stats: Array.isArray(result.daily_stats)
-          ? result.daily_stats.map((item) => ({
-              ...item,
-              impressions: Number(item.impressions || 0),
-              clicks: Number(item.clicks || 0),
-              contacts: Number(item.contacts || 0),
-              conversions: Number(item.conversions || 0),
-              whatsapp_clicks: Number(item.whatsapp_clicks || 0),
-              phone_clicks: Number(item.phone_clicks || 0),
-              website_clicks: Number(item.website_clicks || 0),
-            }))
-          : [],
-      });
-    } catch (err) {
-      setAnalyticsError(
-        err instanceof Error
-          ? err.message
-          : "Unable to load advertising analytics."
-      );
-    } finally {
-      setRefreshing(false);
-    }
-  }, [business?.id, range]);
+  }, [loadLocalizedPrices, loadAdEvents]);
 
   useEffect(() => {
     void loadData();
   }, [loadData]);
 
-  useEffect(() => {
-    if (!loading && business?.id) {
-      void loadAnalytics();
-    }
-  }, [loading, business?.id, loadAnalytics]);
-
   const activeCampaigns = useMemo(
-    () => campaigns.filter((campaign) => campaign.status === "active"),
+    () =>
+      campaigns.filter(
+        (campaign) => campaign.status === "active"
+      ),
     [campaigns]
   );
 
@@ -682,25 +640,27 @@ export default function AdvertisingPage() {
     [range]
   );
 
-  const filteredStats = useMemo(
+  const filteredEvents = useMemo(
     () =>
-      stats.filter((item) => {
-        if (startDate && item.stat_date < startDate) {
+      adEvents.filter((event) => {
+        const eventDate = event.created_at.slice(0, 10);
+
+        if (startDate && eventDate < startDate) {
           return false;
         }
 
-        if (endDate && item.stat_date > endDate) {
+        if (endDate && eventDate > endDate) {
           return false;
         }
 
         return true;
       }),
-    [stats, startDate, endDate]
+    [adEvents, startDate, endDate]
   );
 
   const totalStats = useMemo(
-    () => sumStats(filteredStats),
-    [filteredStats]
+    () => calculateEventTotals(filteredEvents),
+    [filteredEvents]
   );
 
   const getPackagePrice = (
@@ -709,8 +669,34 @@ export default function AdvertisingPage() {
     return localizedPrices[packageId] || null;
   };
 
+  const getCampaignTotals = (campaignId: string) => {
+    const campaignAdvertisementIds = new Set(
+      advertisements
+        .filter(
+          (advertisement) =>
+            advertisement.campaign_id === campaignId
+        )
+        .map((advertisement) => advertisement.id)
+    );
+
+    const campaignEvents = filteredEvents.filter(
+      (event) =>
+        campaignAdvertisementIds.has(event.advertisement_id) &&
+        (event.campaign_id === null ||
+          event.campaign_id === campaignId)
+    );
+
+    return calculateEventTotals(campaignEvents);
+  };
+
   const handleRefresh = async () => {
-    await loadData();
+    setRefreshing(true);
+
+    try {
+      await loadData();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const createCampaign = async () => {
@@ -725,7 +711,9 @@ export default function AdvertisingPage() {
     }
 
     if (!localizedPrices[selectedPackage.id]) {
-      setError("The local price for this package is unavailable.");
+      setError(
+        "The local price for this package is unavailable."
+      );
       return;
     }
 
@@ -752,7 +740,9 @@ export default function AdvertisingPage() {
         process.env.NEXT_PUBLIC_SUPABASE_URL;
 
       if (!supabaseUrl) {
-        throw new Error("Supabase configuration is missing.");
+        throw new Error(
+          "Supabase configuration is missing."
+        );
       }
 
       const campaignResponse = await fetch(
@@ -810,7 +800,8 @@ export default function AdvertisingPage() {
 
       if (!paymentResponse.ok) {
         throw new Error(
-          paymentData?.error || "Unable to initialize payment."
+          paymentData?.error ||
+            "Unable to initialize payment."
         );
       }
 
@@ -961,7 +952,9 @@ export default function AdvertisingPage() {
                   >
                     <div className="package-duration">
                       {item.duration_days}{" "}
-                      {item.duration_days === 1 ? "day" : "days"}
+                      {item.duration_days === 1
+                        ? "day"
+                        : "days"}
                     </div>
 
                     <h3>{item.name}</h3>
@@ -1072,8 +1065,10 @@ export default function AdvertisingPage() {
                     <span>Price</span>
                     <strong>
                       {formatMoney(
-                        localizedPrices[selectedPackage.id].local_price,
-                        localizedPrices[selectedPackage.id].local_currency
+                        localizedPrices[selectedPackage.id]
+                          .local_price,
+                        localizedPrices[selectedPackage.id]
+                          .local_currency
                       )}
                     </strong>
                   </div>
@@ -1188,20 +1183,7 @@ export default function AdvertisingPage() {
           ) : (
             <div className="active-campaign-grid">
               {activeCampaigns.map((campaign) => {
-                const campaignAds = advertisements.filter(
-                  (item) => item.campaign_id === campaign.id
-                );
-
-                const campaignAdIds = new Set(
-                  campaignAds.map((item) => item.id)
-                );
-
-                const campaignStats = filteredStats.filter(
-                  (item) =>
-                    campaignAdIds.has(item.advertisement_id)
-                );
-
-                const totals = sumStats(campaignStats);
+                const totals = getCampaignTotals(campaign.id);
 
                 return (
                   <article
@@ -1263,9 +1245,9 @@ export default function AdvertisingPage() {
                       </div>
 
                       <div>
-                        <span>Contacts</span>
+                        <span>Unique reach</span>
                         <strong>
-                          {totals.contacts.toLocaleString()}
+                          {totals.reach.toLocaleString()}
                         </strong>
                       </div>
                     </div>
@@ -1283,8 +1265,8 @@ export default function AdvertisingPage() {
             <div>
               <h2>Advertising statistics</h2>
               <p>
-                Review your campaign reach and advertising
-                performance.
+                Review impressions, clicks, click-through rate,
+                and unique reach for your advertisements.
               </p>
             </div>
 
@@ -1300,7 +1282,10 @@ export default function AdvertisingPage() {
             </button>
           </div>
 
-          <div className="stats-filters" aria-label="Statistics date range">
+          <div
+            className="stats-filters"
+            aria-label="Statistics date range"
+          >
             {(
               [
                 ["today", "Today"],
@@ -1324,7 +1309,8 @@ export default function AdvertisingPage() {
           {analyticsError && (
             <div className="advertising-error" role="alert">
               <span>
-                Analytics could not be loaded: {analyticsError}
+                Advertising analytics could not be loaded:{" "}
+                {analyticsError}
               </span>
             </div>
           )}
@@ -1333,82 +1319,49 @@ export default function AdvertisingPage() {
             <div className="stat-card">
               <span>Unique reach</span>
               <strong>
-                {analytics.reach === null
-                  ? "Unavailable"
-                  : analytics.reach.toLocaleString()}
+                {totalStats.reach.toLocaleString()}
               </strong>
-              <small>Distinct visitors recorded</small>
+              <small>
+                Distinct visitor IDs recorded for your ads
+              </small>
             </div>
 
             <div className="stat-card">
               <span>Impressions</span>
               <strong>
-                {analytics.impressions.toLocaleString()}
+                {totalStats.impressions.toLocaleString()}
               </strong>
-              <small>Total recorded ad views</small>
+              <small>Recorded advertisement views</small>
             </div>
 
             <div className="stat-card">
               <span>Clicks</span>
               <strong>
-                {analytics.clicks.toLocaleString()}
+                {totalStats.clicks.toLocaleString()}
               </strong>
               <small>
                 CTR:{" "}
                 {calculateCTR(
-                  analytics.impressions,
-                  analytics.clicks
+                  totalStats.impressions,
+                  totalStats.clicks
                 )}
               </small>
             </div>
-
-            <div className="stat-card">
-              <span>Contacts</span>
-              <strong>
-                {analytics.contacts.toLocaleString()}
-              </strong>
-              <small>Recorded contact actions</small>
-            </div>
-
-            <div className="stat-card">
-              <span>Conversions</span>
-              <strong>
-                {analytics.conversions.toLocaleString()}
-              </strong>
-              <small>Recorded conversions</small>
-            </div>
-
-            <div className="stat-card">
-              <span>WhatsApp clicks</span>
-              <strong>
-                {analytics.whatsapp_clicks.toLocaleString()}
-              </strong>
-              <small>WhatsApp contact actions</small>
-            </div>
-
-            <div className="stat-card">
-              <span>Phone clicks</span>
-              <strong>
-                {analytics.phone_clicks.toLocaleString()}
-              </strong>
-              <small>Phone contact actions</small>
-            </div>
-
-            <div className="stat-card">
-              <span>Website clicks</span>
-              <strong>
-                {analytics.website_clicks.toLocaleString()}
-              </strong>
-              <small>Visits to business websites</small>
-            </div>
           </div>
 
-          {filteredStats.length === 0 ? (
+          {eventsLoading ? (
             <div className="empty-state">
-              <h3>No statistics for this period</h3>
+              <h3>Loading advertising statistics</h3>
               <p>
-                Statistics will appear when your advertisements
-                begin receiving recorded activity.
+                Retrieving recorded activity for your advertisements.
+              </p>
+            </div>
+          ) : filteredEvents.length === 0 ? (
+            <div className="empty-state">
+              <h3>No advertising activity for this period</h3>
+              <p>
+                Impressions and clicks will appear here when
+                activity is recorded for your advertisements.
               </p>
             </div>
           ) : (
@@ -1417,66 +1370,80 @@ export default function AdvertisingPage() {
                 <thead>
                   <tr>
                     <th>Date</th>
+                    <th>Campaign</th>
                     <th>Impressions</th>
                     <th>Clicks</th>
                     <th>CTR</th>
-                    <th>Contacts</th>
-                    <th>WhatsApp</th>
-                    <th>Phone</th>
-                    <th>Website</th>
-                    <th>Conversions</th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {filteredStats.map((item) => (
-                    <tr key={item.id}>
-                      <td>{formatDate(item.stat_date)}</td>
+                  {campaigns
+                    .map((campaign) => {
+                      const campaignAdIds = new Set(
+                        advertisements
+                          .filter(
+                            (advertisement) =>
+                              advertisement.campaign_id ===
+                              campaign.id
+                          )
+                          .map((advertisement) => advertisement.id)
+                      );
 
-                      <td>
-                        {Number(item.impressions || 0).toLocaleString()}
-                      </td>
+                      const campaignEvents = filteredEvents.filter(
+                        (event) =>
+                          campaignAdIds.has(
+                            event.advertisement_id
+                          ) &&
+                          (event.campaign_id === null ||
+                            event.campaign_id === campaign.id)
+                      );
 
-                      <td>
-                        {Number(item.clicks || 0).toLocaleString()}
-                      </td>
+                      const dates = Array.from(
+                        new Set(
+                          campaignEvents.map((event) =>
+                            event.created_at.slice(0, 10)
+                          )
+                        )
+                      ).sort((a, b) => b.localeCompare(a));
 
-                      <td>
-                        {calculateCTR(
-                          Number(item.impressions || 0),
-                          Number(item.clicks || 0)
-                        )}
-                      </td>
+                      return dates.map((date) => {
+                        const dayEvents = campaignEvents.filter(
+                          (event) =>
+                            event.created_at.slice(0, 10) === date
+                        );
 
-                      <td>
-                        {Number(item.contacts || 0).toLocaleString()}
-                      </td>
+                        const totals =
+                          calculateEventTotals(dayEvents);
 
-                      <td>
-                        {Number(
-                          item.whatsapp_clicks || 0
-                        ).toLocaleString()}
-                      </td>
-
-                      <td>
-                        {Number(
-                          item.phone_clicks || 0
-                        ).toLocaleString()}
-                      </td>
-
-                      <td>
-                        {Number(
-                          item.website_clicks || 0
-                        ).toLocaleString()}
-                      </td>
-
-                      <td>
-                        {Number(
-                          item.conversions || 0
-                        ).toLocaleString()}
-                      </td>
-                    </tr>
-                  ))}
+                        return {
+                          key: `${campaign.id}-${date}`,
+                          date,
+                          campaignName: campaign.name,
+                          ...totals,
+                        };
+                      });
+                    })
+                    .flat()
+                    .sort((a, b) =>
+                      b.date.localeCompare(a.date)
+                    )
+                    .map((row) => (
+                      <tr key={row.key}>
+                        <td>{formatDate(row.date)}</td>
+                        <td>{row.campaignName}</td>
+                        <td>
+                          {row.impressions.toLocaleString()}
+                        </td>
+                        <td>{row.clicks.toLocaleString()}</td>
+                        <td>
+                          {calculateCTR(
+                            row.impressions,
+                            row.clicks
+                          )}
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
