@@ -1708,7 +1708,7 @@ export default function DiscoverPage() {
         </div>
       </footer>
 
-     {/* Mobile Bottom Navigation */}
+    {/* Mobile Bottom Navigation */}
 <nav
 className="mobile-bottom-nav"
 aria-label="Mobile navigation"
@@ -1717,10 +1717,7 @@ aria-label="Mobile navigation"
 href="/discover"
 className="active"
 >
-<span
-className="mobile-nav-icon"
-aria-hidden="true"
->
+<span className="mobile-nav-icon" aria-hidden="true">
 <svg
 viewBox="0 0 24 24"
 width="20"
@@ -1739,7 +1736,28 @@ strokeLinejoin="round"
 <span>Discover</span>
 </Link>
 
-    <Link href="/business-login">
+    <Link href="/categories">
+      <span className="mobile-nav-icon" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          width="20"
+          height="20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect x="3" y="3" width="7" height="7" rx="1" />
+          <rect x="14" y="3" width="7" height="7" rx="1" />
+          <rect x="3" y="14" width="7" height="7" rx="1" />
+          <rect x="14" y="14" width="7" height="7" rx="1" />
+        </svg>
+      </span>
+      <span>Categories</span>
+    </Link>
+
+    <Link href="/business/register">
       <span className="mobile-nav-icon" aria-hidden="true">
         <svg
           viewBox="0 0 24 24"
@@ -1758,6 +1776,25 @@ strokeLinejoin="round"
         </svg>
       </span>
       <span>Business</span>
+    </Link>
+
+    <Link href="/login">
+      <span className="mobile-nav-icon" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          width="20"
+          height="20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="12" cy="8" r="4" />
+          <path d="M5 21v-2a7 7 0 0 1 14 0v2" />
+        </svg>
+      </span>
+      <span>Login</span>
     </Link>
   </nav>
 </main>
