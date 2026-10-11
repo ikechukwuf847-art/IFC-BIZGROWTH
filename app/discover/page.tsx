@@ -1708,31 +1708,59 @@ export default function DiscoverPage() {
         </div>
       </footer>
 
-      {/* Mobile Bottom Navigation */}
-      <nav
-        className="mobile-bottom-nav"
-        aria-label="Mobile navigation"
-      >
-        <Link
-          href="/discover"
-          className="active"
+     {/* Mobile Bottom Navigation */}
+<nav
+className="mobile-bottom-nav"
+aria-label="Mobile navigation"
+>
+<Link
+href="/discover"
+className="active"
+>
+<span
+className="mobile-nav-icon"
+aria-hidden="true"
+>
+<svg
+viewBox="0 0 24 24"
+width="20"
+height="20"
+fill="none"
+stroke="currentColor"
+strokeWidth="2"
+strokeLinecap="round"
+strokeLinejoin="round"
+>
+<path d="M3 10.5 12 3l9 7.5" />
+<path d="M5 9.5V21h14V9.5" />
+<path d="M9 21v-6h6v6" />
+</svg>
+</span>
+<span>Discover</span>
+</Link>
+
+    <Link href="/business-login">
+      <span className="mobile-nav-icon" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          width="20"
+          height="20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
         >
-          <span
-            className="mobile-nav-icon"
-            aria-hidden="true"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              width="20"
-              height="20"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M3 10.5 12 3l9 7.5" />
-              <path d="M5 9.5V21h14V9.5" />
-              <path d="M9 21v-6h6v6" />
-            </svg>
-         
+          <path d="M3 21h18" />
+          <path d="M5 21V7l8-4v18" />
+          <path d="M13 10h6v11" />
+          <path d="M8 9h2M8 13h2M8 17h2M16 14h1M16 17h1" />
+        </svg>
+      </span>
+      <span>Business</span>
+    </Link>
+  </nav>
+</main>
+
+);
+}
