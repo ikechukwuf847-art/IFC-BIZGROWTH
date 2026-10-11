@@ -194,10 +194,10 @@ function BusinessCard({
       href={destination}
       className="business-card"
       onClick={() => {
-        if (advertisement) {
-          onAdvertisementClick?.(advertisement);
-        }
-      }}
+  if (advertisement) {
+    void onAdvertisementClick?.(advertisement);
+  }
+}}
       target={
         externalDestination ? "_blank" : undefined
       }
@@ -926,46 +926,48 @@ export default function DiscoverPage() {
   /*
    * Record an advertising click.
    */
-  const recordAdvertisementClick =
-    useCallback(
-      async (advertisement: Advertisement) => {
-        const { error: eventError } =
-          await supabase.rpc(
-            "record_advertising_event",
-            {
-              p_advertisement_id:
-                advertisement.id,
+/*
 
-              p_event_type: "click",
+* Production advertising click tracking.
 
-              p_visitor_id: null,
+* Analytics failures must not disrupt navigation
 
-              p_session_id: null,
-
-              p_placement:
-                FEATURED_PLACEMENT_NAME,
-
-              p_page_url:
-                typeof window !== "undefined"
-                  ? window.location.href
-                  : null,
-
-              p_referrer:
-                typeof document !== "undefined"
-                  ? document.referrer || null
-                  : null,
-            }
-          );
-
-        if (eventError) {
-          console.error(
-            "Unable to record advertising click:",
-            eventError
-          );
-        }
-      },
-      []
-    );
+* or display errors to visitors.
+  */
+  const recordAdvertisementClick = useCallback(
+  async (advertisement: Advertisement): Promise<void> => {
+  if (
+  typeof window === "undefined" ||
+  !advertisement?.id
+  ) {
+  return;
+  }
+  
+  try {
+  const { error } = await supabase.rpc(
+  "record_advertising_event",
+  {
+  p_advertisement_id: advertisement.id,
+  p_event_type: "click",
+  p_visitor_id: null,
+  p_session_id: null,
+  p_placement: FEATURED_PLACEMENT_NAME,
+  p_page_url: window.location.href,
+  p_referrer: document.referrer || null,
+  }
+  );
+  
+  if (error) {
+  // Tracking is non-critical; preserve the
+  // visitor's normal browsing experience.
+  return;
+  }
+  } catch {
+  // Silently handle unexpected tracking failures.
+  }
+  },
+  []
+  );
 
   useEffect(() => {
     loadCategories();
@@ -1831,7 +1833,6 @@ strokeLinejoin="round"
       <span>More</span>
     </Link>
   </nav>
-</main>
-
-);
-        }
+    </main>
+  );
+}
