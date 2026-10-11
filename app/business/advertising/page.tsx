@@ -77,22 +77,14 @@ type AdEvent = {
 };
 
 type DateRange = "today" | "7d" | "30d" | "all";
-
 type Tab = "campaigns" | "active" | "stats";
 
 type EventTotals = {
   impressions: number;
   clicks: number;
-  reach: number;
 };
 
 const supabase = createSupabaseBrowserClient();
-
-const EMPTY_TOTALS: EventTotals = {
-  impressions: 0,
-  clicks: 0,
-  reach: 0,
-};
 
 function formatMoney(amount: number, currency: string) {
   try {
@@ -167,72 +159,42 @@ function calculateCTR(impressions: number, clicks: number) {
 }
 
 function calculateEventTotals(events: AdEvent[]): EventTotals {
-  const visitors = new Set<string>();
-
   let impressions = 0;
   let clicks = 0;
 
   for (const event of events) {
     if (event.event_type === "impression") {
       impressions += 1;
-    }
-
-    if (event.event_type === "click") {
+    } else if (event.event_type === "click") {
       clicks += 1;
-    }
-
-    if (event.visitor_id) {
-      visitors.add(event.visitor_id);
     }
   }
 
-  return {
-    impressions,
-    clicks,
-    reach: visitors.size,
-  };
+  return { impressions, clicks };
 }
 
 export default function AdvertisingPage() {
   const [business, setBusiness] = useState<Business | null>(null);
-
   const [packages, setPackages] = useState<Package[]>([]);
-
   const [localizedPrices, setLocalizedPrices] = useState<
     Record<string, LocalizedPrice>
   >({});
-
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-
-  const [advertisements, setAdvertisements] = useState<
-    Advertisement[]
-  >([]);
-
+  const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
   const [adEvents, setAdEvents] = useState<AdEvent[]>([]);
-
   const [analyticsError, setAnalyticsError] = useState("");
-
   const [range, setRange] = useState<DateRange>("30d");
-
   const [tab, setTab] = useState<Tab>("campaigns");
-
   const [loading, setLoading] = useState(true);
-
   const [refreshing, setRefreshing] = useState(false);
-
   const [creating, setCreating] = useState(false);
-
   const [pricingLoading, setPricingLoading] = useState(false);
-
   const [eventsLoading, setEventsLoading] = useState(false);
-
   const [error, setError] = useState("");
-
-  const [selectedPackage, setSelectedPackage] =
-    useState<Package | null>(null);
-
+  const [selectedPackage, setSelectedPackage] = useState<Package | null>(
+    null
+  );
   const [campaignName, setCampaignName] = useState("");
-
   const [objective, setObjective] = useState("visibility");
 
   const loadLocalizedPrices = useCallback(
@@ -249,8 +211,7 @@ export default function AdvertisingPage() {
       setPricingLoading(true);
 
       try {
-        const supabaseUrl =
-          process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
         if (!supabaseUrl) {
           throw new Error("Supabase configuration is missing.");
@@ -284,9 +245,7 @@ export default function AdvertisingPage() {
         }
 
         if (!Array.isArray(data?.prices)) {
-          throw new Error(
-            "Invalid pricing response from the server."
-          );
+          throw new Error("Invalid pricing response from the server.");
         }
 
         const priceMap: Record<string, LocalizedPrice> = {};
@@ -313,8 +272,6 @@ export default function AdvertisingPage() {
         }
 
         setLocalizedPrices(priceMap);
-
-        return priceMap;
       } finally {
         setPricingLoading(false);
       }
@@ -322,34 +279,60 @@ export default function AdvertisingPage() {
     []
   );
 
+  /**
+   * Loads events only for advertisements already obtained from the
+   * selected business's campaigns.
+   *
+   * This is still subject to Supabase RLS. It does not replace the
+   * requirement for database policies to protect business data.
+   */
   const loadAdEvents = useCallback(
     async (advertisementIds: string[]) => {
-      if (advertisementIds.length === 0) {
-        setAdEvents([]);
-        setAnalyticsError("");
-        return;
-      }
-
       setEventsLoading(true);
       setAnalyticsError("");
 
       try {
-        const { data, error: eventsError } = await supabase
-          .from("ad_events")
-          .select(
-            "id,advertisement_id,campaign_id,event_type,visitor_id,created_at"
-          )
-          .in("advertisement_id", advertisementIds)
-          .order("created_at", { ascending: false });
-
-        if (eventsError) {
-          throw new Error(eventsError.message);
+        if (advertisementIds.length === 0) {
+          setAdEvents([]);
+          return;
         }
 
-        setAdEvents((data || []) as AdEvent[]);
+        const batchSize = 25;
+        const batches: string[][] = [];
+
+        for (let i = 0; i < advertisementIds.length; i += batchSize) {
+          batches.push(advertisementIds.slice(i, i + batchSize));
+        }
+
+        const results = await Promise.all(
+          batches.map(async (ids) => {
+            const { data, error: eventsError } = await supabase
+              .from("ad_events")
+              .select(
+                "id,advertisement_id,campaign_id,event_type,visitor_id,created_at"
+              )
+              .in("advertisement_id", ids)
+              .in("event_type", ["impression", "click"])
+              .order("created_at", { ascending: false });
+
+            if (eventsError) {
+              throw new Error(eventsError.message);
+            }
+
+            return (data || []) as AdEvent[];
+          })
+        );
+
+        const allEvents = results.flat();
+
+        // Deduplicate records defensively by event ID.
+        const uniqueEvents = Array.from(
+          new Map(allEvents.map((event) => [event.id, event])).values()
+        );
+
+        setAdEvents(uniqueEvents);
       } catch (err) {
         setAdEvents([]);
-
         setAnalyticsError(
           err instanceof Error
             ? err.message
@@ -418,10 +401,7 @@ export default function AdvertisingPage() {
         .filter(Boolean);
 
       const businessIds = Array.from(
-        new Set([
-          ...membershipBusinessIds,
-          ...ownedBusinessIds,
-        ])
+        new Set([...membershipBusinessIds, ...ownedBusinessIds])
       );
 
       if (businessIds.length === 0) {
@@ -447,26 +427,18 @@ export default function AdvertisingPage() {
       }
 
       if (!availableBusinesses?.length) {
-        throw new Error(
-          "No accessible business account was found."
-        );
+        throw new Error("No accessible business account was found.");
       }
 
       const selectedBusiness =
         availableBusinesses.find(
-          (item) =>
-            item.status === "active" &&
-            item.is_public === true
+          (item) => item.status === "active" && item.is_public === true
         ) ||
-        availableBusinesses.find(
-          (item) => item.status === "active"
-        ) ||
+        availableBusinesses.find((item) => item.status === "active") ||
         availableBusinesses[0];
 
       if (!selectedBusiness) {
-        throw new Error(
-          "No active business account was found."
-        );
+        throw new Error("No active business account was found.");
       }
 
       const {
@@ -485,9 +457,7 @@ export default function AdvertisingPage() {
       }
 
       if (!countryData?.currency_code) {
-        throw new Error(
-          "The business local currency is not configured."
-        );
+        throw new Error("The business local currency is not configured.");
       }
 
       setBusiness({
@@ -495,9 +465,7 @@ export default function AdvertisingPage() {
         name: selectedBusiness.name,
         email: selectedBusiness.email,
         country_code: selectedBusiness.country_code,
-        countries: [
-          { currency_code: countryData.currency_code },
-        ],
+        countries: [{ currency_code: countryData.currency_code }],
       });
 
       const {
@@ -518,17 +486,19 @@ export default function AdvertisingPage() {
       }
 
       const loadedPackages = (packagesData || []) as Package[];
-
       setPackages(loadedPackages);
 
       const {
         data: { session },
+        error: sessionError,
       } = await supabase.auth.getSession();
 
+      if (sessionError) {
+        throw new Error(sessionError.message);
+      }
+
       if (!session?.access_token) {
-        throw new Error(
-          "Your session has expired. Please sign in again."
-        );
+        throw new Error("Your session has expired. Please sign in again.");
       }
 
       await loadLocalizedPrices(
@@ -554,8 +524,8 @@ export default function AdvertisingPage() {
         );
       }
 
-      const campaignsWithPackages: Campaign[] =
-        (campaignsData || []).map((campaign) => {
+      const campaignsWithPackages: Campaign[] = (campaignsData || []).map(
+        (campaign) => {
           const packageData = loadedPackages.find(
             (item) => item.id === campaign.package_id
           );
@@ -564,7 +534,8 @@ export default function AdvertisingPage() {
             ...campaign,
             ad_packages: packageData ? [packageData] : [],
           };
-        }) as Campaign[];
+        }
+      ) as Campaign[];
 
       setCampaigns(campaignsWithPackages);
 
@@ -595,16 +566,14 @@ export default function AdvertisingPage() {
         );
       }
 
-      const loadedAdvertisements =
-        (advertisementsData || []) as Advertisement[];
+      const loadedAdvertisements = (advertisementsData ||
+        []) as Advertisement[];
 
       setAdvertisements(loadedAdvertisements);
 
-      const advertisementIds = loadedAdvertisements.map(
-        (advertisement) => advertisement.id
+      await loadAdEvents(
+        loadedAdvertisements.map((advertisement) => advertisement.id)
       );
-
-      await loadAdEvents(advertisementIds);
     } catch (err) {
       setError(
         err instanceof Error
@@ -628,10 +597,7 @@ export default function AdvertisingPage() {
   }, [loadData]);
 
   const activeCampaigns = useMemo(
-    () =>
-      campaigns.filter(
-        (campaign) => campaign.status === "active"
-      ),
+    () => campaigns.filter((campaign) => campaign.status === "active"),
     [campaigns]
   );
 
@@ -663,18 +629,14 @@ export default function AdvertisingPage() {
     [filteredEvents]
   );
 
-  const getPackagePrice = (
-    packageId: string
-  ): LocalizedPrice | null => {
-    return localizedPrices[packageId] || null;
-  };
+  const getPackagePrice = (packageId: string): LocalizedPrice | null =>
+    localizedPrices[packageId] || null;
 
   const getCampaignTotals = (campaignId: string) => {
     const campaignAdvertisementIds = new Set(
       advertisements
         .filter(
-          (advertisement) =>
-            advertisement.campaign_id === campaignId
+          (advertisement) => advertisement.campaign_id === campaignId
         )
         .map((advertisement) => advertisement.id)
     );
@@ -682,8 +644,7 @@ export default function AdvertisingPage() {
     const campaignEvents = filteredEvents.filter(
       (event) =>
         campaignAdvertisementIds.has(event.advertisement_id) &&
-        (event.campaign_id === null ||
-          event.campaign_id === campaignId)
+        (event.campaign_id === null || event.campaign_id === campaignId)
     );
 
     return calculateEventTotals(campaignEvents);
@@ -711,9 +672,7 @@ export default function AdvertisingPage() {
     }
 
     if (!localizedPrices[selectedPackage.id]) {
-      setError(
-        "The local price for this package is unavailable."
-      );
+      setError("The local price for this package is unavailable.");
       return;
     }
 
@@ -728,21 +687,21 @@ export default function AdvertisingPage() {
     try {
       const {
         data: { session },
+        error: sessionError,
       } = await supabase.auth.getSession();
 
-      if (!session?.access_token) {
-        throw new Error(
-          "Your session has expired. Please sign in again."
-        );
+      if (sessionError) {
+        throw new Error(sessionError.message);
       }
 
-      const supabaseUrl =
-        process.env.NEXT_PUBLIC_SUPABASE_URL;
+      if (!session?.access_token) {
+        throw new Error("Your session has expired. Please sign in again.");
+      }
+
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
       if (!supabaseUrl) {
-        throw new Error(
-          "Supabase configuration is missing."
-        );
+        throw new Error("Supabase configuration is missing.");
       }
 
       const campaignResponse = await fetch(
@@ -766,8 +725,7 @@ export default function AdvertisingPage() {
 
       if (!campaignResponse.ok) {
         throw new Error(
-          campaignData?.error ||
-            "Unable to create advertising campaign."
+          campaignData?.error || "Unable to create advertising campaign."
         );
       }
 
@@ -800,15 +758,12 @@ export default function AdvertisingPage() {
 
       if (!paymentResponse.ok) {
         throw new Error(
-          paymentData?.error ||
-            "Unable to initialize payment."
+          paymentData?.error || "Unable to initialize payment."
         );
       }
 
       if (!paymentData?.authorization_url) {
-        throw new Error(
-          "Payment authorization URL was not returned."
-        );
+        throw new Error("Payment authorization URL was not returned.");
       }
 
       window.location.href = paymentData.authorization_url;
@@ -818,7 +773,6 @@ export default function AdvertisingPage() {
           ? err.message
           : "Unable to create your advertising campaign."
       );
-
       setCreating(false);
     }
   };
@@ -838,15 +792,11 @@ export default function AdvertisingPage() {
     <main className="advertising-page">
       <section className="advertising-header">
         <div>
-          <span className="advertising-eyebrow">
-            IFC BIZGROWTH
-          </span>
-
+          <span className="advertising-eyebrow">IFC BIZGROWTH</span>
           <h1>Advertising</h1>
-
           <p>
-            Promote your business and put your brand in front
-            of more customers.
+            Promote your business and put your brand in front of more
+            customers.
           </p>
         </div>
 
@@ -859,7 +809,6 @@ export default function AdvertisingPage() {
       {error && (
         <div className="advertising-error" role="alert">
           <span>{error}</span>
-
           <button
             type="button"
             onClick={() => setError("")}
@@ -870,10 +819,7 @@ export default function AdvertisingPage() {
         </div>
       )}
 
-      <nav
-        className="advertising-tabs"
-        aria-label="Advertising navigation"
-      >
+      <nav className="advertising-tabs" aria-label="Advertising navigation">
         <button
           type="button"
           className={tab === "campaigns" ? "active" : ""}
@@ -889,9 +835,7 @@ export default function AdvertisingPage() {
         >
           Active Campaign
           {activeCampaigns.length > 0 && (
-            <span className="tab-count">
-              {activeCampaigns.length}
-            </span>
+            <span className="tab-count">{activeCampaigns.length}</span>
           )}
         </button>
 
@@ -910,8 +854,7 @@ export default function AdvertisingPage() {
             <div>
               <h2>Choose an advertising package</h2>
               <p>
-                Select how long you want your business
-                promotion to run.
+                Select how long you want your business promotion to run.
               </p>
             </div>
           </div>
@@ -920,16 +863,14 @@ export default function AdvertisingPage() {
             <div className="empty-state">
               <h3>Calculating local prices</h3>
               <p>
-                We are calculating advertising prices for your
-                business location.
+                We are calculating advertising prices for your business
+                location.
               </p>
             </div>
           ) : packages.length === 0 ? (
             <div className="empty-state">
               <h3>No advertising packages available</h3>
-              <p>
-                Advertising packages are currently unavailable.
-              </p>
+              <p>Advertising packages are currently unavailable.</p>
             </div>
           ) : (
             <div className="package-grid">
@@ -940,28 +881,19 @@ export default function AdvertisingPage() {
                   <article
                     key={item.id}
                     className={`package-card ${
-                      selectedPackage?.id === item.id
-                        ? "selected"
-                        : ""
+                      selectedPackage?.id === item.id ? "selected" : ""
                     }`}
                     onClick={() => {
-                      if (localized) {
-                        setSelectedPackage(item);
-                      }
+                      if (localized) setSelectedPackage(item);
                     }}
                   >
                     <div className="package-duration">
                       {item.duration_days}{" "}
-                      {item.duration_days === 1
-                        ? "day"
-                        : "days"}
+                      {item.duration_days === 1 ? "day" : "days"}
                     </div>
 
                     <h3>{item.name}</h3>
-
-                    {item.description && (
-                      <p>{item.description}</p>
-                    )}
+                    {item.description && <p>{item.description}</p>}
 
                     <strong className="package-price">
                       {localized
@@ -977,10 +909,7 @@ export default function AdvertisingPage() {
                       disabled={!localized}
                       onClick={(event) => {
                         event.stopPropagation();
-
-                        if (localized) {
-                          setSelectedPackage(item);
-                        }
+                        if (localized) setSelectedPackage(item);
                       }}
                     >
                       {selectedPackage?.id === item.id
@@ -995,105 +924,83 @@ export default function AdvertisingPage() {
             </div>
           )}
 
-          {selectedPackage &&
-            localizedPrices[selectedPackage.id] && (
-              <section className="campaign-form-card">
-                <div className="section-heading">
-                  <div>
-                    <h2>Create campaign</h2>
-                    <p>
-                      Your campaign will be activated automatically
-                      after successful payment.
-                    </p>
-                  </div>
+          {selectedPackage && localizedPrices[selectedPackage.id] && (
+            <section className="campaign-form-card">
+              <div className="section-heading">
+                <div>
+                  <h2>Create campaign</h2>
+                  <p>
+                    Your campaign will be activated automatically after
+                    successful payment.
+                  </p>
                 </div>
+              </div>
 
-                <div className="form-grid">
-                  <label>
-                    Campaign name
+              <div className="form-grid">
+                <label>
+                  Campaign name
+                  <input
+                    type="text"
+                    value={campaignName}
+                    onChange={(event) => setCampaignName(event.target.value)}
+                    placeholder="e.g. October Business Promotion"
+                    maxLength={120}
+                  />
+                </label>
 
-                    <input
-                      type="text"
-                      value={campaignName}
-                      onChange={(event) =>
-                        setCampaignName(event.target.value)
-                      }
-                      placeholder="e.g. October Business Promotion"
-                      maxLength={120}
-                    />
-                  </label>
+                <label>
+                  Objective
+                  <select
+                    value={objective}
+                    onChange={(event) => setObjective(event.target.value)}
+                  >
+                    <option value="visibility">Brand visibility</option>
+                    <option value="customer_acquisition">
+                      Customer acquisition
+                    </option>
+                    <option value="website_traffic">Website traffic</option>
+                    <option value="promotion">Promote an offer</option>
+                  </select>
+                </label>
+              </div>
 
-                  <label>
-                    Objective
-
-                    <select
-                      value={objective}
-                      onChange={(event) =>
-                        setObjective(event.target.value)
-                      }
-                    >
-                      <option value="visibility">
-                        Brand visibility
-                      </option>
-                      <option value="customer_acquisition">
-                        Customer acquisition
-                      </option>
-                      <option value="website_traffic">
-                        Website traffic
-                      </option>
-                      <option value="promotion">
-                        Promote an offer
-                      </option>
-                    </select>
-                  </label>
+              <div className="campaign-summary">
+                <div>
+                  <span>Package</span>
+                  <strong>{selectedPackage.name}</strong>
                 </div>
-
-                <div className="campaign-summary">
-                  <div>
-                    <span>Package</span>
-                    <strong>{selectedPackage.name}</strong>
-                  </div>
-
-                  <div>
-                    <span>Duration</span>
-                    <strong>
-                      {selectedPackage.duration_days} days
-                    </strong>
-                  </div>
-
-                  <div>
-                    <span>Price</span>
-                    <strong>
-                      {formatMoney(
-                        localizedPrices[selectedPackage.id]
-                          .local_price,
-                        localizedPrices[selectedPackage.id]
-                          .local_currency
-                      )}
-                    </strong>
-                  </div>
+                <div>
+                  <span>Duration</span>
+                  <strong>{selectedPackage.duration_days} days</strong>
                 </div>
+                <div>
+                  <span>Price</span>
+                  <strong>
+                    {formatMoney(
+                      localizedPrices[selectedPackage.id].local_price,
+                      localizedPrices[selectedPackage.id].local_currency
+                    )}
+                  </strong>
+                </div>
+              </div>
 
-                <button
-                  type="button"
-                  className="primary-button"
-                  disabled={creating}
-                  onClick={createCampaign}
-                >
-                  {creating
-                    ? "Preparing payment..."
-                    : "Continue to payment"}
-                </button>
-              </section>
-            )}
+              <button
+                type="button"
+                className="primary-button"
+                disabled={creating}
+                onClick={createCampaign}
+              >
+                {creating ? "Preparing payment..." : "Continue to payment"}
+              </button>
+            </section>
+          )}
 
           <section className="campaign-history">
             <div className="section-heading">
               <div>
                 <h2>Your campaigns</h2>
                 <p>
-                  View your previous and current advertising
-                  campaigns.
+                  View your previous and current advertising campaigns.
                 </p>
               </div>
             </div>
@@ -1101,34 +1008,25 @@ export default function AdvertisingPage() {
             {campaigns.length === 0 ? (
               <div className="empty-state">
                 <h3>No campaigns yet</h3>
-                <p>
-                  Your advertising campaigns will appear here.
-                </p>
+                <p>Your advertising campaigns will appear here.</p>
               </div>
             ) : (
               <div className="campaign-list">
                 {campaigns.map((campaign) => {
-                  const campaignPackage =
-                    campaign.ad_packages?.[0];
-
+                  const campaignPackage = campaign.ad_packages?.[0];
                   const localized = campaignPackage
                     ? getPackagePrice(campaignPackage.id)
                     : null;
 
                   return (
-                    <article
-                      className="campaign-row"
-                      key={campaign.id}
-                    >
+                    <article className="campaign-row" key={campaign.id}>
                       <div>
                         <h3>{campaign.name}</h3>
-
                         <p>
                           {campaignPackage
                             ? campaignPackage.name
                             : `${campaign.budget} ${campaign.currency_code}`}
                         </p>
-
                         {localized && (
                           <small>
                             {formatMoney(
@@ -1141,9 +1039,7 @@ export default function AdvertisingPage() {
 
                       <div className="campaign-row-date">
                         <span>Created</span>
-                        <strong>
-                          {formatDate(campaign.created_at)}
-                        </strong>
+                        <strong>{formatDate(campaign.created_at)}</strong>
                       </div>
 
                       <span
@@ -1165,10 +1061,7 @@ export default function AdvertisingPage() {
           <div className="section-heading">
             <div>
               <h2>Active campaigns</h2>
-              <p>
-                Monitor the advertising campaigns currently
-                running.
-              </p>
+              <p>Monitor the advertising campaigns currently running.</p>
             </div>
           </div>
 
@@ -1176,8 +1069,8 @@ export default function AdvertisingPage() {
             <div className="empty-state">
               <h3>No active campaign</h3>
               <p>
-                Once your advertising payment is successful,
-                your campaign will appear here automatically.
+                Once your advertising payment is successful, your campaign
+                will appear here automatically.
               </p>
             </div>
           ) : (
@@ -1192,12 +1085,9 @@ export default function AdvertisingPage() {
                   >
                     <div className="active-campaign-top">
                       <div>
-                        <span className="active-label">
-                          LIVE
-                        </span>
+                        <span className="active-label">LIVE</span>
                         <h3>{campaign.name}</h3>
                       </div>
-
                       <span className="campaign-status status-active">
                         Active
                       </span>
@@ -1206,48 +1096,27 @@ export default function AdvertisingPage() {
                     <div className="active-campaign-dates">
                       <div>
                         <span>Started</span>
-                        <strong>
-                          {formatDate(campaign.starts_at)}
-                        </strong>
+                        <strong>{formatDate(campaign.starts_at)}</strong>
                       </div>
-
                       <div>
                         <span>Ends</span>
-                        <strong>
-                          {formatDate(campaign.ends_at)}
-                        </strong>
+                        <strong>{formatDate(campaign.ends_at)}</strong>
                       </div>
                     </div>
 
                     <div className="active-campaign-metrics">
                       <div>
                         <span>Impressions</span>
-                        <strong>
-                          {totals.impressions.toLocaleString()}
-                        </strong>
+                        <strong>{totals.impressions.toLocaleString()}</strong>
                       </div>
-
                       <div>
                         <span>Clicks</span>
-                        <strong>
-                          {totals.clicks.toLocaleString()}
-                        </strong>
+                        <strong>{totals.clicks.toLocaleString()}</strong>
                       </div>
-
                       <div>
                         <span>CTR</span>
                         <strong>
-                          {calculateCTR(
-                            totals.impressions,
-                            totals.clicks
-                          )}
-                        </strong>
-                      </div>
-
-                      <div>
-                        <span>Unique reach</span>
-                        <strong>
-                          {totals.reach.toLocaleString()}
+                          {calculateCTR(totals.impressions, totals.clicks)}
                         </strong>
                       </div>
                     </div>
@@ -1265,8 +1134,8 @@ export default function AdvertisingPage() {
             <div>
               <h2>Advertising statistics</h2>
               <p>
-                Review impressions, clicks, click-through rate,
-                and unique reach for your advertisements.
+                Review recorded impressions, clicks, and click-through
+                rates for your advertisements.
               </p>
             </div>
 
@@ -1276,16 +1145,11 @@ export default function AdvertisingPage() {
               onClick={handleRefresh}
               disabled={loading || refreshing}
             >
-              {loading || refreshing
-                ? "Refreshing..."
-                : "Refresh"}
+              {loading || refreshing ? "Refreshing..." : "Refresh"}
             </button>
           </div>
 
-          <div
-            className="stats-filters"
-            aria-label="Statistics date range"
-          >
+          <div className="stats-filters" aria-label="Statistics date range">
             {(
               [
                 ["today", "Today"],
@@ -1309,43 +1173,30 @@ export default function AdvertisingPage() {
           {analyticsError && (
             <div className="advertising-error" role="alert">
               <span>
-                Advertising analytics could not be loaded:{" "}
-                {analyticsError}
+                Advertising analytics could not be loaded: {analyticsError}
               </span>
             </div>
           )}
 
           <div className="stats-grid">
             <div className="stat-card">
-              <span>Unique reach</span>
-              <strong>
-                {totalStats.reach.toLocaleString()}
-              </strong>
-              <small>
-                Distinct visitor IDs recorded for your ads
-              </small>
-            </div>
-
-            <div className="stat-card">
               <span>Impressions</span>
-              <strong>
-                {totalStats.impressions.toLocaleString()}
-              </strong>
+              <strong>{totalStats.impressions.toLocaleString()}</strong>
               <small>Recorded advertisement views</small>
             </div>
 
             <div className="stat-card">
               <span>Clicks</span>
+              <strong>{totalStats.clicks.toLocaleString()}</strong>
+              <small>Recorded advertisement clicks</small>
+            </div>
+
+            <div className="stat-card">
+              <span>Click-through rate</span>
               <strong>
-                {totalStats.clicks.toLocaleString()}
+                {calculateCTR(totalStats.impressions, totalStats.clicks)}
               </strong>
-              <small>
-                CTR:{" "}
-                {calculateCTR(
-                  totalStats.impressions,
-                  totalStats.clicks
-                )}
-              </small>
+              <small>Clicks divided by impressions</small>
             </div>
           </div>
 
@@ -1356,12 +1207,20 @@ export default function AdvertisingPage() {
                 Retrieving recorded activity for your advertisements.
               </p>
             </div>
+          ) : analyticsError ? (
+            <div className="empty-state">
+              <h3>Statistics unavailable</h3>
+              <p>
+                The event query failed. Use the error above to diagnose the
+                issue; zero values are not being presented as confirmed
+                analytics.
+              </p>
+            </div>
           ) : filteredEvents.length === 0 ? (
             <div className="empty-state">
               <h3>No advertising activity for this period</h3>
               <p>
-                Impressions and clicks will appear here when
-                activity is recorded for your advertisements.
+                Try All time to check whether older events are recorded.
               </p>
             </div>
           ) : (
@@ -1384,17 +1243,14 @@ export default function AdvertisingPage() {
                         advertisements
                           .filter(
                             (advertisement) =>
-                              advertisement.campaign_id ===
-                              campaign.id
+                              advertisement.campaign_id === campaign.id
                           )
                           .map((advertisement) => advertisement.id)
                       );
 
                       const campaignEvents = filteredEvents.filter(
                         (event) =>
-                          campaignAdIds.has(
-                            event.advertisement_id
-                          ) &&
+                          campaignAdIds.has(event.advertisement_id) &&
                           (event.campaign_id === null ||
                             event.campaign_id === campaign.id)
                       );
@@ -1409,12 +1265,10 @@ export default function AdvertisingPage() {
 
                       return dates.map((date) => {
                         const dayEvents = campaignEvents.filter(
-                          (event) =>
-                            event.created_at.slice(0, 10) === date
+                          (event) => event.created_at.slice(0, 10) === date
                         );
 
-                        const totals =
-                          calculateEventTotals(dayEvents);
+                        const totals = calculateEventTotals(dayEvents);
 
                         return {
                           key: `${campaign.id}-${date}`,
@@ -1425,22 +1279,15 @@ export default function AdvertisingPage() {
                       });
                     })
                     .flat()
-                    .sort((a, b) =>
-                      b.date.localeCompare(a.date)
-                    )
+                    .sort((a, b) => b.date.localeCompare(a.date))
                     .map((row) => (
                       <tr key={row.key}>
                         <td>{formatDate(row.date)}</td>
                         <td>{row.campaignName}</td>
-                        <td>
-                          {row.impressions.toLocaleString()}
-                        </td>
+                        <td>{row.impressions.toLocaleString()}</td>
                         <td>{row.clicks.toLocaleString()}</td>
                         <td>
-                          {calculateCTR(
-                            row.impressions,
-                            row.clicks
-                          )}
+                          {calculateCTR(row.impressions, row.clicks)}
                         </td>
                       </tr>
                     ))}
