@@ -519,6 +519,23 @@ export default function BusinessProfilePage() {
     [],
   );
 
+    const trackContactClick = useCallback(
+    (
+      businessId: string,
+      method: string,
+      metadata: AnalyticsMetadata = {},
+    ) => {
+      void trackEvent(businessId, "contact_click", {
+        method,
+        ...metadata,
+      });
+    },
+    [trackEvent],
+  );
+
+  const loadBusiness = useCallback(
+    async () => {
+
   const loadBusiness = useCallback(
     async () => {
       if (!slug) return;
@@ -783,20 +800,58 @@ export default function BusinessProfilePage() {
     setActiveSection("about");
   }, [slug]);
 
-  /*
-   * ANALYTICS: Track visits to profile sections.
-   */
-  useEffect(() => {
-    if (!business?.id) return;
+/*
+ * ANALYTICS: Track visits to business profile sections.
+ * Product, service and promotion tabs feed the dashboard
+ * view metrics. Other tabs remain section_view events.
+ */
+useEffect(() => {
+  if (!business?.id) return;
 
-    void trackEvent(
-      business.id,
-      "section_view",
-      {
-        section: activeSection,
-      },
-    );
-  }, [business?.id, activeSection, trackEvent]);
+  const eventTypes: Partial<
+    Record<ProfileSection, string>
+  > = {
+    products: "product_view",
+    services: "service_view",
+    promotions: "promotion_view",
+  };
+
+  const eventType =
+    eventTypes[activeSection] ?? "section_view";
+
+  void trackEvent(business.id, eventType, {
+    section: activeSection,
+    business_slug: business.slug,
+  });
+}, [
+  business?.id,
+  business?.slug,
+  activeSection,
+  trackEvent,
+]);
+
+  /*
+ * ANALYTICS: Track when customers open the Contact
+ * section containing the business's contact/location details.
+ */
+useEffect(() => {
+  if (!business?.id || activeSection !== "contact") {
+    return;
+  }
+
+  void trackEvent(business.id, "location_view", {
+    has_location: Boolean(location),
+    has_address: Boolean(address),
+    has_map: Boolean(mapUrl),
+  });
+}, [
+  business?.id,
+  activeSection,
+  location,
+  address,
+  mapUrl,
+  trackEvent,
+]);
 
   const logoUrl = getLogoUrl(
     business?.logo_url ?? null,
