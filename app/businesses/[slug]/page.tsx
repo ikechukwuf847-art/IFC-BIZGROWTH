@@ -110,9 +110,9 @@ function getAnalyticsId(storage: Storage, key: string) {
 
     return id;
   } catch {
-    return `${
-      Date.now()
-    }-${Math.random().toString(36).slice(2)}`;
+    return `${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2)}`;
   }
 }
 
@@ -450,25 +450,30 @@ export default function BusinessProfilePage() {
   ] = useState("");
 
   /*
-   * This controls the actual navigation.
-   * Clicking a tab changes the displayed section.
-   * It does NOT scroll down the page.
+   * Controls which profile section is displayed.
    */
   const [activeSection, setActiveSection] =
     useState<ProfileSection>("about");
 
   /*
-   * Track a profile view once for each business ID
-   * during this component's lifetime.
+   * Prevent repeated profile-view tracking during
+   * this component's lifetime.
    */
   const trackedProfileViews = useRef<Set<string>>(
     new Set(),
   );
 
   /*
+   * Prevent duplicate location-view tracking when
+   * React reruns an effect for the same location.
+   */
+  const trackedLocationViews = useRef<Set<string>>(
+    new Set(),
+  );
+
+  /*
    * Send analytics to the existing API endpoint.
-   * Errors are deliberately swallowed so analytics
-   * cannot break the business profile.
+   * Errors never interrupt normal functionality.
    */
   const trackEvent = useCallback(
     async (
@@ -513,256 +518,247 @@ export default function BusinessProfilePage() {
           }),
         });
       } catch {
-        // Analytics must never interrupt normal functionality.
+        // Analytics must never interrupt functionality.
       }
     },
     [],
   );
 
-  const loadBusiness = useCallback(
-    async () => {
-      if (!slug) return;
+  const loadBusiness = useCallback(async () => {
+    if (!slug) return;
 
-      setLoading(true);
-      setError("");
-      setNotFound(false);
+    setLoading(true);
+    setError("");
+    setNotFound(false);
 
-      try {
-        const {
-          data: businessData,
-          error: businessError,
-        } = await supabase
-          .from("businesses")
-          .select(
-            `
-              id,
-              name,
-              slug,
-              description,
-              email,
-              phone,
-              website_url,
-              logo_url,
-              country_code,
-              verification_status,
-              is_featured,
-              is_public,
-              status
-            `,
-          )
-          .eq("slug", slug)
-          .eq("is_public", true)
-          .eq("status", "active")
-          .maybeSingle();
-
-        if (businessError) {
-          throw businessError;
-        }
-
-        if (!businessData) {
-          setNotFound(true);
-          return;
-        }
-
-        setBusiness(businessData as Business);
-
-        const businessId = businessData.id;
-
-        /*
-         * ANALYTICS: Record a profile view.
-         * The ref prevents repeat tracking when loadBusiness
-         * runs again after a review is submitted.
-         */
-        if (!trackedProfileViews.current.has(businessId)) {
-          trackedProfileViews.current.add(businessId);
-
-          void trackEvent(
-            businessId,
-            "profile_view",
-            {
-              business_slug: businessData.slug,
-              business_name: businessData.name,
-              source: document.referrer
-                ? "external_or_previous_page"
-                : "direct",
-            },
-          );
-        }
-
-        const [
-          locationResult,
-          reviewsResult,
-          ratingResult,
-          productsResult,
-          servicesResult,
-          mediaResult,
-          socialResult,
-          promotionsResult,
-          hoursResult,
-        ] = await Promise.all([
-          supabase
-            .from("business_locations")
-            .select("*")
-            .eq("business_id", businessId)
-            .eq("is_active", true)
-            .eq("is_public", true)
-            .order("is_primary", {
-              ascending: false,
-            })
-            .limit(1)
-            .maybeSingle(),
-
-          supabase
-            .from("business_reviews")
-            .select("*")
-            .eq("business_id", businessId)
-            .eq("is_published", true)
-            .order("created_at", {
-              ascending: false,
-            }),
-
-          supabase.rpc(
-            "get_business_rating",
-            {
-              p_business_id: businessId,
-            },
-          ),
-
-          supabase
-            .from("business_products")
-            .select("*")
-            .eq("business_id", businessId),
-
-          supabase
-            .from("business_services")
-            .select("*")
-            .eq("business_id", businessId),
-
-          supabase
-            .from("business_media")
-            .select("*")
-            .eq("business_id", businessId)
-            .eq("is_active", true)
-            .order("sort_order", {
-              ascending: true,
-            }),
-
-          supabase
-            .from("business_social_links")
-            .select("*")
-            .eq("business_id", businessId),
-
-          supabase
-            .from("business_promotions")
-            .select("*")
-            .eq("business_id", businessId),
-
-          supabase
-            .from("business_hours")
-            .select("*")
-            .eq("business_id", businessId)
-            .order("day_of_week", {
-              ascending: true,
-            }),
-        ]);
-
-        if (locationResult.error) {
-          console.error(locationResult.error);
-        }
-
-        if (reviewsResult.error) {
-          console.error(reviewsResult.error);
-        }
-
-        if (productsResult.error) {
-          console.error(productsResult.error);
-        }
-
-        if (servicesResult.error) {
-          console.error(servicesResult.error);
-        }
-
-        if (mediaResult.error) {
-          console.error(mediaResult.error);
-        }
-
-        if (socialResult.error) {
-          console.error(socialResult.error);
-        }
-
-        if (promotionsResult.error) {
-          console.error(promotionsResult.error);
-        }
-
-        if (hoursResult.error) {
-          console.error(hoursResult.error);
-        }
-
-        setLocation(
-          (locationResult.data as Location | null) ??
-            null,
-        );
-
-        setReviews(
-          (reviewsResult.data as Review[]) ?? [],
-        );
-
-        const ratingData = Array.isArray(
-          ratingResult.data,
+    try {
+      const {
+        data: businessData,
+        error: businessError,
+      } = await supabase
+        .from("businesses")
+        .select(
+          `
+            id,
+            name,
+            slug,
+            description,
+            email,
+            phone,
+            website_url,
+            logo_url,
+            country_code,
+            verification_status,
+            is_featured,
+            is_public,
+            status
+          `,
         )
-          ? ratingResult.data[0]
-          : ratingResult.data;
+        .eq("slug", slug)
+        .eq("is_public", true)
+        .eq("status", "active")
+        .maybeSingle();
 
-        if (ratingData) {
-          setRating({
-            average_rating:
-              Number(ratingData.average_rating) || 0,
-
-            review_count:
-              Number(ratingData.review_count) || 0,
-          });
-        } else {
-          setRating({
-            average_rating: 0,
-            review_count: 0,
-          });
-        }
-
-        setProducts(
-          (productsResult.data as GenericRow[]) ?? [],
-        );
-
-        setServices(
-          (servicesResult.data as GenericRow[]) ?? [],
-        );
-
-        setMedia(
-          (mediaResult.data as GenericRow[]) ?? [],
-        );
-
-        setSocialLinks(
-          (socialResult.data as GenericRow[]) ?? [],
-        );
-
-        setPromotions(
-          (promotionsResult.data as GenericRow[]) ?? [],
-        );
-
-        setHours(
-          (hoursResult.data as GenericRow[]) ?? [],
-        );
-      } catch (err) {
-        console.error(err);
-
-        setError(
-          "We couldn't load this business right now. Please try again.",
-        );
-      } finally {
-        setLoading(false);
+      if (businessError) {
+        throw businessError;
       }
-    },
-    [slug, supabase, trackEvent],
-  );
+
+      if (!businessData) {
+        setNotFound(true);
+        setBusiness(null);
+        return;
+      }
+
+      setBusiness(businessData as Business);
+
+      const businessId = businessData.id;
+
+      /*
+       * ANALYTICS: Record a profile view.
+       */
+      if (
+        !trackedProfileViews.current.has(businessId)
+      ) {
+        trackedProfileViews.current.add(businessId);
+
+        void trackEvent(
+          businessId,
+          "profile_view",
+          {
+            business_slug: businessData.slug,
+            business_name: businessData.name,
+            source: document.referrer
+              ? "external_or_previous_page"
+              : "direct",
+          },
+        );
+      }
+
+      const [
+        locationResult,
+        reviewsResult,
+        ratingResult,
+        productsResult,
+        servicesResult,
+        mediaResult,
+        socialResult,
+        promotionsResult,
+        hoursResult,
+      ] = await Promise.all([
+        supabase
+          .from("business_locations")
+          .select("*")
+          .eq("business_id", businessId)
+          .eq("is_active", true)
+          .eq("is_public", true)
+          .order("is_primary", {
+            ascending: false,
+          })
+          .limit(1)
+          .maybeSingle(),
+
+        supabase
+          .from("business_reviews")
+          .select("*")
+          .eq("business_id", businessId)
+          .eq("is_published", true)
+          .order("created_at", {
+            ascending: false,
+          }),
+
+        supabase.rpc("get_business_rating", {
+          p_business_id: businessId,
+        }),
+
+        supabase
+          .from("business_products")
+          .select("*")
+          .eq("business_id", businessId),
+
+        supabase
+          .from("business_services")
+          .select("*")
+          .eq("business_id", businessId),
+
+        supabase
+          .from("business_media")
+          .select("*")
+          .eq("business_id", businessId)
+          .eq("is_active", true)
+          .order("sort_order", {
+            ascending: true,
+          }),
+
+        supabase
+          .from("business_social_links")
+          .select("*")
+          .eq("business_id", businessId),
+
+        supabase
+          .from("business_promotions")
+          .select("*")
+          .eq("business_id", businessId),
+
+        supabase
+          .from("business_hours")
+          .select("*")
+          .eq("business_id", businessId)
+          .order("day_of_week", {
+            ascending: true,
+          }),
+      ]);
+
+      if (locationResult.error) {
+        console.error(locationResult.error);
+      }
+
+      if (reviewsResult.error) {
+        console.error(reviewsResult.error);
+      }
+
+      if (productsResult.error) {
+        console.error(productsResult.error);
+      }
+
+      if (servicesResult.error) {
+        console.error(servicesResult.error);
+      }
+
+      if (mediaResult.error) {
+        console.error(mediaResult.error);
+      }
+
+      if (socialResult.error) {
+        console.error(socialResult.error);
+      }
+
+      if (promotionsResult.error) {
+        console.error(promotionsResult.error);
+      }
+
+      if (hoursResult.error) {
+        console.error(hoursResult.error);
+      }
+
+      setLocation(
+        (locationResult.data as Location | null) ?? null,
+      );
+
+      setReviews(
+        (reviewsResult.data as Review[]) ?? [],
+      );
+
+      const ratingData = Array.isArray(ratingResult.data)
+        ? ratingResult.data[0]
+        : ratingResult.data;
+
+      if (ratingData) {
+        setRating({
+          average_rating:
+            Number(ratingData.average_rating) || 0,
+          review_count:
+            Number(ratingData.review_count) || 0,
+        });
+      } else {
+        setRating({
+          average_rating: 0,
+          review_count: 0,
+        });
+      }
+
+      setProducts(
+        (productsResult.data as GenericRow[]) ?? [],
+      );
+
+      setServices(
+        (servicesResult.data as GenericRow[]) ?? [],
+      );
+
+      setMedia(
+        (mediaResult.data as GenericRow[]) ?? [],
+      );
+
+      setSocialLinks(
+        (socialResult.data as GenericRow[]) ?? [],
+      );
+
+      setPromotions(
+        (promotionsResult.data as GenericRow[]) ?? [],
+      );
+
+      setHours(
+        (hoursResult.data as GenericRow[]) ?? [],
+      );
+    } catch (err) {
+      console.error(err);
+
+      setError(
+        "We couldn't load this business right now. Please try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [slug, supabase, trackEvent]);
 
   useEffect(() => {
     void loadBusiness();
@@ -777,25 +773,21 @@ export default function BusinessProfilePage() {
   }, [reviewImagePreview]);
 
   /*
-   * When the business loads, start on About.
+   * Start on About when the slug changes.
    */
   useEffect(() => {
     setActiveSection("about");
   }, [slug]);
 
   /*
-   * ANALYTICS: Track visits to profile sections.
+   * ANALYTICS: Track profile-section visits.
    */
   useEffect(() => {
     if (!business?.id) return;
 
-    void trackEvent(
-      business.id,
-      "section_view",
-      {
-        section: activeSection,
-      },
-    );
+    void trackEvent(business.id, "section_view", {
+      section: activeSection,
+    });
   }, [business?.id, activeSection, trackEvent]);
 
   const logoUrl = getLogoUrl(
@@ -840,6 +832,78 @@ export default function BusinessProfilePage() {
 
     return null;
   }, [location, address]);
+
+  /*
+   * ANALYTICS: Track product, service, and promotion
+   * section visits using dashboard event names.
+   */
+  useEffect(() => {
+    if (!business?.id) return;
+
+    const eventTypes: Partial<
+      Record<ProfileSection, string>
+    > = {
+      products: "product_view",
+      services: "service_view",
+      promotions: "promotion_view",
+    };
+
+    const eventType = eventTypes[activeSection];
+
+    if (!eventType) return;
+
+    void trackEvent(business.id, eventType, {
+      section: activeSection,
+      business_slug: business.slug,
+    });
+  }, [
+    business?.id,
+    business?.slug,
+    activeSection,
+    trackEvent,
+  ]);
+
+  /*
+   * ANALYTICS: Track visits to the contact section
+   * when a public address or map destination exists.
+   */
+  useEffect(() => {
+    if (
+      !business?.id ||
+      activeSection !== "contact"
+    ) {
+      return;
+    }
+
+    if (!address && !mapUrl) return;
+
+    const trackingKey =
+      `${business.id}:${address}:${mapUrl}`;
+
+    if (
+      trackedLocationViews.current.has(trackingKey)
+    ) {
+      return;
+    }
+
+    trackedLocationViews.current.add(trackingKey);
+
+    void trackEvent(business.id, "location_view", {
+      has_location: Boolean(
+        location?.latitude != null &&
+          location?.longitude != null,
+      ),
+      has_address: Boolean(address),
+    });
+  }, [
+    business?.id,
+    activeSection,
+    address,
+    mapUrl,
+    location?.latitude,
+    location?.longitude,
+    trackEvent,
+  ]);
 
   const pageUrl =
     typeof window !== "undefined"
@@ -1046,8 +1110,8 @@ export default function BusinessProfilePage() {
       }
 
       /*
-       * ANALYTICS: Track only successful submissions.
-       * Do not send the reviewer's name or review text.
+       * ANALYTICS: Track successful submissions only.
+       * Never send the reviewer's name or review text.
        */
       void trackEvent(
         business.id,
@@ -1090,101 +1154,99 @@ export default function BusinessProfilePage() {
 
   /*
    * Navigation configuration.
-   * Only sections that actually contain data are shown.
+   * Only sections containing data are shown,
+   * except About and Reviews.
    */
-  const navigationItems = useMemo(
-    () => {
-      const items: {
-        id: ProfileSection;
-        label: string;
-        count?: number;
-      }[] = [];
+  const navigationItems = useMemo(() => {
+    const items: {
+      id: ProfileSection;
+      label: string;
+      count?: number;
+    }[] = [];
 
+    items.push({
+      id: "about",
+      label: "About",
+    });
+
+    if (products.length > 0) {
       items.push({
-        id: "about",
-        label: "About",
+        id: "products",
+        label: "Products",
+        count: products.length,
       });
+    }
 
-      if (products.length > 0) {
-        items.push({
-          id: "products",
-          label: "Products",
-          count: products.length,
-        });
-      }
-
-      if (services.length > 0) {
-        items.push({
-          id: "services",
-          label: "Services",
-          count: services.length,
-        });
-      }
-
-      if (promotions.length > 0) {
-        items.push({
-          id: "promotions",
-          label: "Promotions",
-          count: promotions.length,
-        });
-      }
-
-      if (media.length > 0) {
-        items.push({
-          id: "photos",
-          label: "Photos",
-          count: media.length,
-        });
-      }
-
-      if (
-        address ||
-        business?.phone ||
-        business?.email ||
-        business?.website_url
-      ) {
-        items.push({
-          id: "contact",
-          label: "Contact",
-        });
-      }
-
-      if (hours.length > 0) {
-        items.push({
-          id: "hours",
-          label: "Hours",
-        });
-      }
-
-      if (socialLinks.length > 0) {
-        items.push({
-          id: "social",
-          label: "Social",
-        });
-      }
-
+    if (services.length > 0) {
       items.push({
-        id: "reviews",
-        label: "Reviews",
-        count: rating.review_count || 0,
+        id: "services",
+        label: "Services",
+        count: services.length,
       });
+    }
 
-      return items;
-    },
-    [
-      products.length,
-      services.length,
-      promotions.length,
-      media.length,
-      address,
-      business?.phone,
-      business?.email,
-      business?.website_url,
-      hours.length,
-      socialLinks.length,
-      rating.review_count,
-    ],
-  );
+    if (promotions.length > 0) {
+      items.push({
+        id: "promotions",
+        label: "Promotions",
+        count: promotions.length,
+      });
+    }
+
+    if (media.length > 0) {
+      items.push({
+        id: "photos",
+        label: "Photos",
+        count: media.length,
+      });
+    }
+
+    if (
+      address ||
+      business?.phone ||
+      business?.email ||
+      business?.website_url
+    ) {
+      items.push({
+        id: "contact",
+        label: "Contact",
+      });
+    }
+
+    if (hours.length > 0) {
+      items.push({
+        id: "hours",
+        label: "Hours",
+      });
+    }
+
+    if (socialLinks.length > 0) {
+      items.push({
+        id: "social",
+        label: "Social",
+      });
+    }
+
+    items.push({
+      id: "reviews",
+      label: "Reviews",
+      count: rating.review_count || 0,
+    });
+
+    return items;
+  }, [
+    products.length,
+    services.length,
+    promotions.length,
+    media.length,
+    address,
+    business?.phone,
+    business?.email,
+    business?.website_url,
+    hours.length,
+    socialLinks.length,
+    rating.review_count,
+  ]);
 
   if (loading) {
     return (
@@ -1612,12 +1674,7 @@ export default function BusinessProfilePage() {
                       "product_description",
                     ]);
 
-                  const imagePath =
-                    getMediaPath(product);
-
-                  /*
-                   * Products use product-media.
-                   */
+                  const imagePath = getMediaPath(product);
                   const imageUrl =
                     getProductMediaUrl(imagePath);
 
@@ -1709,12 +1766,7 @@ export default function BusinessProfilePage() {
                       "service_description",
                     ]);
 
-                  /*
-                   * Services use business-media.
-                   */
-                  const imagePath =
-                    getMediaPath(service);
-
+                  const imagePath = getMediaPath(service);
                   const imageUrl =
                     getBusinessMediaUrl(imagePath);
 
@@ -1780,76 +1832,69 @@ export default function BusinessProfilePage() {
 
             {promotions.length > 0 ? (
               <div className="bp-offers">
-                {promotions.map(
-                  (promotion, index) => {
-                    const title =
-                      getRowText(promotion, [
-                        "title",
-                        "name",
-                        "promotion_name",
-                      ]) || "Special offer";
+                {promotions.map((promotion, index) => {
+                  const title =
+                    getRowText(promotion, [
+                      "title",
+                      "name",
+                      "promotion_name",
+                    ]) || "Special offer";
 
-                    const description =
-                      getRowText(promotion, [
-                        "description",
-                        "details",
-                        "offer_description",
-                      ]);
+                  const description =
+                    getRowText(promotion, [
+                      "description",
+                      "details",
+                      "offer_description",
+                    ]);
 
-                    const discount =
-                      getRowText(promotion, [
-                        "discount",
-                        "discount_text",
-                        "offer",
-                      ]);
+                  const discount =
+                    getRowText(promotion, [
+                      "discount",
+                      "discount_text",
+                      "offer",
+                    ]);
 
-                    const imagePath =
-                      getMediaPath(promotion);
+                  const imagePath = getMediaPath(promotion);
+                  const imageUrl =
+                    getBusinessMediaUrl(imagePath);
 
-                    /*
-                     * Promotions use business-media.
-                     */
-                    const imageUrl =
-                      getBusinessMediaUrl(imagePath);
+                  return (
+                    <article
+                      className="bp-offer"
+                      key={
+                        getRowText(promotion, ["id"]) ||
+                        `${title}-${index}`
+                      }
+                    >
+                      {imageUrl ? (
+                        <div className="bp-offer-image-wrap">
+                          <img
+                            src={imageUrl}
+                            alt={title}
+                            className="bp-offer-image"
+                            loading="lazy"
+                          />
+                        </div>
+                      ) : (
+                        <div className="bp-offer-icon">
+                          %
+                        </div>
+                      )}
 
-                    return (
-                      <article
-                        className="bp-offer"
-                        key={
-                          getRowText(promotion, ["id"]) ||
-                          `${title}-${index}`
-                        }
-                      >
-                        {imageUrl ? (
-                          <div className="bp-offer-image-wrap">
-                            <img
-                              src={imageUrl}
-                              alt={title}
-                              className="bp-offer-image"
-                              loading="lazy"
-                            />
-                          </div>
-                        ) : (
-                          <div className="bp-offer-icon">
-                            %
-                          </div>
+                      <div className="bp-offer-content">
+                        <h3>{title}</h3>
+
+                        {discount && (
+                          <strong>{discount}</strong>
                         )}
 
-                        <div className="bp-offer-content">
-                          <h3>{title}</h3>
-
-                          {discount && (
-                            <strong>{discount}</strong>
-                          )}
-
-                          {description && (
-                            <p>{description}</p>
-                          )}
-                        </div>
-                      </article>
-                    );
-                  },
-                )}
+                        {description && (
+                          <p>{description}</p>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             ) : (
               <div className="bp-empty-section">
@@ -1967,6 +2012,7 @@ export default function BusinessProfilePage() {
                           void trackEvent(
                             business.id,
                             "directions_click",
+                            { placement: "contact" },
                           )
                         }
                       >
@@ -1992,13 +2038,22 @@ export default function BusinessProfilePage() {
 
                     <a
                       href={`tel:${business.phone}`}
-                      onClick={() =>
+                      onClick={() => {
                         void trackEvent(
                           business.id,
                           "phone_click",
                           { placement: "contact" },
-                        )
-                      }
+                        );
+
+                        void trackEvent(
+                          business.id,
+                          "contact_click",
+                          {
+                            method: "phone",
+                            placement: "contact",
+                          },
+                        );
+                      }}
                     >
                       {business.phone}
                     </a>
@@ -2017,12 +2072,22 @@ export default function BusinessProfilePage() {
 
                     <a
                       href={`mailto:${business.email}`}
-                      onClick={() =>
+                      onClick={() => {
                         void trackEvent(
                           business.id,
                           "email_click",
-                        )
-                      }
+                          { placement: "contact" },
+                        );
+
+                        void trackEvent(
+                          business.id,
+                          "contact_click",
+                          {
+                            method: "email",
+                            placement: "contact",
+                          },
+                        );
+                      }}
                     >
                       {business.email}
                     </a>
@@ -2047,13 +2112,22 @@ export default function BusinessProfilePage() {
                       }
                       target="_blank"
                       rel="noopener noreferrer"
-                      onClick={() =>
+                      onClick={() => {
                         void trackEvent(
                           business.id,
                           "website_click",
                           { placement: "contact" },
-                        )
-                      }
+                        );
+
+                        void trackEvent(
+                          business.id,
+                          "contact_click",
+                          {
+                            method: "website",
+                            placement: "contact",
+                          },
+                        );
+                      }}
                     >
                       Visit website
                     </a>
@@ -2067,13 +2141,22 @@ export default function BusinessProfilePage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="bp-whatsapp-large"
-                  onClick={() =>
+                  onClick={() => {
                     void trackEvent(
                       business.id,
                       "whatsapp_click",
                       { placement: "contact" },
-                    )
-                  }
+                    );
+
+                    void trackEvent(
+                      business.id,
+                      "contact_click",
+                      {
+                        method: "whatsapp",
+                        placement: "contact",
+                      },
+                    );
+                  }}
                 >
                   <span>◉</span>
                   Contact on WhatsApp
@@ -2099,7 +2182,6 @@ export default function BusinessProfilePage() {
             <div className="bp-hours">
               {hours.map((item, index) => {
                 const rawDay = item.day_of_week;
-
                 const day = getDayName(rawDay);
 
                 const open = getRowText(item, [
@@ -2275,9 +2357,7 @@ export default function BusinessProfilePage() {
                     type="text"
                     value={reviewerName}
                     onChange={(event) =>
-                      setReviewerName(
-                        event.target.value,
-                      )
+                      setReviewerName(event.target.value)
                     }
                     placeholder="Enter your name"
                     maxLength={100}
@@ -2320,9 +2400,7 @@ export default function BusinessProfilePage() {
                     id="review-text"
                     value={reviewText}
                     onChange={(event) =>
-                      setReviewText(
-                        event.target.value,
-                      )
+                      setReviewText(event.target.value)
                     }
                     placeholder="Share your experience..."
                     maxLength={2000}
@@ -2378,10 +2456,9 @@ export default function BusinessProfilePage() {
             {reviews.length > 0 ? (
               <div className="bp-reviews-list">
                 {reviews.map((review) => {
-                  const avatar =
-                    getCustomerAvatarUrl(
-                      review.reviewer_avatar_url,
-                    );
+                  const avatar = getCustomerAvatarUrl(
+                    review.reviewer_avatar_url,
+                  );
 
                   const reviewer =
                     review.reviewer_name || "Customer";
@@ -2414,9 +2491,7 @@ export default function BusinessProfilePage() {
                             />
 
                             <span>
-                              {formatDate(
-                                review.created_at,
-                              )}
+                              {formatDate(review.created_at)}
                             </span>
                           </div>
                         </div>
@@ -2469,4 +2544,4 @@ export default function BusinessProfilePage() {
       )}
     </main>
   );
-  }
+ }
