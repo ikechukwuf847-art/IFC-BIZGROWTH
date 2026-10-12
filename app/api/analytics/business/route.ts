@@ -5,103 +5,176 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const supabase =
-  supabaseUrl && supabaseAnonKey
-    ? createClient(supabaseUrl, supabaseAnonKey, {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false,
-        },
-      })
-    : null;
+supabaseUrl && supabaseAnonKey
+? createClient(supabaseUrl, supabaseAnonKey, {
+auth: {
+persistSession: false,
+autoRefreshToken: false,
+detectSessionInUrl: false,
+},
+})
+: null;
 
 const ALLOWED_EVENTS = new Set([
-  "profile_view",
-  "website_click",
-  "phone_click",
-  "whatsapp_click",
-  "directions_click",
-  "share",
-  "product_view",
-  "service_view",
-  "promotion_view",
-  "review_submit",
+"profile_view",
+"section_view",
+"product_view",
+"service_view",
+"promotion_view",
+"website_click",
+"phone_click",
+"contact_click",
+"whatsapp_click",
+"social_click",
+"location_view",
+"directions_click",
+"email_click",
+"share",
+"share_click",
+"share_menu_open",
+"photo_click",
+"photo_view",
+"review_submit",
+"review_submitted",
 ]);
 
 function jsonError(message: string, status: number) {
-  return NextResponse.json({ success: false, error: message }, { status });
+return NextResponse.json(
+{ success: false, error: message },
+{ status },
+);
 }
 
 export async function POST(request: NextRequest) {
-  if (!supabase) {
-    return jsonError("Analytics service is not configured.", 500);
-  }
+if (!supabase) {
+return jsonError(
+"Analytics service is not configured.",
+500,
+);
+}
 
-  let body: Record<string, unknown>;
+let body: Record<string, unknown>;
 
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError("Invalid JSON body.", 400);
-  }
+try {
+body = await request.json();
+} catch {
+return jsonError("Invalid JSON body.", 400);
+}
 
-  const businessId =
-    typeof body.business_id === "string" ? body.business_id : "";
+const businessId =
+typeof body.business_id === "string"
+? body.business_id
+: "";
 
-  const eventType =
-    typeof body.event_type === "string" ? body.event_type : "";
+const eventType =
+typeof body.event_type === "string"
+? body.event_type
+: "";
 
-  const visitorId =
-    typeof body.visitor_id === "string" ? body.visitor_id : null;
+const visitorId =
+typeof body.visitor_id === "string"
+? body.visitor_id
+: null;
 
-  const sessionId =
-    typeof body.session_id === "string" ? body.session_id : null;
+const sessionId =
+typeof body.session_id === "string"
+? body.session_id
+: null;
 
-  const metadata =
-    body.metadata &&
-    typeof body.metadata === "object" &&
-    !Array.isArray(body.metadata)
-      ? body.metadata
-      : {};
+const metadata =
+body.metadata &&
+typeof body.metadata === "object" &&
+!Array.isArray(body.metadata)
+? body.metadata
+: {};
 
-  const uuidPattern =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const uuidPattern =
+/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-  if (!uuidPattern.test(businessId)) {
-    return jsonError("Invalid business ID.", 400);
-  }
+if (!uuidPattern.test(businessId)) {
+return jsonError("Invalid business ID.", 400);
+}
 
-  if (visitorId && !uuidPattern.test(visitorId)) {
-    return jsonError("Invalid visitor ID.", 400);
-  }
+if (
+visitorId !== null &&
+!uuidPattern.test(visitorId)
+) {
+return jsonError("Invalid visitor ID.", 400);
+}
 
-  if (
-    !ALLOWED_EVENTS.has(eventType) ||
-    eventType.length > 80
-  ) {
-    return jsonError("Unsupported analytics event.", 400);
-  }
+if (
+typeof eventType !== "string" ||
+!ALLOWED_EVENTS.has(eventType) ||
+eventType.length > 80
+) {
+return jsonError(
+"Unsupported analytics event.",
+400,
+);
+}
 
-  if (sessionId && sessionId.length > 128) {
-    return jsonError("Invalid session ID.", 400);
-  }
+if (
+sessionId !== null &&
+(typeof sessionId !== "string" ||
+sessionId.length > 128)
+) {
+return jsonError("Invalid session ID.", 400);
+}
 
-  if (JSON.stringify(metadata).length > 3000) {
-    return jsonError("Analytics metadata is too large.", 400);
-  }
+let metadataSize: number;
 
-  const { error } = await supabase.rpc("record_business_analytics", {
-    p_business_id: businessId,
-    p_event_type: eventType,
-    p_visitor_id: visitorId,
-    p_session_id: sessionId,
-    p_metadata: metadata,
-  });
+try {
+metadataSize = JSON.stringify(metadata).length;
+} catch {
+return jsonError(
+"Invalid analytics metadata.",
+400,
+);
+}
 
-  if (error) {
-    console.error("Business analytics recording failed:", error.message);
-    return jsonError("Unable to record analytics event.", 500);
-  }
+if (metadataSize > 3000) {
+return jsonError(
+"Analytics metadata is too large.",
+400,
+);
+}
 
-  return NextResponse.json({ success: true });
-  }
+try {
+const { error } = await supabase.rpc(
+"record_business_analytics",
+{
+p_business_id: businessId,
+p_event_type: eventType,
+p_visitor_id: visitorId,
+p_session_id: sessionId,
+p_metadata: metadata,
+},
+);
+
+if (error) {
+  console.error(
+    "Business analytics recording failed:",
+    error.message,
+  );
+
+  return jsonError(
+    "Unable to record analytics event.",
+    500,
+  );
+}
+
+return NextResponse.json({ success: true });
+
+} catch (error) {
+console.error(
+"Business analytics request failed:",
+error,
+);
+
+return jsonError(
+  "Unable to record analytics event.",
+  500,
+);
+
+}
+}
