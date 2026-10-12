@@ -77,17 +77,20 @@ type ProfileSection =
   | "social"
   | "reviews";
 
+const SUPABASE_URL =
+  "https://iluczxsqdpohzgbknldh.supabase.co";
+
+/*
+ * ANALYTICS HELPERS
+ *
+ * Uses the existing /api/analytics/business endpoint.
+ * Analytics failures must never interrupt profile functionality.
+ */
+
 type AnalyticsMetadata = Record<
   string,
   string | number | boolean | null
 >;
-
-const SUPABASE_URL =
-  "https://iluczxsqdpohzgbknldh.supabase.co";
-
-/* -------------------------------------------------------
-   HELPERS
-------------------------------------------------------- */
 
 function getAnalyticsId(storage: Storage, key: string) {
   try {
@@ -107,9 +110,9 @@ function getAnalyticsId(storage: Storage, key: string) {
 
     return id;
   } catch {
-    return `${Date.now()}-${Math.random()
-      .toString(36)
-      .slice(2)}`;
+    return `${
+      Date.now()
+    }-${Math.random().toString(36).slice(2)}`;
   }
 }
 
@@ -130,7 +133,9 @@ function getStorageUrl(
 ) {
   if (!path) return null;
 
-  if (isValidUrl(path)) return path;
+  if (isValidUrl(path)) {
+    return path;
+  }
 
   const cleanPath = path
     .replace(/^\/+/, "")
@@ -147,10 +152,17 @@ function getCustomerAvatarUrl(path: string | null) {
   return getStorageUrl("customer-logo", path);
 }
 
+/*
+ * SERVICES, PROMOTIONS AND BUSINESS PHOTOS
+ * all use business-media.
+ */
 function getBusinessMediaUrl(path: string | null) {
   return getStorageUrl("business-media", path);
 }
 
+/*
+ * PRODUCTS use product-media.
+ */
 function getProductMediaUrl(path: string | null) {
   return getStorageUrl("product-media", path);
 }
@@ -178,11 +190,9 @@ function getWhatsAppUrl(
 
   if (!digits) return null;
 
-  const message = encodeURIComponent(
+  return `https://wa.me/${digits}?text=${encodeURIComponent(
     `Hello ${businessName}, I found your business on IFC BIZGROWTH.`,
-  );
-
-  return `https://wa.me/${digits}?text=${message}`;
+  )}`;
 }
 
 function getRowText(
@@ -354,10 +364,6 @@ function Logo({
   );
 }
 
-/* -------------------------------------------------------
-   BUSINESS PROFILE
-------------------------------------------------------- */
-
 export default function BusinessProfilePage() {
   const params = useParams();
 
@@ -380,10 +386,11 @@ export default function BusinessProfilePage() {
   const [reviews, setReviews] =
     useState<Review[]>([]);
 
-  const [rating, setRating] = useState<Rating>({
-    average_rating: null,
-    review_count: 0,
-  });
+  const [rating, setRating] =
+    useState<Rating>({
+      average_rating: null,
+      review_count: 0,
+    });
 
   const [products, setProducts] =
     useState<GenericRow[]>([]);
@@ -404,9 +411,15 @@ export default function BusinessProfilePage() {
     useState<GenericRow[]>([]);
 
   const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+
+  const [notFound, setNotFound] =
+    useState(false);
+
   const [error, setError] = useState("");
-  const [showShare, setShowShare] = useState(false);
+
+  const [showShare, setShowShare] =
+    useState(false);
+
   const [copied, setCopied] = useState(false);
 
   const [reviewerName, setReviewerName] =
@@ -421,29 +434,42 @@ export default function BusinessProfilePage() {
   const [reviewImage, setReviewImage] =
     useState<File | null>(null);
 
-  const [reviewImagePreview, setReviewImagePreview] =
-    useState<string | null>(null);
+  const [
+    reviewImagePreview,
+    setReviewImagePreview,
+  ] = useState<string | null>(null);
 
-  const [submittingReview, setSubmittingReview] =
-    useState(false);
+  const [
+    submittingReview,
+    setSubmittingReview,
+  ] = useState(false);
 
-  const [reviewMessage, setReviewMessage] =
-    useState("");
+  const [
+    reviewMessage,
+    setReviewMessage,
+  ] = useState("");
 
+  /*
+   * This controls the actual navigation.
+   * Clicking a tab changes the displayed section.
+   * It does NOT scroll down the page.
+   */
   const [activeSection, setActiveSection] =
     useState<ProfileSection>("about");
 
+  /*
+   * Track a profile view once for each business ID
+   * during this component's lifetime.
+   */
   const trackedProfileViews = useRef<Set<string>>(
     new Set(),
   );
 
-  const lastTrackedSection = useRef<string>("");
-  const lastTrackedLocationSection = useRef<string>("");
-
-  /* -----------------------------------------------------
-     ANALYTICS
-  ----------------------------------------------------- */
-
+  /*
+   * Send analytics to the existing API endpoint.
+   * Errors are deliberately swallowed so analytics
+   * cannot break the business profile.
+   */
   const trackEvent = useCallback(
     async (
       businessId: string,
@@ -487,195 +513,256 @@ export default function BusinessProfilePage() {
           }),
         });
       } catch {
-        // Analytics must never break the profile.
+        // Analytics must never interrupt normal functionality.
       }
     },
     [],
   );
 
-  const trackContactClick = useCallback(
-    (
-      businessId: string,
-      method: string,
-      metadata: AnalyticsMetadata = {},
-    ) => {
-      void trackEvent(businessId, "contact_click", {
-        method,
-        ...metadata,
-      });
-    },
-    [trackEvent],
-  );
+  const loadBusiness = useCallback(
+    async () => {
+      if (!slug) return;
 
-  /* -----------------------------------------------------
-     LOAD BUSINESS DATA
-  ----------------------------------------------------- */
+      setLoading(true);
+      setError("");
+      setNotFound(false);
 
-  const loadBusiness = useCallback(async () => {
-    if (!slug) return;
-
-    setLoading(true);
-    setError("");
-    setNotFound(false);
-
-    try {
-      const {
-        data: businessData,
-        error: businessError,
-      } = await supabase
-        .from("businesses")
-        .select(`
-          id,
-          name,
-          slug,
-          description,
-          email,
-          phone,
-          website_url,
-          logo_url,
-          country_code,
-          verification_status,
-          is_featured,
-          is_public,
-          status
-        `)
-        .eq("slug", slug)
-        .eq("is_public", true)
-        .eq("status", "active")
-        .maybeSingle();
-
-      if (businessError) throw businessError;
-
-      if (!businessData) {
-        setNotFound(true);
-        return;
-      }
-
-      setBusiness(businessData as Business);
-
-      const businessId = businessData.id;
-
-      if (!trackedProfileViews.current.has(businessId)) {
-        trackedProfileViews.current.add(businessId);
-
-        void trackEvent(businessId, "profile_view", {
-          business_slug: businessData.slug,
-          source: document.referrer
-            ? "external_or_previous_page"
-            : "direct",
-        });
-      }
-
-      const [
-        locationResult,
-        reviewsResult,
-        ratingResult,
-        productsResult,
-        servicesResult,
-        mediaResult,
-        socialResult,
-        promotionsResult,
-        hoursResult,
-      ] = await Promise.all([
-        supabase
-          .from("business_locations")
-          .select("*")
-          .eq("business_id", businessId)
-          .eq("is_active", true)
+      try {
+        const {
+          data: businessData,
+          error: businessError,
+        } = await supabase
+          .from("businesses")
+          .select(
+            `
+              id,
+              name,
+              slug,
+              description,
+              email,
+              phone,
+              website_url,
+              logo_url,
+              country_code,
+              verification_status,
+              is_featured,
+              is_public,
+              status
+            `,
+          )
+          .eq("slug", slug)
           .eq("is_public", true)
-          .order("is_primary", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
+          .eq("status", "active")
+          .maybeSingle();
 
-        supabase
-          .from("business_reviews")
-          .select("*")
-          .eq("business_id", businessId)
-          .eq("is_published", true)
-          .order("created_at", { ascending: false }),
+        if (businessError) {
+          throw businessError;
+        }
 
-        supabase.rpc("get_business_rating", {
-          p_business_id: businessId,
-        }),
+        if (!businessData) {
+          setNotFound(true);
+          return;
+        }
 
-        supabase
-          .from("business_products")
-          .select("*")
-          .eq("business_id", businessId),
+        setBusiness(businessData as Business);
 
-        supabase
-          .from("business_services")
-          .select("*")
-          .eq("business_id", businessId),
+        const businessId = businessData.id;
 
-        supabase
-          .from("business_media")
-          .select("*")
-          .eq("business_id", businessId)
-          .eq("is_active", true)
-          .order("sort_order", { ascending: true }),
+        /*
+         * ANALYTICS: Record a profile view.
+         * The ref prevents repeat tracking when loadBusiness
+         * runs again after a review is submitted.
+         */
+        if (!trackedProfileViews.current.has(businessId)) {
+          trackedProfileViews.current.add(businessId);
 
-        supabase
-          .from("business_social_links")
-          .select("*")
-          .eq("business_id", businessId),
+          void trackEvent(
+            businessId,
+            "profile_view",
+            {
+              business_slug: businessData.slug,
+              business_name: businessData.name,
+              source: document.referrer
+                ? "external_or_previous_page"
+                : "direct",
+            },
+          );
+        }
 
-        supabase
-          .from("business_promotions")
-          .select("*")
-          .eq("business_id", businessId),
+        const [
+          locationResult,
+          reviewsResult,
+          ratingResult,
+          productsResult,
+          servicesResult,
+          mediaResult,
+          socialResult,
+          promotionsResult,
+          hoursResult,
+        ] = await Promise.all([
+          supabase
+            .from("business_locations")
+            .select("*")
+            .eq("business_id", businessId)
+            .eq("is_active", true)
+            .eq("is_public", true)
+            .order("is_primary", {
+              ascending: false,
+            })
+            .limit(1)
+            .maybeSingle(),
 
-        supabase
-          .from("business_hours")
-          .select("*")
-          .eq("business_id", businessId)
-          .order("day_of_week", { ascending: true }),
-      ]);
+          supabase
+            .from("business_reviews")
+            .select("*")
+            .eq("business_id", businessId)
+            .eq("is_published", true)
+            .order("created_at", {
+              ascending: false,
+            }),
 
-      if (locationResult.error) console.error(locationResult.error);
-      if (reviewsResult.error) console.error(reviewsResult.error);
-      if (productsResult.error) console.error(productsResult.error);
-      if (servicesResult.error) console.error(servicesResult.error);
-      if (mediaResult.error) console.error(mediaResult.error);
-      if (socialResult.error) console.error(socialResult.error);
-      if (promotionsResult.error) console.error(promotionsResult.error);
-      if (hoursResult.error) console.error(hoursResult.error);
+          supabase.rpc(
+            "get_business_rating",
+            {
+              p_business_id: businessId,
+            },
+          ),
 
-      setLocation(
-        (locationResult.data as Location | null) ?? null,
-      );
+          supabase
+            .from("business_products")
+            .select("*")
+            .eq("business_id", businessId),
 
-      setReviews((reviewsResult.data as Review[]) ?? []);
+          supabase
+            .from("business_services")
+            .select("*")
+            .eq("business_id", businessId),
 
-      const ratingData = Array.isArray(ratingResult.data)
-        ? ratingResult.data[0]
-        : ratingResult.data;
+          supabase
+            .from("business_media")
+            .select("*")
+            .eq("business_id", businessId)
+            .eq("is_active", true)
+            .order("sort_order", {
+              ascending: true,
+            }),
 
-      setRating({
-        average_rating: ratingData
-          ? Number(ratingData.average_rating) || 0
-          : 0,
-        review_count: ratingData
-          ? Number(ratingData.review_count) || 0
-          : 0,
-      });
+          supabase
+            .from("business_social_links")
+            .select("*")
+            .eq("business_id", businessId),
 
-      setProducts((productsResult.data as GenericRow[]) ?? []);
-      setServices((servicesResult.data as GenericRow[]) ?? []);
-      setMedia((mediaResult.data as GenericRow[]) ?? []);
-      setSocialLinks((socialResult.data as GenericRow[]) ?? []);
-      setPromotions((promotionsResult.data as GenericRow[]) ?? []);
-      setHours((hoursResult.data as GenericRow[]) ?? []);
-    } catch (err) {
-      console.error(err);
+          supabase
+            .from("business_promotions")
+            .select("*")
+            .eq("business_id", businessId),
 
-      setError(
-        "We couldn't load this business right now. Please try again.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [slug, supabase, trackEvent]);
+          supabase
+            .from("business_hours")
+            .select("*")
+            .eq("business_id", businessId)
+            .order("day_of_week", {
+              ascending: true,
+            }),
+        ]);
+
+        if (locationResult.error) {
+          console.error(locationResult.error);
+        }
+
+        if (reviewsResult.error) {
+          console.error(reviewsResult.error);
+        }
+
+        if (productsResult.error) {
+          console.error(productsResult.error);
+        }
+
+        if (servicesResult.error) {
+          console.error(servicesResult.error);
+        }
+
+        if (mediaResult.error) {
+          console.error(mediaResult.error);
+        }
+
+        if (socialResult.error) {
+          console.error(socialResult.error);
+        }
+
+        if (promotionsResult.error) {
+          console.error(promotionsResult.error);
+        }
+
+        if (hoursResult.error) {
+          console.error(hoursResult.error);
+        }
+
+        setLocation(
+          (locationResult.data as Location | null) ??
+            null,
+        );
+
+        setReviews(
+          (reviewsResult.data as Review[]) ?? [],
+        );
+
+        const ratingData = Array.isArray(
+          ratingResult.data,
+        )
+          ? ratingResult.data[0]
+          : ratingResult.data;
+
+        if (ratingData) {
+          setRating({
+            average_rating:
+              Number(ratingData.average_rating) || 0,
+
+            review_count:
+              Number(ratingData.review_count) || 0,
+          });
+        } else {
+          setRating({
+            average_rating: 0,
+            review_count: 0,
+          });
+        }
+
+        setProducts(
+          (productsResult.data as GenericRow[]) ?? [],
+        );
+
+        setServices(
+          (servicesResult.data as GenericRow[]) ?? [],
+        );
+
+        setMedia(
+          (mediaResult.data as GenericRow[]) ?? [],
+        );
+
+        setSocialLinks(
+          (socialResult.data as GenericRow[]) ?? [],
+        );
+
+        setPromotions(
+          (promotionsResult.data as GenericRow[]) ?? [],
+        );
+
+        setHours(
+          (hoursResult.data as GenericRow[]) ?? [],
+        );
+      } catch (err) {
+        console.error(err);
+
+        setError(
+          "We couldn't load this business right now. Please try again.",
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [slug, supabase, trackEvent],
+  );
 
   useEffect(() => {
     void loadBusiness();
@@ -689,15 +776,27 @@ export default function BusinessProfilePage() {
     };
   }, [reviewImagePreview]);
 
+  /*
+   * When the business loads, start on About.
+   */
   useEffect(() => {
     setActiveSection("about");
-    lastTrackedSection.current = "";
-    lastTrackedLocationSection.current = "";
   }, [slug]);
 
-  /* -----------------------------------------------------
-     SHARED VALUES
-  ----------------------------------------------------- */
+  /*
+   * ANALYTICS: Track visits to profile sections.
+   */
+  useEffect(() => {
+    if (!business?.id) return;
+
+    void trackEvent(
+      business.id,
+      "section_view",
+      {
+        section: activeSection,
+      },
+    );
+  }, [business?.id, activeSection, trackEvent]);
 
   const logoUrl = getLogoUrl(
     business?.logo_url ?? null,
@@ -742,78 +841,6 @@ export default function BusinessProfilePage() {
     return null;
   }, [location, address]);
 
-  /* -----------------------------------------------------
-     SECTION ANALYTICS
-  ----------------------------------------------------- */
-
-  useEffect(() => {
-    if (!business?.id) return;
-
-    const trackingKey = `${business.id}:${activeSection}`;
-
-    if (lastTrackedSection.current === trackingKey) {
-      return;
-    }
-
-    lastTrackedSection.current = trackingKey;
-
-    const eventTypes: Partial<
-      Record<ProfileSection, string>
-    > = {
-      products: "product_view",
-      services: "service_view",
-      promotions: "promotion_view",
-    };
-
-    void trackEvent(
-      business.id,
-      eventTypes[activeSection] ?? "section_view",
-      {
-        section: activeSection,
-        business_slug: business.slug,
-      },
-    );
-  }, [
-    business?.id,
-    business?.slug,
-    activeSection,
-    trackEvent,
-  ]);
-
-  useEffect(() => {
-    if (!business?.id || activeSection !== "contact") {
-      lastTrackedLocationSection.current = "";
-      return;
-    }
-
-    const trackingKey = `${business.id}:contact`;
-
-    if (
-      lastTrackedLocationSection.current === trackingKey
-    ) {
-      return;
-    }
-
-    lastTrackedLocationSection.current = trackingKey;
-
-    void trackEvent(business.id, "location_view", {
-      has_location: Boolean(location),
-      has_address: Boolean(address),
-      has_map: Boolean(mapUrl),
-    });
-  }, [
-    business?.id,
-    activeSection,
-    location,
-    address,
-    mapUrl,
-    trackEvent,
-  ]);
-
-  /* -----------------------------------------------------
-     SHARE VALUES AND ACTIONS
-  ----------------------------------------------------- */
-
   const pageUrl =
     typeof window !== "undefined"
       ? window.location.href
@@ -853,7 +880,7 @@ export default function BusinessProfilePage() {
 
       setShowShare(true);
     } catch {
-      // The customer cancelled sharing.
+      // User cancelled sharing.
     }
   };
 
@@ -869,7 +896,9 @@ export default function BusinessProfilePage() {
 
       setCopied(true);
 
-      window.setTimeout(() => setCopied(false), 2000);
+      window.setTimeout(() => {
+        setCopied(false);
+      }, 2000);
     } catch {
       setError("Unable to copy the business link.");
     }
@@ -884,37 +913,55 @@ export default function BusinessProfilePage() {
 
     try {
       await navigator.clipboard.writeText(pageUrl);
+
       setCopied(true);
 
-      window.setTimeout(() => setCopied(false), 2000);
+      window.setTimeout(() => {
+        setCopied(false);
+      }, 2000);
+
+      window.open(
+        "https://www.tiktok.com/",
+        "_blank",
+        "noopener,noreferrer",
+      );
     } catch {
-      // Continue opening TikTok even if copying fails.
+      window.open(
+        "https://www.tiktok.com/",
+        "_blank",
+        "noopener,noreferrer",
+      );
     }
-
-    window.open(
-      "https://www.tiktok.com/",
-      "_blank",
-      "noopener,noreferrer",
-    );
   };
-    /* -------------------------------------------------------
-     REVIEW IMAGE
-  ------------------------------------------------------- */
 
-  const handleReviewImageChange = (
+  const handleReviewImage = (
     event: ChangeEvent<HTMLInputElement>,
   ) => {
     const file = event.target.files?.[0];
 
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      setReviewMessage("Please select a valid image.");
+    const allowed = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ];
+
+    if (!allowed.includes(file.type)) {
+      setReviewMessage(
+        "Please choose a JPG, PNG, or WebP image.",
+      );
+
+      event.target.value = "";
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setReviewMessage("The image must be smaller than 5 MB.");
+    if (file.size > 2 * 1024 * 1024) {
+      setReviewMessage(
+        "Your picture must be 2 MB or smaller.",
+      );
+
+      event.target.value = "";
       return;
     }
 
@@ -923,105 +970,94 @@ export default function BusinessProfilePage() {
     }
 
     setReviewImage(file);
-    setReviewImagePreview(URL.createObjectURL(file));
     setReviewMessage("");
+
+    const previewUrl = URL.createObjectURL(file);
+
+    setReviewImagePreview(previewUrl);
   };
 
-  /* -------------------------------------------------------
-     SUBMIT REVIEW
-  ------------------------------------------------------- */
-
-  const handleReviewSubmit = async (
+  const submitReview = async (
     event: FormEvent<HTMLFormElement>,
   ) => {
     event.preventDefault();
 
     if (!business) return;
 
-    const name = reviewerName.trim();
-    const text = reviewText.trim();
+    setReviewMessage("");
 
-    if (!name) {
+    if (reviewerName.trim().length < 2) {
       setReviewMessage("Please enter your name.");
       return;
     }
 
-    if (reviewRating < 1 || reviewRating > 5) {
-      setReviewMessage("Please select a star rating.");
-      return;
-    }
-
-    if (!text) {
-      setReviewMessage("Please write your review.");
-      return;
-    }
-
-    if (text.length > 2000) {
-      setReviewMessage(
-        "Your review must not exceed 2,000 characters.",
-      );
+    if (!reviewRating) {
+      setReviewMessage("Please select a rating.");
       return;
     }
 
     setSubmittingReview(true);
-    setReviewMessage("");
 
     try {
       let avatarPath: string | null = null;
 
       if (reviewImage) {
         const extension =
-          reviewImage.name.split(".").pop()?.toLowerCase() ||
-          "jpg";
+          reviewImage.name
+            .split(".")
+            .pop()
+            ?.toLowerCase() || "jpg";
 
-        const allowedExtensions = [
-          "jpg",
-          "jpeg",
-          "png",
-          "webp",
-        ];
+        const randomPart = crypto.randomUUID();
 
-        if (!allowedExtensions.includes(extension)) {
-          setReviewMessage(
-            "Use a JPG, PNG, or WebP image.",
-          );
-          return;
-        }
+        const filePath =
+          `reviews/${business.id}/${randomPart}.${extension}`;
 
-        const fileName =
-          `${crypto.randomUUID()}.${extension}`;
-
-        const { data: uploadedFile, error: uploadError } =
+        const { error: uploadError } =
           await supabase.storage
             .from("customer-logo")
-            .upload(fileName, reviewImage, {
+            .upload(filePath, reviewImage, {
               cacheControl: "3600",
               upsert: false,
               contentType: reviewImage.type,
             });
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          throw uploadError;
+        }
 
-        avatarPath = uploadedFile.path;
+        avatarPath = filePath;
       }
 
-      const { error: submitError } = await supabase.rpc(
-        "submit_public_business_review",
+      const { error: reviewError } =
+        await supabase.rpc(
+          "submit_public_business_review",
+          {
+            p_business_id: business.id,
+            p_reviewer_name: reviewerName.trim(),
+            p_reviewer_avatar_url: avatarPath,
+            p_rating: reviewRating,
+            p_review_text: reviewText.trim() || null,
+          },
+        );
+
+      if (reviewError) {
+        throw reviewError;
+      }
+
+      /*
+       * ANALYTICS: Track only successful submissions.
+       * Do not send the reviewer's name or review text.
+       */
+      void trackEvent(
+        business.id,
+        "review_submitted",
         {
-          p_business_id: business.id,
-          p_reviewer_name: name,
-          p_rating: reviewRating,
-          p_review_text: text,
-          p_reviewer_avatar_url: avatarPath,
+          rating: reviewRating,
+          included_text: reviewText.trim().length > 0,
+          included_image: Boolean(reviewImage),
         },
       );
-
-      if (submitError) throw submitError;
-
-      void trackEvent(business.id, "review_submitted", {
-        rating: reviewRating,
-        has_avatar: Boolean(avatarPath),
-      });
 
       setReviewerName("");
       setReviewText("");
@@ -1030,14 +1066,19 @@ export default function BusinessProfilePage() {
 
       if (reviewImagePreview) {
         URL.revokeObjectURL(reviewImagePreview);
-        setReviewImagePreview(null);
       }
 
+      setReviewImagePreview(null);
+
       setReviewMessage(
-        "Thank you! Your review has been submitted for moderation.",
+        "Thank you! Your review has been submitted.",
       );
+
+      setActiveSection("reviews");
+
+      await loadBusiness();
     } catch (err) {
-      console.error("Review submission failed:", err);
+      console.error(err);
 
       setReviewMessage(
         "We couldn't submit your review. Please try again.",
@@ -1047,513 +1088,366 @@ export default function BusinessProfilePage() {
     }
   };
 
-  /* -------------------------------------------------------
-     CONTACT ACTIONS
-  ------------------------------------------------------- */
+  /*
+   * Navigation configuration.
+   * Only sections that actually contain data are shown.
+   */
+  const navigationItems = useMemo(
+    () => {
+      const items: {
+        id: ProfileSection;
+        label: string;
+        count?: number;
+      }[] = [];
 
-  const handlePhoneClick = (
-    placement: "hero" | "contact",
-  ) => {
-    if (!business) return;
-
-    void trackEvent(business.id, "phone_click", {
-      placement,
-    });
-
-    trackContactClick(business.id, "phone", {
-      placement,
-    });
-  };
-
-  const handleWebsiteClick = (
-    placement: "hero" | "contact",
-  ) => {
-    if (!business) return;
-
-    void trackEvent(business.id, "website_click", {
-      placement,
-    });
-
-    trackContactClick(business.id, "website", {
-      placement,
-    });
-  };
-
-  const handleWhatsAppClick = (
-    placement:
-      | "hero"
-      | "contact"
-      | "floating_button",
-  ) => {
-    if (!business) return;
-
-    void trackEvent(business.id, "whatsapp_click", {
-      placement,
-    });
-
-    trackContactClick(business.id, "whatsapp", {
-      placement,
-    });
-  };
-
-  const handleEmailClick = () => {
-    if (!business) return;
-
-    void trackEvent(business.id, "email_click", {
-      placement: "contact",
-    });
-
-    trackContactClick(business.id, "email", {
-      placement: "contact",
-    });
-  };
-
-  const handleDirectionsClick = () => {
-    if (!business) return;
-
-    void trackEvent(business.id, "directions_click", {
-      has_coordinates: Boolean(
-        location?.latitude != null &&
-        location?.longitude != null,
-      ),
-    });
-
-    void trackEvent(business.id, "location_view", {
-      action: "directions",
-    });
-  };
-
-  /* -------------------------------------------------------
-     SOCIAL LINKS
-  ------------------------------------------------------- */
-
-  const handleSocialClick = (
-    platform: string,
-    url: string,
-  ) => {
-    if (business) {
-      void trackEvent(business.id, "social_click", {
-        platform,
+      items.push({
+        id: "about",
+        label: "About",
       });
-    }
 
-    window.open(
-      url,
-      "_blank",
-      "noopener,noreferrer",
-    );
-  };
+      if (products.length > 0) {
+        items.push({
+          id: "products",
+          label: "Products",
+          count: products.length,
+        });
+      }
 
-  /* -------------------------------------------------------
-     NAVIGATION
-  ------------------------------------------------------- */
+      if (services.length > 0) {
+        items.push({
+          id: "services",
+          label: "Services",
+          count: services.length,
+        });
+      }
 
-  const sections: {
-    id: ProfileSection;
-    label: string;
-  }[] = [
-    { id: "about", label: "About" },
-    { id: "products", label: "Products" },
-    { id: "services", label: "Services" },
-    { id: "promotions", label: "Promotions" },
-    { id: "photos", label: "Photos" },
-    { id: "contact", label: "Contact" },
-    { id: "hours", label: "Opening Hours" },
-    { id: "social", label: "Social Media" },
-    { id: "reviews", label: "Reviews" },
-  ];
+      if (promotions.length > 0) {
+        items.push({
+          id: "promotions",
+          label: "Promotions",
+          count: promotions.length,
+        });
+      }
 
-  const navigateToSection = (
-    section: ProfileSection,
-  ) => {
-    setActiveSection(section);
+      if (media.length > 0) {
+        items.push({
+          id: "photos",
+          label: "Photos",
+          count: media.length,
+        });
+      }
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  };
+      if (
+        address ||
+        business?.phone ||
+        business?.email ||
+        business?.website_url
+      ) {
+        items.push({
+          id: "contact",
+          label: "Contact",
+        });
+      }
 
-  /* -------------------------------------------------------
-     LOADING STATE
-  ------------------------------------------------------- */
+      if (hours.length > 0) {
+        items.push({
+          id: "hours",
+          label: "Hours",
+        });
+      }
+
+      if (socialLinks.length > 0) {
+        items.push({
+          id: "social",
+          label: "Social",
+        });
+      }
+
+      items.push({
+        id: "reviews",
+        label: "Reviews",
+        count: rating.review_count || 0,
+      });
+
+      return items;
+    },
+    [
+      products.length,
+      services.length,
+      promotions.length,
+      media.length,
+      address,
+      business?.phone,
+      business?.email,
+      business?.website_url,
+      hours.length,
+      socialLinks.length,
+      rating.review_count,
+    ],
+  );
 
   if (loading) {
     return (
       <main className="bp-page">
         <div className="bp-loading">
           <div className="bp-spinner" />
-          <p>Loading business profile...</p>
+          <p>Loading business...</p>
         </div>
       </main>
     );
   }
-
-  /* -------------------------------------------------------
-     NOT FOUND STATE
-  ------------------------------------------------------- */
 
   if (notFound || !business) {
     return (
       <main className="bp-page">
-        <div className="bp-not-found">
-          <div className="bp-not-found-icon">⌕</div>
+        <div className="bp-empty">
+          <div className="bp-empty-icon">?</div>
 
           <h1>Business not found</h1>
 
           <p>
-            This business profile may be unavailable,
-            inactive, or no longer public.
+            This business may no longer be publicly
+            available.
           </p>
 
-          <Link href="/discover" className="bp-primary-button">
-            Discover businesses
+          <Link
+            href="/businesses"
+            className="bp-primary-button"
+          >
+            Browse businesses
           </Link>
         </div>
       </main>
     );
   }
 
-  /* -------------------------------------------------------
-     DERIVED VALUES
-  ------------------------------------------------------- */
-
-  const verified = isBusinessVerified(
-    business.verification_status,
-  );
-
-  const websiteUrl = business.website_url
-    ? business.website_url.startsWith("http://") ||
-      business.website_url.startsWith("https://")
-      ? business.website_url
-      : `https://${business.website_url}`
-    : null;
-
-  const averageRating = Number(
-    rating.average_rating ?? 0,
-  );
-
-  const reviewCount = Number(
-    rating.review_count ?? reviews.length,
-  );
-
-  const activeProducts = products.filter((item) => {
-    const status = getRowText(item, ["status"]);
-
-    return (
-      item.is_active !== false &&
-      item.is_public !== false &&
-      (!status ||
-        ["active", "published", "approved"].includes(
-          status.toLowerCase(),
-        ))
-    );
-  });
-
-  const activeServices = services.filter((item) => {
-    const status = getRowText(item, ["status"]);
-
-    return (
-      item.is_active !== false &&
-      item.is_public !== false &&
-      (!status ||
-        ["active", "published", "approved"].includes(
-          status.toLowerCase(),
-        ))
-    );
-  });
-
-  const activePromotions = promotions.filter((item) => {
-    const status = getRowText(item, ["status"]);
-
-    return (
-      item.is_active !== false &&
-      item.is_public !== false &&
-      (!status ||
-        ["active", "published", "approved"].includes(
-          status.toLowerCase(),
-        ))
-    );
-  });
-
-  const getSocialPlatform = (row: GenericRow) =>
-    getRowText(row, [
-      "platform",
-      "social_platform",
-      "name",
-      "type",
-    ]) ?? "Social media";
-
-  const getSocialUrl = (row: GenericRow) =>
-    getRowText(row, [
-      "url",
-      "profile_url",
-      "social_url",
-      "link",
-    ]);
-
-  const getItemTitle = (row: GenericRow) =>
-    getRowText(row, [
-      "name",
-      "title",
-      "product_name",
-      "service_name",
-      "promotion_name",
-    ]) ?? "Untitled";
-
-  const getItemDescription = (row: GenericRow) =>
-    getRowText(row, [
-      "description",
-      "short_description",
-      "details",
-    ]);
-
-  const getItemPrice = (row: GenericRow) =>
-    getRowText(row, [
-      "price",
-      "selling_price",
-      "amount",
-    ]);
-
-  const getItemCurrency = (row: GenericRow) =>
-    getRowText(row, ["currency", "currency_code"]) ??
-    "NGN";
-
-  const getItemImage = (row: GenericRow) => {
-    const path = getMediaPath(row);
-
-    if (!path) return null;
-
-    if (isValidUrl(path)) return path;
-
-    if (path.startsWith("business-media/")) {
-      return getStorageUrl("business-media", path);
-    }
-
-    if (path.startsWith("product-media/")) {
-      return getStorageUrl("product-media", path);
-    }
-
-    return getBusinessMediaUrl(path);
-  };
-
-  /* -------------------------------------------------------
-     PAGE
-  ------------------------------------------------------- */
-
   return (
     <main className="bp-page">
-      {/* HEADER */}
-
       <header className="bp-topbar">
-        <Link
-          href="/"
-          className="bp-brand"
-          aria-label="IFC BIZGROWTH home"
-        >
-          <span className="bp-brand-mark">IFC</span>
+        <div className="bp-topbar-inner">
+          <Link
+            href="/businesses"
+            className="bp-back"
+            aria-label="Back to businesses"
+          >
+            ←
+          </Link>
 
-          <span className="bp-brand-name">
-            BIZGROWTH
-          </span>
-        </Link>
-
-        <div className="bp-topbar-actions">
           <Link
             href="/discover"
-            className="bp-header-link"
+            className="bp-brand"
           >
-            Discover
+            IFC BIZGROWTH
           </Link>
 
           <button
             type="button"
-            className="bp-share-button"
+            className="bp-share-top"
             onClick={() => {
-              setShowShare((current) => !current);
-
               void trackEvent(
                 business.id,
                 "share_menu_open",
               );
+
+              setShowShare((value) => !value);
             }}
+            aria-label="Share business"
           >
-            Share profile
+            ↗
           </button>
         </div>
-      </header>
 
-      {/* SHARE MENU */}
-
-      {showShare && (
-        <div
-          className="bp-share-backdrop"
-          onClick={() => setShowShare(false)}
-        >
-          <div
-            className="bp-share-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Share business profile"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="bp-share-heading">
-              <div>
-                <h2>Share business</h2>
-                <p>
-                  Help more people discover this business.
-                </p>
-              </div>
+        {showShare && (
+          <div className="bp-share-menu">
+            <div className="bp-share-title">
+              <strong>Share business</strong>
 
               <button
                 type="button"
-                className="bp-icon-button"
-                aria-label="Close share menu"
                 onClick={() => setShowShare(false)}
+                aria-label="Close share menu"
               >
                 ×
               </button>
             </div>
 
-            <button
-              type="button"
-              className="bp-share-option"
-              onClick={() => void copyLink()}
-            >
-              <span>🔗</span>
+            <div className="bp-share-grid">
+              <a
+                href={
+                  whatsappUrl ||
+                  `https://wa.me/?text=${encodedShareText}%20${encodedPageUrl}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bp-share-option whatsapp"
+                onClick={() =>
+                  void trackEvent(
+                    business.id,
+                    "share_click",
+                    { method: "whatsapp" },
+                  )
+                }
+              >
+                <span>◉</span>
+                <small>WhatsApp</small>
+              </a>
 
-              <span>
-                <strong>
-                  {copied ? "Link copied" : "Copy link"}
-                </strong>
+              <a
+                href={`https://www.facebook.com/sharer/sharer.php?u=${encodedPageUrl}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bp-share-option facebook"
+                onClick={() =>
+                  void trackEvent(
+                    business.id,
+                    "share_click",
+                    { method: "facebook" },
+                  )
+                }
+              >
+                <span>f</span>
+                <small>Facebook</small>
+              </a>
 
+              <button
+                type="button"
+                onClick={shareToTikTok}
+                className="bp-share-option tiktok"
+              >
+                <span>♪</span>
+                <small>TikTok</small>
+              </button>
+
+              <a
+                href={`https://twitter.com/intent/tweet?text=${encodedShareText}&url=${encodedPageUrl}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bp-share-option x"
+                onClick={() =>
+                  void trackEvent(
+                    business.id,
+                    "share_click",
+                    { method: "x" },
+                  )
+                }
+              >
+                <span>𝕏</span>
+                <small>X</small>
+              </a>
+
+              <a
+                href={`https://t.me/share/url?url=${encodedPageUrl}&text=${encodedShareText}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bp-share-option telegram"
+                onClick={() =>
+                  void trackEvent(
+                    business.id,
+                    "share_click",
+                    { method: "telegram" },
+                  )
+                }
+              >
+                <span>➤</span>
+                <small>Telegram</small>
+              </a>
+
+              <a
+                href={`mailto:?subject=${encodedShareText}&body=${encodedShareText}%0A${encodedPageUrl}`}
+                className="bp-share-option email"
+                onClick={() =>
+                  void trackEvent(
+                    business.id,
+                    "share_click",
+                    { method: "email" },
+                  )
+                }
+              >
+                <span>@</span>
+                <small>Email</small>
+              </a>
+
+              <button
+                type="button"
+                onClick={copyLink}
+                className="bp-share-option copy"
+              >
+                <span>⌘</span>
                 <small>
-                  Share the profile URL anywhere.
+                  {copied ? "Copied" : "Copy link"}
                 </small>
-              </span>
-            </button>
-
-            <a
-              className="bp-share-option"
-              href={`https://wa.me/?text=${encodedShareText}%20${encodedPageUrl}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => {
-                void trackEvent(
-                  business.id,
-                  "share_click",
-                  { method: "whatsapp_share" },
-                );
-              }}
-            >
-              <span>💬</span>
-
-              <span>
-                <strong>WhatsApp</strong>
-                <small>Send the profile to your contacts.</small>
-              </span>
-            </a>
-
-            <a
-              className="bp-share-option"
-              href={`https://www.facebook.com/sharer/sharer.php?u=${encodedPageUrl}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => {
-                void trackEvent(
-                  business.id,
-                  "share_click",
-                  { method: "facebook" },
-                );
-              }}
-            >
-              <span>f</span>
-
-              <span>
-                <strong>Facebook</strong>
-                <small>Share with your Facebook audience.</small>
-              </span>
-            </a>
-
-            <a
-              className="bp-share-option"
-              href={`https://twitter.com/intent/tweet?text=${encodedShareText}&url=${encodedPageUrl}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => {
-                void trackEvent(
-                  business.id,
-                  "share_click",
-                  { method: "x" },
-                );
-              }}
-            >
-              <span>𝕏</span>
-
-              <span>
-                <strong>X</strong>
-                <small>Post this business profile.</small>
-              </span>
-            </a>
-
-            <button
-              type="button"
-              className="bp-share-option"
-              onClick={() => void shareToTikTok()}
-            >
-              <span>♪</span>
-
-              <span>
-                <strong>TikTok</strong>
-                <small>
-                  Copy the link and open TikTok.
-                </small>
-              </span>
-            </button>
-
-            <button
-              type="button"
-              className="bp-primary-button bp-share-done"
-              onClick={() => setShowShare(false)}
-            >
-              Done
-            </button>
+              </button>
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* BUSINESS HERO */}
+        )}
+      </header>
 
       <section className="bp-hero">
         <div className="bp-hero-inner">
-          <div className="bp-hero-main">
-            <div className="bp-hero-logo">
+          <div className="bp-business-heading">
+            <div className="bp-logo">
               <Logo
                 src={logoUrl}
                 name={business.name}
               />
             </div>
 
-            <div className="bp-hero-content">
-              <div className="bp-business-badges">
-                {verified && (
-                  <span className="bp-verified-badge">
-                    ✓ Verified business
-                  </span>
-                )}
+            <div className="bp-business-heading-content">
+              <div className="bp-name-row">
+                <h1>{business.name}</h1>
 
-                {business.is_featured && (
-                  <span className="bp-featured-badge">
-                    Featured
+                {isBusinessVerified(
+                  business.verification_status,
+                ) && (
+                  <span
+                    className="bp-verified"
+                    title="Verified business"
+                    aria-label="Verified business"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M12 2.5l2.1 1.2 2.4-.1 1.1 2.1 2.1 1.1-.1 2.4L20.5 11l.7 2.3-1.5 1.9.1 2.4-2.2 1-1.1 2.1-2.4-.2L12 21.5l-2.1-1.2-2.4.2-1.1-2.1-2.2-1 .1-2.4-1.5-1.9.7-2.3-.7-2.3 1.5-1.8-.1-2.4 2.2-1 1.1-2.1 2.4.1L12 2.5z"
+                        fill="currentColor"
+                      />
+
+                      <path
+                        d="M8.1 12.1l2.5 2.5 5.4-5.4"
+                        fill="none"
+                        stroke="white"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
                   </span>
                 )}
               </div>
 
-              <h1>{business.name}</h1>
+              <div className="bp-rating-row">
+                <StarRating
+                  rating={rating.average_rating ?? 0}
+                  size="medium"
+                />
+
+                <strong>
+                  {rating.average_rating
+                    ? Number(
+                        rating.average_rating,
+                      ).toFixed(1)
+                    : "0.0"}
+                </strong>
+
+                <span>
+                  ({rating.review_count ?? 0} reviews)
+                </span>
+              </div>
 
               {location && (
-                <p className="bp-location-summary">
-                  <span aria-hidden="true">⌖</span>
+                <p className="bp-location">
+                  <span>⌖</span>
 
                   {[
                     location.city,
@@ -1564,1156 +1458,814 @@ export default function BusinessProfilePage() {
                     .join(", ")}
                 </p>
               )}
-
-              <div className="bp-rating-summary">
-                <StarRating
-                  rating={averageRating}
-                  size="medium"
-                />
-
-                <span>
-                  {averageRating.toFixed(1)}
-                </span>
-
-                <span className="bp-rating-count">
-                  ({reviewCount}{" "}
-                  {reviewCount === 1 ? "review" : "reviews"})
-                </span>
-              </div>
-
-              <p className="bp-hero-description">
-                {business.description ||
-                  "Discover this business, explore its offerings, and get in touch directly."}
-              </p>
-
-              <div className="bp-hero-actions">
-                {business.phone && (
-                  <a
-                    href={`tel:${cleanPhone(business.phone)}`}
-                    className="bp-primary-button"
-                    onClick={() =>
-                      handlePhoneClick("hero")
-                    }
-                  >
-                    Call business
-                  </a>
-                )}
-
-                {whatsappUrl && (
-                  <a
-                    href={whatsappUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bp-whatsapp-button"
-                    onClick={() =>
-                      handleWhatsAppClick("hero")
-                    }
-                  >
-                    WhatsApp
-                  </a>
-                )}
-
-                {websiteUrl && (
-                  <a
-                    href={websiteUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bp-secondary-button"
-                    onClick={() =>
-                      handleWebsiteClick("hero")
-                    }
-                  >
-                    Visit website
-                  </a>
-                )}
-              </div>
             </div>
+          </div>
+
+          <div className="bp-action-row">
+            {whatsappUrl && (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bp-action bp-whatsapp"
+                onClick={() =>
+                  void trackEvent(
+                    business.id,
+                    "whatsapp_click",
+                    { placement: "hero" },
+                  )
+                }
+              >
+                <span>◉</span>
+                WhatsApp
+              </a>
+            )}
+
+            {business.phone && (
+              <a
+                href={`tel:${business.phone}`}
+                className="bp-action"
+                onClick={() =>
+                  void trackEvent(
+                    business.id,
+                    "phone_click",
+                    { placement: "hero" },
+                  )
+                }
+              >
+                <span>☎</span>
+                Call
+              </a>
+            )}
+
+            {business.website_url && (
+              <a
+                href={
+                  isValidUrl(business.website_url)
+                    ? business.website_url
+                    : `https://${business.website_url}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bp-action"
+                onClick={() =>
+                  void trackEvent(
+                    business.id,
+                    "website_click",
+                    { placement: "hero" },
+                  )
+                }
+              >
+                <span>↗</span>
+                Website
+              </a>
+            )}
+
+            <button
+              type="button"
+              onClick={shareBusiness}
+              className="bp-action"
+            >
+              <span>↗</span>
+              Share
+            </button>
           </div>
         </div>
       </section>
 
-      {/* MAIN CONTENT */}
-
-      <div className="bp-layout">
-        <aside className="bp-sidebar">
-          <div className="bp-sidebar-heading">
-            <span className="bp-sidebar-label">
-              BUSINESS PROFILE
-            </span>
-
-            <h2>Explore</h2>
-          </div>
-
-          <nav
-            className="bp-section-nav"
-            aria-label="Business profile sections"
-          >
-            {sections.map((section) => (
-              <button
-                type="button"
-                key={section.id}
-                className={
-                  activeSection === section.id
-                    ? "bp-nav-item active"
-                    : "bp-nav-item"
-                }
-                onClick={() =>
-                  navigateToSection(section.id)
-                }
-              >
-                <span>{section.label}</span>
-
-                {section.id === "products" &&
-                  activeProducts.length > 0 && (
-                    <span className="bp-nav-count">
-                      {activeProducts.length}
-                    </span>
-                  )}
-
-                {section.id === "services" &&
-                  activeServices.length > 0 && (
-                    <span className="bp-nav-count">
-                      {activeServices.length}
-                    </span>
-                  )}
-
-                {section.id === "reviews" &&
-                  reviewCount > 0 && (
-                    <span className="bp-nav-count">
-                      {reviewCount}
-                    </span>
-                  )}
-              </button>
-            ))}
-          </nav>
-
-          <div className="bp-sidebar-card">
-            <h3>Discover more businesses</h3>
-
-            <p>
-              Explore businesses and services on
-              IFC BIZGROWTH.
-            </p>
-
-            <Link
-              href="/discover"
-              className="bp-sidebar-cta"
+      <div className="bp-container">
+        {/* SECTION NAVIGATION */}
+        <nav
+          className="bp-profile-nav"
+          aria-label="Business sections"
+        >
+          {navigationItems.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={
+                activeSection === item.id
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                setActiveSection(item.id)
+              }
+              aria-current={
+                activeSection === item.id
+                  ? "page"
+                  : undefined
+              }
             >
-              Explore directory →
-            </Link>
-          </div>
-        </aside>
+              <span>{item.label}</span>
 
-        <section className="bp-content">
-          {/* ABOUT */}
+              {typeof item.count === "number" &&
+                item.count > 0 && (
+                  <small>{item.count}</small>
+                )}
+            </button>
+          ))}
+        </nav>
 
-          {activeSection === "about" && (
-            <div className="bp-section">
-              <div className="bp-section-heading">
-                <span className="bp-eyebrow">
-                  ABOUT THE BUSINESS
-                </span>
-
-                <h2>About {business.name}</h2>
-
-                <p>
-                  Learn more about this business and
-                  what it offers.
-                </p>
-              </div>
-
-              <div className="bp-info-card">
-                <h3>Business overview</h3>
-
-                <p className="bp-description">
-                  {business.description ||
-                    "This business has not added a detailed description yet."}
-                </p>
-
-                <div className="bp-info-grid">
-                  <div className="bp-info-item">
-                    <span className="bp-info-label">
-                      Verification
-                    </span>
-
-                    <strong>
-                      {verified
-                        ? "Verified"
-                        : "Not verified"}
-                    </strong>
-                  </div>
-
-                  <div className="bp-info-item">
-                    <span className="bp-info-label">
-                      Customer rating
-                    </span>
-
-                    <strong>
-                      {averageRating.toFixed(1)} / 5
-                    </strong>
-                  </div>
-
-                  <div className="bp-info-item">
-                    <span className="bp-info-label">
-                      Reviews
-                    </span>
-
-                    <strong>{reviewCount}</strong>
-                  </div>
-
-                  <div className="bp-info-item">
-                    <span className="bp-info-label">
-                      Location
-                    </span>
-
-                    <strong>
-                      {location
-                        ? [
-                            location.city,
-                            location.state_region,
-                          ]
-                            .filter(Boolean)
-                            .join(", ") || "Available on request"
-                        : "Contact the business"}
-                    </strong>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bp-overview-grid">
-                <button
-                  type="button"
-                  className="bp-overview-card"
-                  onClick={() =>
-                    navigateToSection("products")
-                  }
-                >
-                  <span className="bp-overview-icon">
-                    ◈
-                  </span>
-
-                  <strong>Products</strong>
-
-                  <span>
-                    {activeProducts.length} available
-                  </span>
-
-                  <span className="bp-overview-link">
-                    Explore products →
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  className="bp-overview-card"
-                  onClick={() =>
-                    navigateToSection("services")
-                  }
-                >
-                  <span className="bp-overview-icon">
-                    ◉
-                  </span>
-
-                  <strong>Services</strong>
-
-                  <span>
-                    {activeServices.length} available
-                  </span>
-
-                  <span className="bp-overview-link">
-                    Explore services →
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  className="bp-overview-card"
-                  onClick={() =>
-                    navigateToSection("promotions")
-                  }
-                >
-                  <span className="bp-overview-icon">
-                    %
-                  </span>
-
-                  <strong>Promotions</strong>
-
-                  <span>
-                    {activePromotions.length} available
-                  </span>
-
-                  <span className="bp-overview-link">
-                    View promotions →
-                  </span>
-                </button>
-              </div>
+        {/* ABOUT */}
+        {activeSection === "about" && (
+          <section className="bp-section bp-active-content">
+            <div className="bp-section-heading">
+              <h2>About</h2>
             </div>
-          )}
 
-          {/* PRODUCTS */}
+            <div className="bp-about-content">
+              <p>
+                {business.description ||
+                  `Learn more about ${business.name}.`}
+              </p>
+            </div>
+          </section>
+        )}
 
-          {activeSection === "products" && (
-            <div className="bp-section">
-              <div className="bp-section-heading">
-                <span className="bp-eyebrow">
-                  WHAT THIS BUSINESS SELLS
-                </span>
-
+        {/* PRODUCTS */}
+        {activeSection === "products" && (
+          <section className="bp-section bp-active-content">
+            <div className="bp-section-heading">
+              <div>
                 <h2>Products</h2>
 
-                <p>
-                  Browse the products listed by{" "}
-                  {business.name}.
+                <p className="bp-section-subtitle">
+                  Products offered by {business.name}
                 </p>
               </div>
-
-              {activeProducts.length === 0 ? (
-                <div className="bp-empty-state">
-                  <span className="bp-empty-icon">◈</span>
-
-                  <h3>No products available yet</h3>
-
-                  <p>
-                    This business has not listed any
-                    products for display.
-                  </p>
-                </div>
-              ) : (
-                <div className="bp-product-grid">
-                  {activeProducts.map((product, index) => {
-                    const id =
-                      getRowText(product, ["id"]) ??
-                      `${index}`;
-
-                    const title = getItemTitle(product);
-                    const image = getItemImage(product);
-                    const description =
-                      getItemDescription(product);
-                    const price = getItemPrice(product);
-                    const currency =
-                      getItemCurrency(product);
-
-                    return (
-                      <article
-                        className="bp-product-card"
-                        key={id}
-                      >
-                        <div className="bp-product-image">
-                          {image ? (
-                            <img
-                              src={image}
-                              alt={title}
-                              loading="lazy"
-                              onClick={() => {
-                                void trackEvent(
-                                  business.id,
-                                  "product_view",
-                                  {
-                                    product_id: id,
-                                    product_name: title,
-                                    action: "image_click",
-                                  },
-                                );
-                              }}
-                            />
-                          ) : (
-                            <div className="bp-product-placeholder">
-                              ◈
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="bp-product-body">
-                          <h3>{title}</h3>
-
-                          {description && (
-                            <p>{description}</p>
-                          )}
-
-                          {price && (
-                            <strong className="bp-product-price">
-                              {currency}{" "}
-                              {Number(price).toLocaleString(
-                                "en-NG",
-                              )}
-                            </strong>
-                          )}
-
-                          {business.phone && (
-                            <a
-                              href={`tel:${cleanPhone(
-                                business.phone,
-                              )}`}
-                              className="bp-card-action"
-                              onClick={() =>
-                                handlePhoneClick("contact")
-                              }
-                            >
-                              Enquire about product →
-                            </a>
-                          )}
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
-              )}
             </div>
-          )}
 
-          {/* SERVICES */}
+            {products.length > 0 ? (
+              <div className="bp-product-grid">
+                {products.map((product, index) => {
+                  const name =
+                    getRowText(product, [
+                      "product_name",
+                      "name",
+                      "title",
+                    ]) || "Product";
 
-          {activeSection === "services" && (
-            <div className="bp-section">
-              <div className="bp-section-heading">
-                <span className="bp-eyebrow">
-                  HOW THIS BUSINESS CAN HELP
-                </span>
+                  const description =
+                    getRowText(product, [
+                      "description",
+                      "product_description",
+                    ]);
 
+                  const imagePath =
+                    getMediaPath(product);
+
+                  /*
+                   * Products use product-media.
+                   */
+                  const imageUrl =
+                    getProductMediaUrl(imagePath);
+
+                  const price = getRowText(product, [
+                    "price",
+                    "display_price",
+                    "price_text",
+                  ]);
+
+                  return (
+                    <article
+                      className="bp-product-card"
+                      key={
+                        getRowText(product, ["id"]) ||
+                        `${name}-${index}`
+                      }
+                    >
+                      {imageUrl ? (
+                        <div className="bp-product-image-wrap">
+                          <img
+                            src={imageUrl}
+                            alt={name}
+                            className="bp-product-image"
+                            loading="lazy"
+                          />
+                        </div>
+                      ) : (
+                        <div className="bp-product-image-placeholder">
+                          <span>{getInitials(name)}</span>
+                        </div>
+                      )}
+
+                      <div className="bp-product-content">
+                        <h3>{name}</h3>
+
+                        {description && (
+                          <p>{description}</p>
+                        )}
+
+                        {price && (
+                          <strong className="bp-product-price">
+                            {price}
+                          </strong>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="bp-empty-section">
+                <h3>No products available</h3>
+
+                <p>
+                  This business has not added any products
+                  yet.
+                </p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* SERVICES */}
+        {activeSection === "services" && (
+          <section className="bp-section bp-active-content">
+            <div className="bp-section-heading">
+              <div>
                 <h2>Services</h2>
 
-                <p>
-                  Explore the services offered by{" "}
-                  {business.name}.
+                <p className="bp-section-subtitle">
+                  Services provided by {business.name}
                 </p>
               </div>
+            </div>
 
-              {activeServices.length === 0 ? (
-                <div className="bp-empty-state">
-                  <span className="bp-empty-icon">◉</span>
+            {services.length > 0 ? (
+              <div className="bp-service-grid">
+                {services.map((service, index) => {
+                  const name =
+                    getRowText(service, [
+                      "service_name",
+                      "name",
+                      "title",
+                    ]) || "Service";
 
-                  <h3>No services listed yet</h3>
+                  const description =
+                    getRowText(service, [
+                      "description",
+                      "service_description",
+                    ]);
 
-                  <p>
-                    Check back later for services from
-                    this business.
-                  </p>
-                </div>
-              ) : (
-                <div className="bp-service-list">
-                  {activeServices.map((service, index) => {
-                    const id =
-                      getRowText(service, ["id"]) ??
-                      `${index}`;
+                  /*
+                   * Services use business-media.
+                   */
+                  const imagePath =
+                    getMediaPath(service);
 
-                    const title = getItemTitle(service);
-                    const description =
-                      getItemDescription(service);
-                    const price = getItemPrice(service);
-                    const image = getItemImage(service);
+                  const imageUrl =
+                    getBusinessMediaUrl(imagePath);
 
-                    return (
-                      <article
-                        className="bp-service-card"
-                        key={id}
-                      >
-                        {image && (
+                  return (
+                    <article
+                      className="bp-service-card"
+                      key={
+                        getRowText(service, ["id"]) ||
+                        `${name}-${index}`
+                      }
+                    >
+                      {imageUrl ? (
+                        <div className="bp-service-image-wrap">
                           <img
-                            src={image}
-                            alt={title}
+                            src={imageUrl}
+                            alt={name}
                             className="bp-service-image"
                             loading="lazy"
                           />
+                        </div>
+                      ) : (
+                        <div className="bp-service-image-placeholder">
+                          <span>{getInitials(name)}</span>
+                        </div>
+                      )}
+
+                      <div className="bp-service-content">
+                        <h3>{name}</h3>
+
+                        {description && (
+                          <p>{description}</p>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="bp-empty-section">
+                <h3>No services available</h3>
+
+                <p>
+                  This business has not added any services
+                  yet.
+                </p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* PROMOTIONS */}
+        {activeSection === "promotions" && (
+          <section className="bp-section bp-active-content">
+            <div className="bp-section-heading">
+              <div>
+                <h2>Promotions</h2>
+
+                <p className="bp-section-subtitle">
+                  Current offers from {business.name}
+                </p>
+              </div>
+            </div>
+
+            {promotions.length > 0 ? (
+              <div className="bp-offers">
+                {promotions.map(
+                  (promotion, index) => {
+                    const title =
+                      getRowText(promotion, [
+                        "title",
+                        "name",
+                        "promotion_name",
+                      ]) || "Special offer";
+
+                    const description =
+                      getRowText(promotion, [
+                        "description",
+                        "details",
+                        "offer_description",
+                      ]);
+
+                    const discount =
+                      getRowText(promotion, [
+                        "discount",
+                        "discount_text",
+                        "offer",
+                      ]);
+
+                    const imagePath =
+                      getMediaPath(promotion);
+
+                    /*
+                     * Promotions use business-media.
+                     */
+                    const imageUrl =
+                      getBusinessMediaUrl(imagePath);
+
+                    return (
+                      <article
+                        className="bp-offer"
+                        key={
+                          getRowText(promotion, ["id"]) ||
+                          `${title}-${index}`
+                        }
+                      >
+                        {imageUrl ? (
+                          <div className="bp-offer-image-wrap">
+                            <img
+                              src={imageUrl}
+                              alt={title}
+                              className="bp-offer-image"
+                              loading="lazy"
+                            />
+                          </div>
+                        ) : (
+                          <div className="bp-offer-icon">
+                            %
+                          </div>
                         )}
 
-                        <div className="bp-service-content">
+                        <div className="bp-offer-content">
                           <h3>{title}</h3>
+
+                          {discount && (
+                            <strong>{discount}</strong>
+                          )}
 
                           {description && (
                             <p>{description}</p>
                           )}
-
-                          {price && (
-                            <strong>
-                              {getItemCurrency(service)}{" "}
-                              {Number(price).toLocaleString(
-                                "en-NG",
-                              )}
-                            </strong>
-                          )}
-
-                          {business.phone && (
-                            <a
-                              href={`tel:${cleanPhone(
-                                business.phone,
-                              )}`}
-                              className="bp-card-action"
-                              onClick={() =>
-                                handlePhoneClick("contact")
-                              }
-                            >
-                              Enquire about service →
-                            </a>
-                          )}
                         </div>
                       </article>
                     );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* PROMOTIONS */}
-
-          {activeSection === "promotions" && (
-            <div className="bp-section">
-              <div className="bp-section-heading">
-                <span className="bp-eyebrow">
-                  SPECIAL OFFERS
-                </span>
-
-                <h2>Promotions</h2>
+                  },
+                )}
+              </div>
+            ) : (
+              <div className="bp-empty-section">
+                <h3>No promotions available</h3>
 
                 <p>
-                  Check out offers published by{" "}
-                  {business.name}.
+                  This business has no active promotions.
                 </p>
               </div>
+            )}
+          </section>
+        )}
 
-              {activePromotions.length === 0 ? (
-                <div className="bp-empty-state">
-                  <span className="bp-empty-icon">%</span>
-
-                  <h3>No promotions available</h3>
-
-                  <p>
-                    This business has no promotions
-                    available for display right now.
-                  </p>
-                </div>
-              ) : (
-                <div className="bp-promotion-grid">
-                  {activePromotions.map(
-                    (promotion, index) => {
-                      const id =
-                        getRowText(promotion, ["id"]) ??
-                        `${index}`;
-
-                      const title =
-                        getItemTitle(promotion);
-
-                      const description =
-                        getItemDescription(promotion);
-
-                      const image =
-                        getItemImage(promotion);
-
-                      const discount = getRowText(
-                        promotion,
-                        [
-                          "discount_percentage",
-                          "discount_percent",
-                          "discount",
-                        ],
-                      );
-
-                      const endDate = getRowText(
-                        promotion,
-                        [
-                          "end_date",
-                          "valid_until",
-                          "expires_at",
-                        ],
-                      );
-
-                      return (
-                        <article
-                          className="bp-promotion-card"
-                          key={id}
-                        >
-                          {image && (
-                            <img
-                              src={image}
-                              alt={title}
-                              loading="lazy"
-                            />
-                          )}
-
-                          <div className="bp-promotion-body">
-                            {discount && (
-                              <span className="bp-promotion-badge">
-                                {discount}
-                                {String(discount).includes("%")
-                                  ? ""
-                                  : "% off"}
-                              </span>
-                            )}
-
-                            <h3>{title}</h3>
-
-                            {description && (
-                              <p>{description}</p>
-                            )}
-
-                            {endDate && (
-                              <small>
-                                Valid until:{" "}
-                                {formatDate(endDate)}
-                              </small>
-                            )}
-
-                            {whatsappUrl && (
-                              <a
-                                href={whatsappUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="bp-card-action"
-                                onClick={() =>
-                                  handleWhatsAppClick(
-                                    "contact",
-                                  )
-                                }
-                              >
-                                Ask about this offer →
-                              </a>
-                            )}
-                          </div>
-                        </article>
-                      );
-                    },
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* PHOTOS */}
-
-          {activeSection === "photos" && (
-            <div className="bp-section">
-              <div className="bp-section-heading">
-                <span className="bp-eyebrow">
-                  BUSINESS GALLERY
-                </span>
-
+        {/* PHOTOS */}
+        {activeSection === "photos" && (
+          <section className="bp-section bp-active-content">
+            <div className="bp-section-heading">
+              <div>
                 <h2>Photos</h2>
 
-                <p>
-                  Explore photos shared by{" "}
-                  {business.name}.
+                <p className="bp-section-subtitle">
+                  Photos from {business.name}
                 </p>
               </div>
-
-              {media.length === 0 ? (
-                <div className="bp-empty-state">
-                  <span className="bp-empty-icon">▧</span>
-
-                  <h3>No photos available yet</h3>
-
-                  <p>
-                    This business has not added photos
-                    to its gallery.
-                  </p>
-                </div>
-              ) : (
-                <div className="bp-gallery-grid">
-                  {media.map((item, index) => {
-                    const id =
-                      getRowText(item, ["id"]) ??
-                      `${index}`;
-
-                    const path = getMediaPath(item);
-
-                    const image = path
-                      ? isValidUrl(path)
-                        ? path
-                        : getBusinessMediaUrl(path)
-                      : null;
-
-                    if (!image) return null;
-
-                    const caption =
-                      getRowText(item, [
-                        "caption",
-                        "title",
-                        "alt_text",
-                        "description",
-                      ]) ?? business.name;
-
-                    return (
-                      <button
-                        type="button"
-                        key={id}
-                        className="bp-gallery-item"
-                        onClick={() => {
-                          void trackEvent(
-                            business.id,
-                            "photo_click",
-                            {
-                              media_id: id,
-                            },
-                          );
-
-                          window.open(
-                            image,
-                            "_blank",
-                            "noopener,noreferrer",
-                          );
-                        }}
-                        aria-label={`View ${caption}`}
-                      >
-                        <img
-                          src={image}
-                          alt={caption}
-                          loading="lazy"
-                        />
-
-                        <span>{caption}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
             </div>
-          )}
 
-          {/* CONTACT */}
+            {media.length > 0 ? (
+              <div className="bp-gallery">
+                {media.map((item, index) => {
+                  const path = getMediaPath(item);
 
-          {activeSection === "contact" && (
-            <div className="bp-section">
-              <div className="bp-section-heading">
-                <span className="bp-eyebrow">
-                  GET IN TOUCH
-                </span>
+                  if (!path) return null;
 
-                <h2>Contact {business.name}</h2>
+                  const imageUrl =
+                    getBusinessMediaUrl(path);
 
-                <p>
-                  Use the available contact details
-                  to reach this business.
-                </p>
-              </div>
+                  if (!imageUrl) return null;
 
-              <div className="bp-contact-grid">
-                {business.phone && (
-                  <div className="bp-contact-card">
-                    <span className="bp-contact-icon">
-                      ☎
-                    </span>
-
-                    <div>
-                      <h3>Phone</h3>
-                      <p>{business.phone}</p>
-
-                      <a
-                        href={`tel:${cleanPhone(
-                          business.phone,
-                        )}`}
-                        onClick={() =>
-                          handlePhoneClick("contact")
-                        }
-                      >
-                        Call now →
-                      </a>
-                    </div>
-                  </div>
-                )}
-
-                {business.email && (
-                  <div className="bp-contact-card">
-                    <span className="bp-contact-icon">
-                      ✉
-                    </span>
-
-                    <div>
-                      <h3>Email</h3>
-                      <p>{business.email}</p>
-
-                      <a
-                        href={`mailto:${business.email}`}
-                        onClick={handleEmailClick}
-                      >
-                        Send email →
-                      </a>
-                    </div>
-                  </div>
-                )}
-
-                {websiteUrl && (
-                  <div className="bp-contact-card">
-                    <span className="bp-contact-icon">
-                      ◎
-                    </span>
-
-                    <div>
-                      <h3>Website</h3>
-                      <p>Visit the official website.</p>
-
-                      <a
-                        href={websiteUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() =>
-                          handleWebsiteClick("contact")
-                        }
-                      >
-                        Visit website →
-                      </a>
-                    </div>
-                  </div>
-                )}
-
-                {whatsappUrl && (
-                  <div className="bp-contact-card">
-                    <span className="bp-contact-icon">
-                      ◉
-                    </span>
-
-                    <div>
-                      <h3>WhatsApp</h3>
-                      <p>
-                        Contact the business directly.
-                      </p>
-
-                      <a
-                        href={whatsappUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() =>
-                          handleWhatsAppClick("contact")
-                        }
-                      >
-                        Chat on WhatsApp →
-                      </a>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {address && (
-                <div className="bp-address-card">
-                  <div>
-                    <span className="bp-eyebrow">
-                      BUSINESS ADDRESS
-                    </span>
-
-                    <h3>Visit the business</h3>
-
-                    <p>{address}</p>
-                  </div>
-
-                  {mapUrl && (
+                  return (
                     <a
-                      href={mapUrl}
+                      href={imageUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="bp-primary-button"
-                      onClick={handleDirectionsClick}
+                      key={
+                        getRowText(item, ["id"]) ||
+                        `${path}-${index}`
+                      }
+                      className="bp-gallery-item"
+                      onClick={() =>
+                        void trackEvent(
+                          business.id,
+                          "photo_click",
+                        )
+                      }
                     >
-                      Get directions
-                    </a>
-                  )}
-                </div>
-              )}
-
-              {!business.phone &&
-                !business.email &&
-                !websiteUrl &&
-                !whatsappUrl && (
-                  <div className="bp-empty-state">
-                    <h3>Contact details unavailable</h3>
-
-                    <p>
-                      This business has not published
-                      contact details yet.
-                    </p>
-                  </div>
-                )}
-            </div>
-          )}
-
-          {/* OPENING HOURS */}
-
-          {activeSection === "hours" && (
-            <div className="bp-section">
-              <div className="bp-section-heading">
-                <span className="bp-eyebrow">
-                  BUSINESS SCHEDULE
-                </span>
-
-                <h2>Opening Hours</h2>
-
-                <p>
-                  Check the published opening hours
-                  before visiting.
-                </p>
-              </div>
-
-              {hours.length === 0 ? (
-                <div className="bp-empty-state">
-                  <span className="bp-empty-icon">◷</span>
-
-                  <h3>Opening hours unavailable</h3>
-
-                  <p>
-                    Contact the business to confirm
-                    its opening hours.
-                  </p>
-                </div>
-              ) : (
-                <div className="bp-hours-card">
-                  {hours.map((item, index) => {
-                    const dayValue =
-                      item.day_of_week ??
-                      item.day ??
-                      item.weekday;
-
-                    const day = getDayName(dayValue);
-
-                    const opens = getRowText(item, [
-                      "open_time",
-                      "opening_time",
-                      "opens_at",
-                      "start_time",
-                    ]);
-
-                    const closes = getRowText(item, [
-                      "close_time",
-                      "closing_time",
-                      "closes_at",
-                      "end_time",
-                    ]);
-
-                    const isClosed =
-                      item.is_closed === true ||
-                      item.closed === true ||
-                      getRowText(item, ["status"])
-                        ?.toLowerCase() === "closed";
-
-                    return (
-                      <div
-                        className="bp-hours-row"
-                        key={`${day}-${index}`}
-                      >
-                        <span className="bp-hours-day">
-                          {day || "Day"}
-                        </span>
-
-                        <span
-                          className={
-                            isClosed
-                              ? "bp-hours-closed"
-                              : "bp-hours-time"
-                          }
-                        >
-                          {isClosed
-                            ? "Closed"
-                            : opens && closes
-                              ? `${formatBusinessTime(
-                                  opens,
-                                )} – ${formatBusinessTime(
-                                  closes,
-                                )}`
-                              : "Hours not specified"}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* SOCIAL MEDIA */}
-
-          {activeSection === "social" && (
-            <div className="bp-section">
-              <div className="bp-section-heading">
-                <span className="bp-eyebrow">
-                  STAY CONNECTED
-                </span>
-
-                <h2>Social Media</h2>
-
-                <p>
-                  Follow {business.name} on its
-                  published social media channels.
-                </p>
-              </div>
-
-              {socialLinks.filter((item) =>
-                getSocialUrl(item),
-              ).length === 0 ? (
-                <div className="bp-empty-state">
-                  <span className="bp-empty-icon">◎</span>
-
-                  <h3>No social links available</h3>
-
-                  <p>
-                    This business has not added any
-                    social media links yet.
-                  </p>
-                </div>
-              ) : (
-                <div className="bp-social-grid">
-                  {socialLinks.map((item, index) => {
-                    const url = getSocialUrl(item);
-
-                    if (!url) return null;
-
-                    const platform =
-                      getSocialPlatform(item);
-
-                    const safeUrl =
-                      url.startsWith("http://") ||
-                      url.startsWith("https://")
-                        ? url
-                        : `https://${url}`;
-
-                    return (
-                      <button
-                        type="button"
-                        key={
-                          getRowText(item, ["id"]) ??
-                          `${platform}-${index}`
+                      <img
+                        src={imageUrl}
+                        alt={
+                          getRowText(item, [
+                            "title",
+                            "description",
+                          ]) || `${business.name} photo`
                         }
-                        className="bp-social-card"
+                        loading="lazy"
+                      />
+                    </a>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="bp-empty-section">
+                <h3>No photos available</h3>
+
+                <p>
+                  This business has not added any photos
+                  yet.
+                </p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* CONTACT */}
+        {activeSection === "contact" && (
+          <section className="bp-section bp-active-content">
+            <div className="bp-section-heading">
+              <div>
+                <h2>Contact</h2>
+
+                <p className="bp-section-subtitle">
+                  Contact {business.name}
+                </p>
+              </div>
+            </div>
+
+            <div className="bp-contact-card">
+              {address && (
+                <div className="bp-contact-item">
+                  <span className="bp-contact-icon">
+                    ⌖
+                  </span>
+
+                  <div>
+                    <strong>Address</strong>
+
+                    <p>{address}</p>
+
+                    {mapUrl && (
+                      <a
+                        href={mapUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bp-directions"
                         onClick={() =>
-                          handleSocialClick(
-                            platform,
-                            safeUrl,
+                          void trackEvent(
+                            business.id,
+                            "directions_click",
                           )
                         }
                       >
-                        <span className="bp-social-icon">
-                          ◎
+                        <span className="bp-paper-plane">
+                          ➤
                         </span>
 
-                        <span>
-                          <strong>{platform}</strong>
-                          <small>
-                            Visit profile →
-                          </small>
-                        </span>
-                      </button>
-                    );
-                  })}
+                        <span>Get directions</span>
+                      </a>
+                    )}
+                  </div>
                 </div>
               )}
+
+              {business.phone && (
+                <div className="bp-contact-item">
+                  <span className="bp-contact-icon">
+                    ☎
+                  </span>
+
+                  <div>
+                    <strong>Phone</strong>
+
+                    <a
+                      href={`tel:${business.phone}`}
+                      onClick={() =>
+                        void trackEvent(
+                          business.id,
+                          "phone_click",
+                          { placement: "contact" },
+                        )
+                      }
+                    >
+                      {business.phone}
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {business.email && (
+                <div className="bp-contact-item">
+                  <span className="bp-contact-icon">
+                    @
+                  </span>
+
+                  <div>
+                    <strong>Email</strong>
+
+                    <a
+                      href={`mailto:${business.email}`}
+                      onClick={() =>
+                        void trackEvent(
+                          business.id,
+                          "email_click",
+                        )
+                      }
+                    >
+                      {business.email}
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {business.website_url && (
+                <div className="bp-contact-item">
+                  <span className="bp-contact-icon">
+                    ↗
+                  </span>
+
+                  <div>
+                    <strong>Website</strong>
+
+                    <a
+                      href={
+                        isValidUrl(business.website_url)
+                          ? business.website_url
+                          : `https://${business.website_url}`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() =>
+                        void trackEvent(
+                          business.id,
+                          "website_click",
+                          { placement: "contact" },
+                        )
+                      }
+                    >
+                      Visit website
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {whatsappUrl && (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bp-whatsapp-large"
+                  onClick={() =>
+                    void trackEvent(
+                      business.id,
+                      "whatsapp_click",
+                      { placement: "contact" },
+                    )
+                  }
+                >
+                  <span>◉</span>
+                  Contact on WhatsApp
+                </a>
+              )}
             </div>
-          )}
+          </section>
+        )}
 
-          {/* REVIEWS */}
+        {/* BUSINESS HOURS */}
+        {activeSection === "hours" && (
+          <section className="bp-section bp-active-content">
+            <div className="bp-section-heading">
+              <div>
+                <h2>Business Hours</h2>
 
-          {activeSection === "reviews" && (
-            <div className="bp-section">
-              <div className="bp-section-heading">
-                <span className="bp-eyebrow">
-                  CUSTOMER FEEDBACK
-                </span>
-
-                <h2>Reviews</h2>
-
-                <p>
-                  Read customer feedback or share
-                  your own experience.
+                <p className="bp-section-subtitle">
+                  Opening hours for {business.name}
                 </p>
               </div>
+            </div>
 
-              <div className="bp-rating-overview">
-                <div className="bp-rating-number">
-                  {averageRating.toFixed(1)}
-                </div>
+            <div className="bp-hours">
+              {hours.map((item, index) => {
+                const rawDay = item.day_of_week;
 
-                <div>
+                const day = getDayName(rawDay);
+
+                const open = getRowText(item, [
+                  "open_time",
+                  "opening_time",
+                  "opens_at",
+                ]);
+
+                const close = getRowText(item, [
+                  "close_time",
+                  "closing_time",
+                  "closes_at",
+                ]);
+
+                const closedValue = getRowText(item, [
+                  "is_closed",
+                  "closed",
+                ]);
+
+                const closed =
+                  closedValue === "true" ||
+                  closedValue === "1";
+
+                const twentyFourHours =
+                  (open === "00:00:00" ||
+                    open === "00:00") &&
+                  (close === "23:59:00" ||
+                    close === "23:59");
+
+                return (
+                  <div
+                    className="bp-hours-row"
+                    key={
+                      getRowText(item, ["id"]) ||
+                      `${day}-${index}`
+                    }
+                  >
+                    <span>{day}</span>
+
+                    <strong
+                      className={closed ? "closed" : ""}
+                    >
+                      {closed
+                        ? "Closed"
+                        : twentyFourHours
+                          ? "Open 24 hours"
+                          : open && close
+                            ? `${formatBusinessTime(
+                                open,
+                              )} – ${formatBusinessTime(
+                                close,
+                              )}`
+                            : "Hours unavailable"}
+                    </strong>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* SOCIAL */}
+        {activeSection === "social" && (
+          <section className="bp-section bp-active-content">
+            <div className="bp-section-heading">
+              <div>
+                <h2>Follow {business.name}</h2>
+
+                <p className="bp-section-subtitle">
+                  Connect with this business online
+                </p>
+              </div>
+            </div>
+
+            <div className="bp-socials">
+              {socialLinks.map((social, index) => {
+                const url = getRowText(social, [
+                  "url",
+                  "profile_url",
+                  "social_url",
+                  "link",
+                ]);
+
+                if (!url) return null;
+
+                const platform =
+                  getRowText(social, [
+                    "platform",
+                    "platform_name",
+                    "name",
+                  ]) || "Social";
+
+                return (
+                  <a
+                    href={
+                      isValidUrl(url)
+                        ? url
+                        : `https://${url}`
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bp-social"
+                    key={
+                      getRowText(social, ["id"]) ||
+                      `${platform}-${index}`
+                    }
+                    onClick={() =>
+                      void trackEvent(
+                        business.id,
+                        "social_click",
+                        { platform },
+                      )
+                    }
+                  >
+                    {platform}
+                  </a>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* REVIEWS */}
+        {activeSection === "reviews" && (
+          <section className="bp-section bp-reviews-section bp-active-content">
+            <div className="bp-section-heading bp-reviews-heading">
+              <div>
+                <h2>Reviews</h2>
+
+                <p className="bp-section-subtitle">
+                  What customers say about {business.name}
+                </p>
+
+                <div className="bp-rating-summary">
                   <StarRating
-                    rating={averageRating}
+                    rating={rating.average_rating ?? 0}
                     size="large"
                   />
 
-                  <p>
-                    Based on {reviewCount}{" "}
-                    {reviewCount === 1
-                      ? "review"
-                      : "reviews"}
-                  </p>
+                  <strong>
+                    {rating.average_rating
+                      ? Number(
+                          rating.average_rating,
+                        ).toFixed(1)
+                      : "0.0"}
+                  </strong>
+
+                  <span>
+                    {rating.review_count ?? 0} reviews
+                  </span>
                 </div>
               </div>
+            </div>
 
-              <div className="bp-reviews-list">
-                {reviews.length === 0 ? (
-                  <div className="bp-empty-state">
-                    <span className="bp-empty-icon">
-                      ★
-                    </span>
-
-                    <h3>No reviews yet</h3>
-
-                    <p>
-                      Be the first to share your
-                      experience with this business.
-                    </p>
-                  </div>
-                ) : (
-                  reviews.map((review) => {
-                    const avatar = getCustomerAvatarUrl(
-                      review.reviewer_avatar_url,
-                    );
-
-                    return (
-                      <article
-                        className="bp-review-card"
-                        key={review.id}
-                      >
-                        <div className="bp-review-avatar">
-                          {avatar ? (
-                            <img
-                              src={avatar}
-                              alt=""
-                              loading="lazy"
-                            />
-                          ) : (
-                            getInitials(
-                              review.reviewer_name ||
-                                "Customer",
-                            )
-                          )}
-                        </div>
-
-                        <div className="bp-review-content">
-                          <div className="bp-review-heading">
-                            <div>
-                              <h3>
-                                {review.reviewer_name ||
-                                  "Customer"}
-                              </h3>
-
-                              <span className="bp-review-date">
-                                {formatDate(
-                                  review.created_at,
-                                )}
-                              </span>
-                            </div>
-
-                            <StarRating
-                              rating={review.rating}
-                              size="small"
-                            />
-                          </div>
-
-                          {review.review_text && (
-                            <p>{review.review_text}</p>
-                          )}
-                        </div>
-                      </article>
-                    );
-                  })
-                )}
-              </div>
-
-              <div className="bp-review-form-card">
+            <div className="bp-review-form-card">
+              <div className="bp-review-form-header">
                 <h3>Write a review</h3>
 
                 <p>
-                  Share an honest review of your
-                  experience with this business.
+                  No account is required. Tell others
+                  about your experience.
                 </p>
+              </div>
 
-                <form
-                  className="bp-review-form"
-                  onSubmit={handleReviewSubmit}
-                >
+              <form onSubmit={submitReview}>
+                <div className="bp-form-group">
                   <label htmlFor="reviewer-name">
                     Your name
                   </label>
@@ -2723,28 +2275,28 @@ export default function BusinessProfilePage() {
                     type="text"
                     value={reviewerName}
                     onChange={(event) =>
-                      setReviewerName(event.target.value)
+                      setReviewerName(
+                        event.target.value,
+                      )
                     }
                     placeholder="Enter your name"
                     maxLength={100}
                     required
                   />
+                </div>
 
-                  <label>Rating</label>
+                <div className="bp-form-group">
+                  <label>Your rating</label>
 
-                  <div
-                    className="bp-rating-selector"
-                    role="radiogroup"
-                    aria-label="Choose your rating"
-                  >
+                  <div className="bp-rating-input">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button
-                        type="button"
                         key={star}
+                        type="button"
                         className={
                           star <= reviewRating
-                            ? "bp-rating-star selected"
-                            : "bp-rating-star"
+                            ? "selected"
+                            : ""
                         }
                         onClick={() =>
                           setReviewRating(star)
@@ -2752,15 +2304,14 @@ export default function BusinessProfilePage() {
                         aria-label={`${star} star${
                           star === 1 ? "" : "s"
                         }`}
-                        aria-pressed={
-                          reviewRating === star
-                        }
                       >
                         ★
                       </button>
                     ))}
                   </div>
+                </div>
 
+                <div className="bp-form-group">
                   <label htmlFor="review-text">
                     Your review
                   </label>
@@ -2769,85 +2320,132 @@ export default function BusinessProfilePage() {
                     id="review-text"
                     value={reviewText}
                     onChange={(event) =>
-                      setReviewText(event.target.value)
+                      setReviewText(
+                        event.target.value,
+                      )
                     }
-                    placeholder="Describe your experience..."
-                    rows={5}
+                    placeholder="Share your experience..."
                     maxLength={2000}
-                    required
+                    rows={5}
                   />
+                </div>
 
-                  <div className="bp-character-count">
-                    {reviewText.length}/2000
-                  </div>
-
-                  <label htmlFor="review-image">
-                    Profile photo (optional)
+                <div className="bp-form-group">
+                  <label htmlFor="review-picture">
+                    Your picture
+                    <span> Optional</span>
                   </label>
 
                   <input
-                    id="review-image"
+                    id="review-picture"
                     type="file"
                     accept="image/jpeg,image/png,image/webp"
-                    onChange={handleReviewImageChange}
+                    onChange={handleReviewImage}
                   />
 
                   {reviewImagePreview && (
                     <div className="bp-review-image-preview">
                       <img
                         src={reviewImagePreview}
-                        alt="Selected profile photo"
+                        alt="Your review picture preview"
                       />
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (reviewImagePreview) {
-                            URL.revokeObjectURL(
-                              reviewImagePreview,
-                            );
-                          }
-
-                          setReviewImage(null);
-                          setReviewImagePreview(null);
-                        }}
-                      >
-                        Remove photo
-                      </button>
                     </div>
                   )}
 
-                  {reviewMessage && (
-                    <p
-                      className="bp-review-message"
-                      role="status"
-                    >
-                      {reviewMessage}
-                    </p>
-                  )}
-
-                  <button
-                    type="submit"
-                    className="bp-primary-button bp-review-submit"
-                    disabled={submittingReview}
-                  >
-                    {submittingReview
-                      ? "Submitting..."
-                      : "Submit review"}
-                  </button>
-
-                  <small className="bp-review-disclaimer">
-                    Reviews may be checked before
-                    appearing publicly.
+                  <small>
+                    JPG, PNG or WebP. Maximum 2 MB.
                   </small>
-                </form>
-              </div>
-            </div>
-          )}
-        </section>
-      </div>
+                </div>
 
-      {/* FLOATING WHATSAPP BUTTON */}
+                {reviewMessage && (
+                  <p className="bp-review-message">
+                    {reviewMessage}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  className="bp-primary-button"
+                  disabled={submittingReview}
+                >
+                  {submittingReview
+                    ? "Submitting..."
+                    : "Submit review"}
+                </button>
+              </form>
+            </div>
+
+            {reviews.length > 0 ? (
+              <div className="bp-reviews-list">
+                {reviews.map((review) => {
+                  const avatar =
+                    getCustomerAvatarUrl(
+                      review.reviewer_avatar_url,
+                    );
+
+                  const reviewer =
+                    review.reviewer_name || "Customer";
+
+                  return (
+                    <article
+                      className="bp-review"
+                      key={review.id}
+                    >
+                      <div className="bp-review-top">
+                        {avatar ? (
+                          <img
+                            src={avatar}
+                            alt={reviewer}
+                            className="bp-review-avatar"
+                          />
+                        ) : (
+                          <div className="bp-review-avatar-fallback">
+                            {getInitials(reviewer)}
+                          </div>
+                        )}
+
+                        <div className="bp-review-author">
+                          <strong>{reviewer}</strong>
+
+                          <div className="bp-review-meta">
+                            <StarRating
+                              rating={review.rating}
+                              size="small"
+                            />
+
+                            <span>
+                              {formatDate(
+                                review.created_at,
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {review.review_text && (
+                        <p className="bp-review-text">
+                          {review.review_text}
+                        </p>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="bp-no-reviews">
+                <div>★</div>
+
+                <h3>No reviews yet</h3>
+
+                <p>
+                  Be the first person to review this
+                  business.
+                </p>
+              </div>
+            )}
+          </section>
+        )}
+      </div>
 
       {whatsappUrl && (
         <a
@@ -2855,49 +2453,20 @@ export default function BusinessProfilePage() {
           target="_blank"
           rel="noopener noreferrer"
           className="bp-floating-whatsapp"
-          aria-label={`Contact ${business.name} on WhatsApp`}
+          aria-label="Contact this business on WhatsApp"
           onClick={() =>
-            handleWhatsAppClick("floating_button")
+            void trackEvent(
+              business.id,
+              "whatsapp_click",
+              { placement: "floating_button" },
+            )
           }
         >
-          <span aria-hidden="true">◉</span>
-          <span>Chat with business</span>
+          <span>◉</span>
+
+          <strong>WhatsApp</strong>
         </a>
       )}
-
-      {/* FOOTER */}
-
-      <footer className="bp-footer">
-        <div className="bp-footer-inner">
-          <Link href="/" className="bp-footer-brand">
-            IFC BIZGROWTH
-          </Link>
-
-          <p>
-            Discover businesses. Explore products.
-            Connect with opportunities.
-          </p>
-
-          <div className="bp-footer-links">
-            <Link href="/discover">
-              Discover businesses
-            </Link>
-
-            <Link href="/privacy">
-              Privacy policy
-            </Link>
-
-            <Link href="/terms">
-              Terms of service
-            </Link>
-          </div>
-
-          <small>
-            © {new Date().getFullYear()} IFC BIZGROWTH.
-            All rights reserved.
-          </small>
-        </div>
-      </footer>
     </main>
   );
-}
+  }
