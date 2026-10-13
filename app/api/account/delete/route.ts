@@ -43,7 +43,7 @@ function getAdminClient() {
 
 /**
  * Accepts either a plain storage path or a Supabase Storage URL.
- * External URLs are ignored because they are not owned Storage objects.
+ * External URLs are ignored because they are not owned Storage objects
  */
 function resolveStorageReference(
   reference: StorageReference,
