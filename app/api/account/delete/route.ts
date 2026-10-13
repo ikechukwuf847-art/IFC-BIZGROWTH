@@ -5,254 +5,195 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function jsonResponse(
-body: Record<string, unknown>,
-status: number,
+function respond(
+  body: Record<string, unknown>,
+  status: number,
 ) {
-return NextResponse.json(body, {
-status,
-headers: {
-"Cache-Control": "no-store",
-},
-});
+  return NextResponse.json(body, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
 }
 
-function getSupabaseConfig() {
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+function getConfig() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!url || !anonKey || !serviceRoleKey) {
-throw new Error("Supabase server configuration is missing.");
-}
+  if (!url || !anonKey || !serviceRoleKey) {
+    throw new Error("Supabase configuration is missing.");
+  }
 
-return { url, anonKey, serviceRoleKey };
+  return { url, anonKey, serviceRoleKey };
 }
 
 function getAdminClient() {
-const { url, serviceRoleKey } = getSupabaseConfig();
+  const { url, serviceRoleKey } = getConfig();
 
-return createClient(url, serviceRoleKey, {
-auth: {
-autoRefreshToken: false,
-persistSession: false,
-detectSessionInUrl: false,
-},
-});
+  return createClient(url, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
+  });
 }
 
-function hasValidOrigin(request: Request): boolean {
-const origin = request.headers.get("origin");
+function validOrigin(request: Request) {
+  const origin = request.headers.get("origin");
 
-if (!origin) {
-return false;
-}
+  if (!origin) return false;
 
-try {
-return new URL(origin).origin === new URL(request.url).origin;
-} catch {
-return false;
-}
+  try {
+    return new URL(origin).origin === new URL(request.url).origin;
+  } catch {
+    return false;
+  }
 }
 
 export async function POST(request: Request) {
-try {
-// Reject cross-origin requests to this destructive endpoint.
-if (!hasValidOrigin(request)) {
-return jsonResponse(
-{ error: "Invalid request origin." },
-403,
-);
-}
+  try {
+    if (!validOrigin(request)) {
+      return respond({ error: "Invalid request origin." }, 403);
+    }
 
-const body: unknown = await request.json().catch(() => null);
+    const body: unknown = await request.json().catch(() => null);
 
-if (
-  !body ||
-  typeof body !== "object" ||
-  !("password" in body) ||
-  typeof body.password !== "string" ||
-  body.password.length === 0 ||
-  !("confirm" in body) ||
-  body.confirm !== "DELETE"
-) {
-  return jsonResponse(
-    {
-      error:
-        'Enter your password and confirm by sending confirm: "DELETE".',
-    },
-    400,
-  );
-}
+    if (
+      !body ||
+      typeof body !== "object" ||
+      !("password" in body) ||
+      typeof body.password !== "string" ||
+      body.password.length === 0 ||
+      !("confirm" in body) ||
+      body.confirm !== "DELETE"
+    ) {
+      return respond(
+        { error: 'Enter your password and type "DELETE" to confirm.' },
+        400,
+      );
+    }
 
-const supabase = await createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
 
-const {
-  data: { user },
-  error: userError,
-} = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-if (userError || !user || !user.email) {
-  return jsonResponse(
-    {
-      error:
-        "Please sign in again before requesting account deletion.",
-    },
-    401,
-  );
-}
+    if (userError || !user?.email) {
+      return respond(
+        { error: "Please sign in again before deleting your account." },
+        401,
+      );
+    }
 
-const { url, anonKey } = getSupabaseConfig();
+    const { url, anonKey } = getConfig();
 
-// Use a separate client so password verification does not replace
-// the user's existing cookie-based session.
-const verificationClient = createClient(url, anonKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-    detectSessionInUrl: false,
-  },
-});
+    const verifier = createClient(url, anonKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+    });
 
-const {
-  data: verified,
-  error: verificationError,
-} = await verificationClient.auth.signInWithPassword({
-  email: user.email,
-  password: body.password,
-});
+    const { data: verification, error: verificationError } =
+      await verifier.auth.signInWithPassword({
+        email: user.email,
+        password: body.password,
+      });
 
-if (
-  verificationError ||
-  !verified.user ||
-  verified.user.id !== user.id
-) {
-  return jsonResponse(
-    {
-      error:
-        "Password verification failed. No account deletion was performed.",
-    },
-    403,
-  );
-}
+    if (
+      verificationError ||
+      verification.user?.id !== user.id
+    ) {
+      return respond(
+        { error: "Password verification failed. No deletion was performed." },
+        403,
+      );
+    }
 
-const admin = getAdminClient();
+    const admin = getAdminClient();
 
-// Self-service deletion must never remove administrator accounts.
-const {
-  data: adminRecord,
-  error: adminCheckError,
-} = await admin
-  .from("admin_users")
-  .select("id")
-  .eq("id", user.id)
-  .maybeSingle();
+    const { data: adminRecord, error: adminCheckError } = await admin
+      .from("admin_users")
+      .select("id")
+      .eq("id", user.id)
+      .maybeSingle();
 
-if (adminCheckError) {
-  return jsonResponse(
-    { error: "Could not verify account permissions." },
-    500,
-  );
-}
+    if (adminCheckError) {
+      return respond(
+        { error: "Could not verify account permissions." },
+        500,
+      );
+    }
 
-if (adminRecord) {
-  return jsonResponse(
-    {
-      error:
-        "Administrator accounts cannot be deleted through self-service.",
-    },
-    403,
-  );
-}
+    if (adminRecord) {
+      return respond(
+        { error: "Administrator accounts cannot self-delete." },
+        403,
+      );
+    }
 
-// Check that the account's business records can be inspected.
-const {
-  error: businessCheckError,
-} = await admin
-  .from("businesses")
-  .select("id")
-  .eq("owner_id", user.id)
-  .limit(1);
+    // Prepare dependent records before deleting the Auth account.
+    const { error: preparationError } = await admin.rpc(
+      "prepare_account_deletion",
+      { p_user_id: user.id },
+    );
 
-if (businessCheckError) {
-  return jsonResponse(
-    {
-      error:
-        "Could not verify business records. No deletion was performed.",
-    },
-    500,
-  );
-}
+    if (preparationError) {
+      console.error(
+        "Account deletion preparation failed:",
+        preparationError.message,
+      );
 
-/*
- * Storage deletion is deliberately not performed here.
- *
- * Before removing Storage objects, we must establish ownership,
- * verify the bucket and path, and ensure no remaining records
- * reference the same object.
- */
+      return respond(
+        {
+          error:
+            "Account preparation failed. Your authentication account was not deleted.",
+        },
+        500,
+      );
+    }
 
-const {
-  error: cleanupError,
-} = await admin.rpc("prepare_account_deletion", {
-  p_user_id: user.id,
-});
+    const { error: deletionError } =
+      await admin.auth.admin.deleteUser(user.id);
 
-if (cleanupError) {
-  console.error(
-    "Account deletion database cleanup failed:",
-    cleanupError.message,
-  );
+    if (deletionError) {
+      console.error(
+        "Auth account deletion failed:",
+        deletionError.message,
+      );
 
-  return jsonResponse(
-    {
-      error:
-        "Database preparation failed. Your authentication account has not been deleted. Contact support before retrying.",
-    },
-    500,
-  );
-}
+      return respond(
+        {
+          error:
+            "Account deletion could not be completed. Some related records may already have changed. Please contact support before retrying.",
+        },
+        500,
+      );
+    }
 
-const {
-  error: deleteUserError,
-} = await admin.auth.admin.deleteUser(user.id);
+    // The businesses_owner_fk ON DELETE CASCADE constraint
+    // removes businesses owned by this account automatically.
 
-if (deleteUserError) {
-  console.error(
-    "Supabase Auth deletion failed:",
-    deleteUserError.message,
-  );
+    return respond(
+      {
+        success: true,
+        message: "Your account has been permanently deleted.",
+      },
+      200,
+    );
+  } catch (error) {
+    console.error(
+      "Account deletion endpoint failed:",
+      error instanceof Error ? error.message : "Unknown error",
+    );
 
-  return jsonResponse(
-    {
-      error:
-        "Database preparation completed, but authentication deletion failed. Contact support to complete the process.",
-    },
-    500,
-  );
-}
-
-return jsonResponse(
-  {
-    success: true,
-    message: "Your account has been permanently deleted.",
-  },
-  200,
-);
-
-} catch (error) {
-console.error(
-"Account deletion endpoint failed:",
-error instanceof Error ? error.message : "Unknown error",
-);
-
-return jsonResponse(
-  {
-    error:
-      "Account deletion could not be completed. Please contact support.",
-  },
-  500,
-);
-
-}
+    return respond(
+      { error: "Account deletion failed. Please contact support." },
+      500,
+    );
+  }
 }
