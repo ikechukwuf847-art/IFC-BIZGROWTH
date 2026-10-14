@@ -185,17 +185,18 @@ export async function POST(request: Request) {
       },
       200,
     );
-} catch (error) {
-  const message =
-    error instanceof Error ? error.message : "Unknown error";
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unknown error";
 
-  console.error("[ACCOUNT_DELETE_ERROR]", message);
+    console.error("[ACCOUNT_DELETE_ERROR]", message);
 
-  return respond(
-    {
-      error: "Account deletion failed. Please contact support.",
-      code: "ACCOUNT_DELETE_ERROR",
-    },
-    500,
-  );
+    return respond(
+      {
+        error: "Account deletion failed. Please contact support.",
+        code: "ACCOUNT_DELETE_ERROR",
+      },
+      500,
+    );
   }
+}
