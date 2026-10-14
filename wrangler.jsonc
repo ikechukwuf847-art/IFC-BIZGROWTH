@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ifc-bizgrowth",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-14",
+  "compatibility_flags": [
+    "global_fetch_strictly_public"
+  ],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_GR6GMUE983WInnXOp7vkZw_ArbAnNZS",
+    "NEXT_PUBLIC_SUPABASE_URL": "https://iluczxsqdpohzgbknldh.supabase.co"
+  }
+}
