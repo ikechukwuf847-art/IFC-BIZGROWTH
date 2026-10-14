@@ -11,7 +11,9 @@ function respond(
 ) {
   return NextResponse.json(body, {
     status,
-    headers: { "Cache-Control": "no-store" },
+    headers: {
+      "Cache-Control": "no-store",
+    },
   });
 }
 
@@ -24,7 +26,11 @@ function getConfig() {
     throw new Error("Supabase configuration is missing.");
   }
 
-  return { url, anonKey, serviceRoleKey };
+  return {
+    url,
+    anonKey,
+    serviceRoleKey,
+  };
 }
 
 function getAdminClient() {
@@ -42,7 +48,9 @@ function getAdminClient() {
 function validOrigin(request: Request) {
   const origin = request.headers.get("origin");
 
-  if (!origin) return false;
+  if (!origin) {
+    return false;
+  }
 
   try {
     return new URL(origin).origin === new URL(request.url).origin;
@@ -53,10 +61,15 @@ function validOrigin(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    // 1. Validate the request origin.
     if (!validOrigin(request)) {
-      return respond({ error: "Invalid request origin." }, 403);
+      return respond(
+        { error: "Invalid request origin." },
+        403,
+      );
     }
 
+    // 2. Validate the submitted password and confirmation.
     const body: unknown = await request.json().catch(() => null);
 
     if (
@@ -69,11 +82,14 @@ export async function POST(request: Request) {
       body.confirm !== "DELETE"
     ) {
       return respond(
-        { error: 'Enter your password and type "DELETE" to confirm.' },
+        {
+          error: 'Enter your password and type "DELETE" to confirm.',
+        },
         400,
       );
     }
 
+    // 3. Verify the currently authenticated user.
     const supabase = await createSupabaseServerClient();
 
     const {
@@ -83,11 +99,15 @@ export async function POST(request: Request) {
 
     if (userError || !user?.email) {
       return respond(
-        { error: "Please sign in again before deleting your account." },
+        {
+          error: "Please sign in again before deleting your account.",
+        },
         401,
       );
     }
 
+    // 4. Verify the user's password without changing the
+    //    current server-side session.
     const { url, anonKey } = getConfig();
 
     const verifier = createClient(url, anonKey, {
@@ -98,53 +118,73 @@ export async function POST(request: Request) {
       },
     });
 
-    const { data: verification, error: verificationError } =
-      await verifier.auth.signInWithPassword({
-        email: user.email,
-        password: body.password,
-      });
+    const {
+      data: verification,
+      error: verificationError,
+    } = await verifier.auth.signInWithPassword({
+      email: user.email,
+      password: body.password,
+    });
 
     if (
       verificationError ||
       verification.user?.id !== user.id
     ) {
       return respond(
-        { error: "Password verification failed. No deletion was performed." },
+        {
+          error:
+            "Password verification failed. No deletion was performed.",
+        },
         403,
       );
     }
 
+    // 5. Create the privileged server-side client.
     const admin = getAdminClient();
 
-    const { data: adminRecord, error: adminCheckError } = await admin
+    // 6. Prevent administrator accounts from self-deleting.
+    const {
+      data: adminRecord,
+      error: adminCheckError,
+    } = await admin
       .from("admin_users")
       .select("id")
       .eq("id", user.id)
       .maybeSingle();
 
     if (adminCheckError) {
+      console.error(
+        "[ACCOUNT_DELETE_ADMIN_CHECK_ERROR]",
+        adminCheckError.message,
+      );
+
       return respond(
-        { error: "Could not verify account permissions." },
+        {
+          error: "Could not verify account permissions.",
+        },
         500,
       );
     }
 
     if (adminRecord) {
       return respond(
-        { error: "Administrator accounts cannot self-delete." },
+        {
+          error: "Administrator accounts cannot self-delete.",
+        },
         403,
       );
     }
 
-    // Prepare dependent records before deleting the Auth account.
-    const { error: preparationError } = await admin.rpc(
-      "prepare_account_deletion",
-      { p_user_id: user.id },
-    );
+    // 7. Prepare related database records.
+    const {
+      error: preparationError,
+    } = await admin.rpc("prepare_account_deletion", {
+      p_user_id: user.id,
+    });
 
     if (preparationError) {
       console.error(
-        "Account deletion preparation failed:",
+        "[ACCOUNT_DELETE_PREPARATION_ERROR]",
         preparationError.message,
       );
 
@@ -157,27 +197,30 @@ export async function POST(request: Request) {
       );
     }
 
-    const { error: deletionError } =
-      await admin.auth.admin.deleteUser(user.id);
+    // 8. Permanently delete the Supabase Auth account.
+    const {
+      error: deletionError,
+    } = await admin.auth.admin.deleteUser(user.id);
 
     if (deletionError) {
       console.error(
-        "Auth account deletion failed:",
+        "[ACCOUNT_DELETE_AUTH_ERROR]",
         deletionError.message,
       );
 
       return respond(
         {
           error:
-            "Account deletion could not be completed. Some related records may already have changed. Please contact support before retrying.",
+            "Account deletion could not be completed. Please contact support before retrying.",
         },
         500,
       );
     }
 
     // The businesses_owner_fk ON DELETE CASCADE constraint
-    // removes businesses owned by this account automatically.
+    // should remove owned businesses automatically if configured.
 
+    // 9. Return success.
     return respond(
       {
         success: true,
@@ -187,9 +230,14 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Unknown error";
+      error instanceof Error
+        ? error.message
+        : "Unknown error";
 
-    console.error("[ACCOUNT_DELETE_ERROR]", message);
+    console.error(
+      "[ACCOUNT_DELETE_ERROR]",
+      message,
+    );
 
     return respond(
       {
