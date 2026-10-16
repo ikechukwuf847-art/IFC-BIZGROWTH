@@ -1380,8 +1380,7 @@ const label = [
                       value={value}
                       key={`${value}-${index}`}
                     >
-                      {label} (
-                      {location.business_count})
+                      {label}
                     </option>
                   );
                 }
