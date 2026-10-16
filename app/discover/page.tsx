@@ -1363,13 +1363,17 @@ export default function DiscoverPage() {
                     location.country_code
                   }|${location.city || ""}`;
 
-                  const label = [
-                    location.city,
-                    location.state_region,
-                    location.country_code,
-                  ]
-                    .filter(Boolean)
-                    .join(", ");
+                  const countryName =
+  location.country_code === "NG"
+    ? "Nigeria"
+    : location.country_code;
+
+const label = [
+  location.city || location.state_region,
+  countryName,
+]
+  .filter(Boolean)
+  .join(", ");
 
                   return (
                     <option
