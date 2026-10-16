@@ -451,82 +451,80 @@ export default function DiscoverPage() {
   }, []);
 
   const loadBusinesses = useCallback(async () => {
-    setLoading(true);
+  setLoading(true);
+  setError("");
 
+  try {
     const locationParts =
       locationMode === "backend" && selectedLocation
         ? selectedLocation.split("|")
         : null;
 
-    const selectedCountry =
-      locationParts?.[0] || null;
-
-    const selectedCity =
-      locationParts?.[1] || null;
-
     const isNearby =
       locationMode === "nearby" &&
       userCoordinates !== null;
 
-    const { data, error: businessesError } =
-      await supabase.rpc(
-        "get_public_business_directory",
-        {
-          p_search: submittedSearch.trim() || null,
+    const params = {
+      p_search: submittedSearch.trim() || null,
+      p_country_code: locationParts?.[0] || null,
+      p_city: locationParts?.[1] || null,
+      p_category_id: null,
+      p_subcategory_id: null,
+      p_latitude: isNearby ? userCoordinates.latitude : null,
+      p_longitude: isNearby ? userCoordinates.longitude : null,
+      p_radius_km: isNearby ? 25 : null,
+      p_featured_only: false,
+      p_limit: 1000,
+      p_offset: 0,
+    };
 
-          p_country_code: selectedCountry,
+    const { data: directoryData, error: directoryError } =
+      await supabase.rpc("get_public_business_directory", params);
 
-          p_city: selectedCity,
+    if (directoryError) throw directoryError;
 
-          p_category_id: null,
+    let results = (directoryData || []) as DirectoryBusiness[];
 
-          p_subcategory_id: null,
+    const term = submittedSearch.trim();
 
-          p_latitude: isNearby
-            ? userCoordinates.latitude
-            : null,
+    if (term) {
+      const { data: offeringData, error: offeringError } =
+        await supabase.rpc("search_business_offerings", {
+          p_search: term,
+        });
 
-          p_longitude: isNearby
-            ? userCoordinates.longitude
-            : null,
+      if (offeringError) throw offeringError;
 
-          p_radius_km: isNearby ? 25 : null,
-
-          p_featured_only: false,
-
-          p_limit: 100,
-
-          p_offset: 0,
-        }
+      const matchingIds = new Set(
+        (offeringData || []).map(
+          (item: { business_id: string }) => item.business_id
+        )
       );
 
-    if (businessesError) {
-      console.error(
-        "Unable to load businesses:",
-        businessesError
+      results = results.filter(
+        (business) =>
+          matchingIds.has(business.business_id) ||
+          business.business_name.toLowerCase().includes(term.toLowerCase()) ||
+          (business.description || "").toLowerCase().includes(term.toLowerCase()) ||
+          (business.category_name || "").toLowerCase().includes(term.toLowerCase()) ||
+          (business.subcategory_name || "").toLowerCase().includes(term.toLowerCase())
       );
-
-      setError("Unable to load businesses.");
-
-      setBusinesses([]);
-
-      setLoading(false);
-
-      return;
     }
 
-    setBusinesses(
-      (data || []) as DirectoryBusiness[]
-    );
-
+    setBusinesses(results);
+  } catch (err) {
+    console.error("Unable to search businesses:", err);
+    setError("Unable to load businesses.");
+    setBusinesses([]);
+  } finally {
     setLoading(false);
-  }, [
-    submittedSearch,
-    selectedLocation,
-    locationMode,
-    userCoordinates,
-  ]);
-
+  }
+}, [
+  submittedSearch,
+  selectedLocation,
+  locationMode,
+  userCoordinates,
+]);
   /*
    * Load regular featured businesses and paid
    * advertisements into the SAME Featured Businesses
