@@ -951,3 +951,71 @@
     font-size: 28px;
   }
        }
+
+.social-placeholder-grid {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+gap: 16px;
+}
+
+.social-placeholder {
+display: flex;
+align-items: center;
+gap: 14px;
+min-width: 0;
+padding: 20px;
+border: 1px solid #e5e7eb;
+border-radius: 14px;
+background: #ffffff;
+color: #111827;
+text-decoration: none;
+transition:
+transform 0.2s ease,
+box-shadow 0.2s ease,
+border-color 0.2s ease;
+}
+
+.social-placeholder:hover {
+transform: translateY(-3px);
+border-color: #2563eb;
+box-shadow: 0 8px 24px rgb(15 23 42 / 8%);
+}
+
+.social-placeholder:focus-visible {
+outline: 3px solid #2563eb;
+outline-offset: 4px;
+}
+
+.social-placeholder img {
+display: block;
+flex-shrink: 0;
+object-fit: contain;
+}
+
+.social-placeholder > div {
+display: flex;
+flex-direction: column;
+gap: 5px;
+min-width: 0;
+}
+
+.social-placeholder strong {
+font-size: 15px;
+font-weight: 700;
+}
+
+.social-placeholder span {
+overflow-wrap: anywhere;
+color: #64748b;
+font-size: 13px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+.social-placeholder {
+transition: none;
+}
+
+.social-placeholder:hover {
+transform: none;
+}
+}
