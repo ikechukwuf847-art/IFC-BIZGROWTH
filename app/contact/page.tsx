@@ -296,59 +296,121 @@ export default function ContactPage(): React.JSX.Element {
         </div>
       </section>
 
-      {/* SOCIAL MEDIA */}
-      <section className="contact-social-section">
-        <div className="contact-container">
+{/* SOCIAL MEDIA */}
 
-          <div className="contact-section-heading">
-            <span>STAY CONNECTED</span>
+<section className="contact-social-section">
+  <div className="contact-container">
+    <div className="contact-section-heading">
+      <span>STAY CONNECTED</span>
+      <h2>Follow IFC BIZGROWTH</h2>
+      <p>
+        Follow us for business opportunities, updates, and growth resources.
+      </p>
+    </div><div className="social-placeholder-grid">
+  {/* FACEBOOK */}
+  <a
+    href="https://www.facebook.com/share/1CAxzZJvEe/"
+    className="social-placeholder"
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label="Follow IFC BIZGROWTH on Facebook"
+  >
+    <img
+      src="https://cdn.simpleicons.org/facebook/1877F2"
+      alt=""
+      width="32"
+      height="32"
+    />
+    <div>
+      <strong>Facebook</strong>
+      <span>Follow us</span>
+    </div>
+  </a>
 
-            <h2>Follow IFC BIZGROWTH</h2>
+  {/* INSTAGRAM */}
+  <a
+    href="https://www.instagram.com/ifcbizgrowth/"
+    className="social-placeholder"
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label="Follow IFC BIZGROWTH on Instagram"
+  >
+    <img
+      src="https://cdn.simpleicons.org/instagram/E4405F"
+      alt=""
+      width="32"
+      height="32"
+    />
+    <div>
+      <strong>Instagram</strong>
+      <span>@ifcbizgrowth</span>
+    </div>
+  </a>
 
-            <p>
-              Our official social media channels will be available here.
-            </p>
-          </div>
+  {/* TIKTOK */}
+  <a
+    href="https://www.tiktok.com/@ifcbizgrowth"
+    className="social-placeholder"
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label="Follow IFC BIZGROWTH on TikTok"
+  >
+    <img
+      src="https://cdn.simpleicons.org/tiktok/000000"
+      alt=""
+      width="32"
+      height="32"
+    />
+    <div>
+      <strong>TikTok</strong>
+      <span>@ifcbizgrowth</span>
+    </div>
+  </a>
 
-          <div className="social-placeholder-grid">
+  {/* X / TWITTER */}
+  <a
+    href="https://x.com/ifcbizgrowth"
+    className="social-placeholder"
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label="Follow IFC BIZGROWTH on X"
+  >
+    <img
+      src="https://cdn.simpleicons.org/x/000000"
+      alt=""
+      width="32"
+      height="32"
+    />
+    <div>
+      <strong>X (Twitter)</strong>
+      <span>@ifcbizgrowth</span>
+    </div>
+  </a>
 
-            <div className="social-placeholder">
-              <div className="social-icon">f</div>
-              <div>
-                <strong>Facebook</strong>
-                <span>Coming soon</span>
-              </div>
-            </div>
+  {/* YOUTUBE */}
+  <a
+    href="https://www.youtube.com/@ifcbizgrowth"
+    className="social-placeholder"
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label="Subscribe to IFC BIZGROWTH on YouTube"
+  >
+    <img
+      src="https://cdn.simpleicons.org/youtube/FF0000"
+      alt=""
+      width="32"
+      height="32"
+    />
+    <div>
+      <strong>YouTube</strong>
+      <span>@ifcbizgrowth</span>
+    </div>
+  </a>
+</div>
 
-            <div className="social-placeholder">
-              <div className="social-icon">◎</div>
-              <div>
-                <strong>Instagram</strong>
-                <span>Coming soon</span>
-              </div>
-            </div>
-
-            <div className="social-placeholder">
-              <div className="social-icon">♪</div>
-              <div>
-                <strong>TikTok</strong>
-                <span>Coming soon</span>
-              </div>
-            </div>
-
-            <div className="social-placeholder">
-              <div className="social-icon">in</div>
-              <div>
-                <strong>LinkedIn</strong>
-                <span>Coming soon</span>
-              </div>
-            </div>
-
-          </div>
-
-        </div>
-      </section>
-
+  </div>
+</section>
+      
       {/* FOOTER */}
       <footer className="contact-footer">
 
