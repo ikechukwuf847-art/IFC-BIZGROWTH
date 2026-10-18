@@ -1,0 +1,338 @@
+.delete-account-page {
+  min-height: 100vh;
+  padding: 48px 20px;
+  background: #f4f7fc;
+  color: #172b4d;
+}
+
+.delete-account-container {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.delete-account-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+  color: #173b79;
+  text-decoration: none;
+}
+
+.delete-account-brand-mark {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border-radius: 12px;
+  background: #1769e0;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.delete-account-brand strong,
+.delete-account-brand small {
+  display: block;
+}
+
+.delete-account-brand strong {
+  font-size: 15px;
+  letter-spacing: 0.4px;
+}
+
+.delete-account-brand small {
+  margin-top: 4px;
+  color: #71809a;
+  font-size: 12px;
+}
+
+.delete-account-card {
+  padding: 34px;
+  border: 1px solid #e5eaf2;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 12px 40px rgb(24 49 88 / 6%);
+}
+
+.delete-account-warning-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  margin-bottom: 22px;
+  border-radius: 50%;
+  background: #fff0f0;
+  color: #d92d20;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.delete-account-eyebrow {
+  margin: 0 0 10px;
+  color: #1769e0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+}
+
+.delete-account-heading h1 {
+  margin: 0;
+  color: #152b4c;
+  font-size: clamp(25px, 5vw, 32px);
+  font-weight: 750;
+  letter-spacing: -0.8px;
+  line-height: 1.25;
+}
+
+.delete-account-heading > p:last-child {
+  margin: 12px 0 0;
+  color: #687790;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.delete-account-consequences {
+  margin: 26px 0;
+  padding: 20px;
+  border: 1px solid #f1d5d5;
+  border-radius: 12px;
+  background: #fffafa;
+}
+
+.delete-account-consequences h2 {
+  margin: 0 0 14px;
+  color: #263650;
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.delete-account-consequences ul {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding-left: 20px;
+  color: #5e6b80;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.delete-account-consequences li::marker {
+  color: #d92d20;
+}
+
+.delete-account-form {
+  display: grid;
+  gap: 20px;
+}
+
+.delete-account-field {
+  display: grid;
+  gap: 9px;
+}
+
+.delete-account-field label {
+  color: #263650;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.delete-account-field input {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid #d9e1ed;
+  border-radius: 9px;
+  outline: none;
+  background: #fff;
+  color: #172b4d;
+  font: inherit;
+  font-size: 14px;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.delete-account-field input:focus {
+  border-color: #1769e0;
+  box-shadow: 0 0 0 3px rgb(23 105 224 / 12%);
+}
+
+.delete-account-field input:disabled {
+  background: #f5f7fa;
+}
+
+.delete-account-field input::placeholder {
+  color: #9aa6b8;
+}
+
+.delete-account-field small {
+  color: #7b8799;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.delete-account-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: #5e6b80;
+  font-size: 13px;
+  line-height: 1.7;
+  cursor: pointer;
+}
+
+.delete-account-checkbox input {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  margin-top: 3px;
+  accent-color: #1769e0;
+}
+
+.delete-account-button {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 18px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 750;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    opacity 160ms ease;
+}
+
+.delete-account-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.delete-account-button-danger {
+  background: #d92d20;
+  color: #fff;
+}
+
+.delete-account-button-danger:hover:not(:disabled) {
+  background: #b42318;
+}
+
+.delete-account-button-secondary {
+  border-color: #d9e1ed;
+  background: #fff;
+  color: #1769e0;
+}
+
+.delete-account-button-secondary:hover:not(:disabled) {
+  border-color: #1769e0;
+  background: #f5f8ff;
+}
+
+.delete-account-otp-heading h2 {
+  margin: 0;
+  color: #172b4d;
+  font-size: 19px;
+}
+
+.delete-account-otp-heading p {
+  margin: 8px 0 0;
+  color: #687790;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+#deletion-otp {
+  font-size: 22px;
+  font-weight: 750;
+  letter-spacing: 8px;
+  text-align: center;
+}
+
+.delete-account-back-button {
+  justify-self: center;
+  padding: 8px 16px;
+  border: 0;
+  background: transparent;
+  color: #687790;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.delete-account-back-button:hover:not(:disabled) {
+  color: #1769e0;
+}
+
+.delete-account-alert {
+  margin: 0 0 20px;
+  padding: 13px 15px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.delete-account-alert-error {
+  border-color: #f4c7c7;
+  background: #fff2f2;
+  color: #b42318;
+}
+
+.delete-account-alert-success {
+  border-color: #b7e4c7;
+  background: #effaf3;
+  color: #187443;
+}
+
+.delete-account-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid #edf0f5;
+  color: #a0a9b8;
+  font-size: 12px;
+}
+
+.delete-account-footer a {
+  color: #1769e0;
+  text-decoration: none;
+}
+
+.delete-account-footer a:hover {
+  text-decoration: underline;
+}
+
+.delete-account-security-note {
+  max-width: 440px;
+  margin: 22px auto 0;
+  color: #8591a4;
+  font-size: 12px;
+  line-height: 1.8;
+  text-align: center;
+}
+
+@media (max-width: 520px) {
+  .delete-account-page {
+    padding: 26px 14px;
+  }
+
+  .delete-account-card {
+    padding: 23px 18px;
+    border-radius: 15px;
+  }
+
+  .delete-account-consequences {
+    padding: 16px;
+  }
+}
