@@ -1,988 +1,562 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import "./privacy.css";
 
-export default function PrivacyPage(): React.JSX.Element {
-  const lastUpdated = "25 September 2026";
+export const metadata: Metadata = {
+  title: "Privacy Policy | IFC BIZGROWTH",
+  description:
+    "Learn how IFC BIZGROWTH collects, uses, protects, and manages your personal information.",
+  alternates: {
+    canonical: "https://ifcbizgrowth.africa/privacy-policy",
+  },
+};
 
+const lastUpdated = "October 18, 2026";
+
+export default function PrivacyPolicyPage() {
   return (
     <main className="privacy-page">
-      {/* HEADER */}
-      <header className="privacy-header">
-        <div className="privacy-header-inner">
-          <Link
-            href="/"
-            className="privacy-logo-link"
-            aria-label="IFC BIZGROWTH home"
-          >
-            <Image
-              src="/ifc-biz-growth.png"
-              alt="IFC BIZGROWTH"
-              width={180}
-              height={55}
-              className="privacy-logo"
-              priority
-            />
+      <div className="privacy-container">
+        <header className="privacy-header">
+          <Link href="/" className="privacy-brand">
+            IFC <span>BIZGROWTH</span>
           </Link>
 
-          <nav className="privacy-nav" aria-label="Main navigation">
-            <Link href="/">Home</Link>
-            <Link href="/businesses">Businesses</Link>
-            <Link href="/blog">Blog</Link>
-            <Link href="/about">About</Link>
-            <Link href="/contact">Contact</Link>
-          </nav>
-
-          <Link href="/business/login" className="privacy-login-btn">
-            Business Login
-          </Link>
-        </div>
-      </header>
-
-      {/* HERO */}
-      <section className="privacy-hero">
-        <div className="privacy-hero-content">
-          <span className="privacy-eyebrow">LEGAL &amp; PRIVACY</span>
+          <p className="privacy-label">LEGAL INFORMATION</p>
 
           <h1>Privacy Policy</h1>
 
-          <p>
-            This Privacy Policy explains how IFC BIZGROWTH collects, uses,
-            protects, stores, and shares information when you use our website,
-            platform, applications, business services, and related services.
+          <p className="privacy-intro">
+            Your privacy matters to us. This policy explains how IFC BIZGROWTH
+            collects, uses, stores, and protects information when you use our
+            website, mobile application, and services.
           </p>
 
-          <div className="privacy-updated">
-            <span>Last updated</span>
-            <strong>{lastUpdated}</strong>
-          </div>
-        </div>
-      </section>
-
-      {/* DOCUMENT */}
-      <section className="privacy-document">
-        <div className="privacy-layout">
-          {/* SIDEBAR */}
-          <aside className="privacy-sidebar">
-            <div className="privacy-sidebar-inner">
-              <span className="privacy-sidebar-title">On this page</span>
-
-              <nav aria-label="Privacy Policy sections">
-                <a href="#introduction">1. Introduction</a>
-                <a href="#controller">2. Who We Are</a>
-                <a href="#information-we-collect">
-                  3. Information We Collect
-                </a>
-                <a href="#information-you-provide">
-                  4. Information You Provide
-                </a>
-                <a href="#automatic-information">
-                  5. Automatically Collected Information
-                </a>
-                <a href="#lawful-basis">6. Lawful Basis</a>
-                <a href="#how-we-use-information">
-                  7. How We Use Information
-                </a>
-                <a href="#public-business-information">
-                  8. Public Business Information
-                </a>
-                <a href="#payments">9. Payments</a>
-                <a href="#cookies">10. Cookies</a>
-                <a href="#sharing">11. Information Sharing</a>
-                <a href="#third-party-services">
-                  12. Third-Party Services
-                </a>
-                <a href="#security">13. Data Security</a>
-                <a href="#retention">14. Data Retention</a>
-                <a href="#your-rights">15. Your Privacy Rights</a>
-                <a href="#requests">16. Privacy Requests</a>
-                <a href="#children">17. Children</a>
-                <a href="#international-transfers">
-                  18. International Transfers
-                </a>
-                <a href="#marketing">19. Marketing Communications</a>
-                <a href="#business-data">20. Business Data</a>
-                <a href="#third-party-websites">
-                  21. Third-Party Websites
-                </a>
-                <a href="#changes">22. Changes</a>
-                <a href="#contact-privacy">23. Contact</a>
-              </nav>
-            </div>
-          </aside>
-
-          {/* MAIN */}
-          <article className="privacy-content">
-            {/* 1 */}
-            <section id="introduction" className="privacy-section">
-              <span className="privacy-section-number">01</span>
-
-              <h2>Introduction</h2>
-
-              <p>
-                IFC BIZGROWTH is an African business-growth platform operated
-                under IFC Bridge Lab. The platform is designed to help
-                businesses improve visibility, reach customers, promote their
-                products and services, and access business-growth services.
-              </p>
-
-              <p>
-                This Privacy Policy explains how we process personal
-                information when you visit our website, create or manage an
-                account, submit a business listing, interact with businesses,
-                purchase services, communicate with us, or otherwise use IFC
-                BIZGROWTH.
-              </p>
-
-              <p>
-                This Privacy Policy should be read together with our{" "}
-                <Link href="/terms">Terms of Service</Link>.
-              </p>
-            </section>
-
-            {/* 2 */}
-            <section id="controller" className="privacy-section">
-              <span className="privacy-section-number">02</span>
-
-              <h2>Who We Are</h2>
-
-              <p>
-                IFC BIZGROWTH is the platform through which the relevant
-                business-growth services described on this website are
-                provided.
-              </p>
-
-              <p>
-                IFC BIZGROWTH operates under its parent company, IFC Bridge
-                Lab.
-              </p>
-
-              <div className="privacy-controller-card">
-                <div>
-                  <span>Platform</span>
-                  <strong>IFC BIZGROWTH</strong>
-                </div>
-
-                <div>
-                  <span>Parent Company</span>
-                  <strong>IFC Bridge Lab</strong>
-                </div>
-
-                <div>
-                  <span>General Email</span>
-                  <a href="mailto:email@ifcbizgrowth.africa">
-                    email@ifcbizgrowth.africa
-                  </a>
-                </div>
-
-                <div>
-                  <span>Privacy / Support</span>
-                  <a href="mailto:support@ifcbizgrowth.africa">
-                    support@ifcbizgrowth.africa
-                  </a>
-                </div>
-              </div>
-
-              <p>
-                Where another organisation processes information on our behalf,
-                that organisation may act as a data processor or other service
-                provider according to the nature of the relationship.
-              </p>
-            </section>
-
-            {/* 3 */}
-            <section
-              id="information-we-collect"
-              className="privacy-section"
-            >
-              <span className="privacy-section-number">03</span>
-
-              <h2>Information We Collect</h2>
-
-              <p>
-                The information we collect depends on how you interact with
-                IFC BIZGROWTH.
-              </p>
-
-              <div className="privacy-card-grid">
-                <div className="privacy-info-card">
-                  <h3>Account information</h3>
-
-                  <p>
-                    This may include your name, email address, authentication
-                    information, account status, verification information,
-                    and other information needed to manage your account.
-                  </p>
-                </div>
-
-                <div className="privacy-info-card">
-                  <h3>Business information</h3>
-
-                  <p>
-                    This may include business name, description, category,
-                    location, contact details, products, services, images,
-                    logos, social links, promotions, and advertising
-                    information.
-                  </p>
-                </div>
-
-                <div className="privacy-info-card">
-                  <h3>Transaction information</h3>
-
-                  <p>
-                    This may include invoices, payment references, transaction
-                    status, advertising purchases, service requests, refunds,
-                    and related financial records.
-                  </p>
-                </div>
-
-                <div className="privacy-info-card">
-                  <h3>Technical information</h3>
-
-                  <p>
-                    This may include device, browser, network, security,
-                    diagnostic, performance, and platform-usage information.
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            {/* 4 */}
-            <section
-              id="information-you-provide"
-              className="privacy-section"
-            >
-              <span className="privacy-section-number">04</span>
-
-              <h2>Information You Provide</h2>
-
-              <p>
-                We may collect information that you voluntarily provide when
-                you:
-              </p>
-
-              <ul>
-                <li>Create or manage an account.</li>
-                <li>Register or manage a business.</li>
-                <li>Submit a business listing.</li>
-                <li>Submit products or services.</li>
-                <li>Create advertising campaigns.</li>
-                <li>Request promotional or marketing services.</li>
-                <li>Make a payment.</li>
-                <li>Request a refund or transaction assistance.</li>
-                <li>Submit documents or media for a requested service.</li>
-                <li>Contact our support or business team.</li>
-              </ul>
-
-              <p>
-                You should only provide information that you are authorised to
-                provide. If you submit information about another individual,
-                you are responsible for ensuring that you have the appropriate
-                authority to do so.
-              </p>
-            </section>
-
-            {/* 5 */}
-            <section id="automatic-information" className="privacy-section">
-              <span className="privacy-section-number">05</span>
-
-              <h2>Automatically Collected Information</h2>
-
-              <p>
-                When you access or use IFC BIZGROWTH, certain technical
-                information may be collected automatically.
-              </p>
-
-              <ul>
-                <li>IP address or network information.</li>
-                <li>Browser type and version.</li>
-                <li>Device type and operating system.</li>
-                <li>Pages and services accessed.</li>
-                <li>Approximate usage information.</li>
-                <li>Authentication and security events.</li>
-                <li>Performance and diagnostic information.</li>
-              </ul>
-
-              <p>
-                We use this information where appropriate to operate, secure,
-                troubleshoot, maintain, and improve the platform.
-              </p>
-            </section>
-
-            {/* 6 */}
-            <section id="lawful-basis" className="privacy-section">
-              <span className="privacy-section-number">06</span>
-
-              <h2>Lawful Basis for Processing</h2>
-
-              <p>
-                We process personal information only for lawful, specific,
-                relevant, and legitimate purposes.
-              </p>
-
-              <p>
-                Depending on the circumstances, the applicable lawful basis
-                may include:
-              </p>
-
-              <ul>
-                <li>
-                  <strong>Performance of a contract:</strong> where processing
-                  is necessary to provide an account or requested service.
-                </li>
-
-                <li>
-                  <strong>Consent:</strong> where applicable law requires us
-                  to obtain your consent before processing.
-                </li>
-
-                <li>
-                  <strong>Legal obligation:</strong> where processing is
-                  necessary to comply with applicable legal or regulatory
-                  requirements.
-                </li>
-
-                <li>
-                  <strong>Legitimate interests:</strong> where applicable,
-                  such as maintaining security, preventing abuse, or
-                  improving the platform, while taking appropriate account of
-                  your rights and interests.
-                </li>
-              </ul>
-
-              <p>
-                Where processing is based on consent, you may withdraw that
-                consent where permitted by applicable law. Withdrawal of
-                consent does not affect processing that was lawfully carried
-                out before withdrawal.
-              </p>
-            </section>
-
-            {/* 7 */}
-            <section
-              id="how-we-use-information"
-              className="privacy-section"
-            >
-              <span className="privacy-section-number">07</span>
-
-              <h2>How We Use Information</h2>
-
-              <p>We may use information to:</p>
-
-              <ul>
-                <li>Create and manage accounts.</li>
-                <li>Provide requested services.</li>
-                <li>Manage business listings.</li>
-                <li>Display public business information.</li>
-                <li>Process advertising and promotions.</li>
-                <li>Process payments and transactions.</li>
-                <li>Provide marketing services.</li>
-                <li>Verify accounts or submitted business information.</li>
-                <li>Send important service communications.</li>
-                <li>Respond to enquiries and support requests.</li>
-                <li>Detect fraud, abuse, or security threats.</li>
-                <li>Maintain platform security.</li>
-                <li>Improve platform performance and functionality.</li>
-                <li>Meet legal and regulatory requirements.</li>
-              </ul>
-            </section>
-
-            {/* 8 */}
-            <section
-              id="public-business-information"
-              className="privacy-section"
-            >
-              <span className="privacy-section-number">08</span>
-
-              <h2>Public Business Information</h2>
-
-              <p>
-                Public business discovery is an important part of IFC
-                BIZGROWTH. Information that a business chooses to publish as
-                part of its public listing may be visible to visitors and
-                users of the platform.
-              </p>
-
-              <p>This may include:</p>
-
-              <ul>
-                <li>Business name.</li>
-                <li>Business description.</li>
-                <li>Business category.</li>
-                <li>Business location information.</li>
-                <li>Business contact information.</li>
-                <li>Products and services.</li>
-                <li>Business logo and images.</li>
-                <li>Website and social links.</li>
-                <li>Public promotions and advertising information.</li>
-              </ul>
-
-              <div className="privacy-note">
-                <strong>Business responsibility</strong>
-
-                <span>
-                  Businesses should not publish sensitive personal information
-                  through their public listing unless there is a lawful and
-                  appropriate reason to do so.
-                </span>
-              </div>
-            </section>
-
-            {/* 9 */}
-            <section id="payments" className="privacy-section">
-              <span className="privacy-section-number">09</span>
-
-              <h2>Payments</h2>
-
-              <p>
-                Some IFC BIZGROWTH services may require payment, including
-                advertising, promotional packages, and other business-growth
-                services.
-              </p>
-
-              <p>
-                Where a third-party payment provider processes payment-card or
-                other payment information, that provider may process the
-                information under its own terms and privacy practices.
-              </p>
-
-              <p>
-                IFC BIZGROWTH may receive transaction information needed to
-                confirm and manage a transaction, including transaction
-                reference, payment status, amount, currency, and related
-                records.
-              </p>
-
-              <p>
-                We do not intend to store complete payment-card details when
-                those details are handled directly by an authorised payment
-                provider.
-              </p>
-            </section>
-
-            {/* 10 */}
-            <section id="cookies" className="privacy-section">
-              <span className="privacy-section-number">10</span>
-
-              <h2>Cookies &amp; Similar Technologies</h2>
-
-              <p>
-                IFC BIZGROWTH may use cookies, local storage, session
-                technologies, and similar technologies.
-              </p>
-
-              <h3>Necessary technologies</h3>
-
-              <p>
-                Necessary technologies may be used where required for core
-                functionality, authentication, security, session management,
-                accessibility, or network stability.
-              </p>
-
-              <h3>Optional technologies</h3>
-
-              <p>
-                Where optional cookies or similar tracking technologies are
-                used for purposes such as analytics or other non-essential
-                functions, we will provide appropriate notice and, where
-                required, request your consent before using them.
-              </p>
-
-              <p>
-                You may withdraw or change your cookie preferences through the
-                cookie controls made available on the platform.
-              </p>
-
-              <div className="privacy-note">
-                <strong>Cookie control</strong>
-
-                <span>
-                  IFC BIZGROWTH will not treat consent to optional cookies as
-                  mandatory for access to services that do not require those
-                  cookies.
-                </span>
-              </div>
-            </section>
-
-            {/* 11 */}
-            <section id="sharing" className="privacy-section">
-              <span className="privacy-section-number">11</span>
-
-              <h2>How We Share Information</h2>
-
-              <p>
-                We do not treat personal information as a product to be sold to
-                unrelated third parties.
-              </p>
-
-              <p>
-                Information may be disclosed where reasonably necessary to
-                provide services, operate the platform, process transactions,
-                maintain security, or comply with applicable law.
-              </p>
-
-              <p>This may include:</p>
-
-              <ul>
-                <li>Technology and infrastructure providers.</li>
-                <li>Payment and transaction providers.</li>
-                <li>Email and communication providers.</li>
-                <li>Authentication providers.</li>
-                <li>Cloud storage or hosting providers.</li>
-                <li>Professional advisers where necessary.</li>
-                <li>Government or regulatory authorities where legally required.</li>
-              </ul>
-
-              <p>
-                Public business information may also be visible to visitors
-                because public business discovery is a core function of the
-                platform.
-              </p>
-            </section>
-
-            {/* 12 */}
-            <section id="third-party-services" className="privacy-section">
-              <span className="privacy-section-number">12</span>
-
-              <h2>Third-Party Services</h2>
-
-              <p>
-                IFC BIZGROWTH may use third-party technology providers to
-                provide parts of the platform.
-              </p>
-
-              <p>
-                Depending on the service being used, our technology
-                architecture may include providers such as:
-              </p>
-
-              <div className="privacy-provider-grid">
-                <div>
-                  <strong>Supabase</strong>
-                  <span>Authentication, database, storage and related infrastructure.</span>
-                </div>
-
-                <div>
-                  <strong>Paystack</strong>
-                  <span>Payment processing where enabled for applicable transactions.</span>
-                </div>
-
-                <div>
-                  <strong>Resend</strong>
-                  <span>Email delivery where enabled for platform communications.</span>
-                </div>
-
-                <div>
-                  <strong>Google</strong>
-                  <span>Authentication where a user chooses Google sign-in.</span>
-                </div>
-              </div>
-
-              <p>
-                The availability and use of a particular third-party service
-                may depend on the feature, account type, location, and stage of
-                the IFC BIZGROWTH platform.
-              </p>
-
-              <p>
-                Third-party providers may process information according to
-                their own privacy policies and contractual obligations.
-              </p>
-            </section>
-
-            {/* 13 */}
-            <section id="security" className="privacy-section">
-              <span className="privacy-section-number">13</span>
-
-              <h2>Data Security</h2>
-
-              <p>
-                We take reasonable technical and organisational measures
-                designed to protect personal information against unauthorised
-                access, alteration, disclosure, loss, misuse, or destruction.
-              </p>
-
-              <p>Security measures may include:</p>
-
-              <ul>
-                <li>Authentication and access controls.</li>
-                <li>Secure connections.</li>
-                <li>Database security controls.</li>
-                <li>Restricted administrative access.</li>
-                <li>Monitoring and security processes.</li>
-                <li>Appropriate internal procedures.</li>
-              </ul>
-
-              <p>
-                No online service, internet transmission, or electronic storage
-                system can be guaranteed to be completely secure.
-              </p>
-            </section>
-
-            {/* 14 */}
-            <section id="retention" className="privacy-section">
-              <span className="privacy-section-number">14</span>
-
-              <h2>Data Retention</h2>
-
-              <p>
-                We retain personal information only for as long as reasonably
-                necessary for the purposes for which it was collected,
-                including:
-              </p>
-
-              <ul>
-                <li>Providing services.</li>
-                <li>Maintaining account records.</li>
-                <li>Maintaining transaction records.</li>
-                <li>Resolving disputes.</li>
-                <li>Preventing fraud and abuse.</li>
-                <li>Enforcing agreements.</li>
-                <li>Meeting legal or regulatory requirements.</li>
-              </ul>
-
-              <p>
-                Retention periods may differ depending on the type of
-                information and the purpose for which it is retained.
-              </p>
-
-              <p>
-                When information is no longer required, we may delete,
-                anonymise, or securely dispose of it, subject to applicable
-                legal requirements and legitimate operational needs.
-              </p>
-            </section>
-
-            {/* 15 */}
-            <section id="your-rights" className="privacy-section">
-              <span className="privacy-section-number">15</span>
-
-              <h2>Your Privacy Rights</h2>
-
-              <p>
-                Subject to applicable law and lawful limitations, you may have
-                rights regarding personal information processed by IFC
-                BIZGROWTH.
-              </p>
-
-              <p>These may include rights to:</p>
-
-              <ul>
-                <li>Request access to your personal information.</li>
-                <li>Request correction of inaccurate information.</li>
-                <li>Request deletion where applicable.</li>
-                <li>Object to certain processing.</li>
-                <li>Request restriction of certain processing.</li>
-                <li>Withdraw consent where processing relies on consent.</li>
-                <li>Request relevant information about our processing.</li>
-                <li>Exercise other rights provided by applicable law.</li>
-              </ul>
-
-              <p>
-                These rights are subject to applicable legal exceptions and
-                may not apply in every circumstance.
-              </p>
-
-              <div className="privacy-note">
-                <strong>Nigeria</strong>
-
-                <span>
-                  IFC BIZGROWTH recognises applicable Nigerian data-protection
-                  requirements, including the Nigeria Data Protection Act
-                  2023.
-                </span>
-              </div>
-            </section>
-
-            {/* 16 */}
-            <section id="requests" className="privacy-section">
-              <span className="privacy-section-number">16</span>
-
-              <h2>Privacy Requests</h2>
-
-              <p>
-                To submit a privacy request, contact our privacy/support team
-                using the details provided at the end of this policy.
-              </p>
-
-              <p>
-                To protect users against unauthorised disclosure, we may need
-                to verify your identity before completing certain requests.
-              </p>
-
-              <p>
-                A request should clearly explain the information or action you
-                are requesting. We will handle requests in accordance with
-                applicable law.
-              </p>
-
-              <p>
-                Where a request cannot lawfully be fulfilled, we may explain
-                the applicable reason or limitation.
-              </p>
-            </section>
-
-            {/* 17 */}
-            <section id="children" className="privacy-section">
-              <span className="privacy-section-number">17</span>
-
-              <h2>Children&apos;s Privacy</h2>
-
-              <p>
-                IFC BIZGROWTH is primarily designed for businesses,
-                entrepreneurs, organisations, and other users who can lawfully
-                use our services.
-              </p>
-
-              <p>
-                We do not knowingly seek to collect personal information from
-                children where such collection is prohibited by applicable
-                law.
-              </p>
-
-              <p>
-                If you believe that a child has provided personal information
-                to us inappropriately, please contact us so that we can review
-                the matter and take appropriate action.
-              </p>
-            </section>
-
-            {/* 18 */}
-            <section
-              id="international-transfers"
-              className="privacy-section"
-            >
-              <span className="privacy-section-number">18</span>
-
-              <h2>International Data Transfers</h2>
-
-              <p>
-                IFC BIZGROWTH is intended to operate across Africa and may use
-                service providers whose systems, infrastructure, or personnel
-                are located outside the country where you are located.
-              </p>
-
-              <p>
-                Where personal information is transferred or processed across
-                borders, we aim to apply appropriate safeguards and comply with
-                applicable data-protection requirements.
-              </p>
-            </section>
-
-            {/* 19 */}
-            <section id="marketing" className="privacy-section">
-              <span className="privacy-section-number">19</span>
-
-              <h2>Marketing Communications</h2>
-
-              <p>
-                We may send communications that are necessary for your account,
-                security, transactions, or requested services.
-              </p>
-
-              <p>
-                Where we send optional marketing communications, you may
-                unsubscribe or request that such communications stop, subject
-                to applicable law.
-              </p>
-
-              <p>
-                You can contact our support team if you believe you are
-                receiving unwanted marketing communications from us.
-              </p>
-            </section>
-
-            {/* 20 */}
-            <section id="business-data" className="privacy-section">
-              <span className="privacy-section-number">20</span>
-
-              <h2>Business Data vs Personal Data</h2>
-
-              <p>
-                Information about a business is not necessarily personal data.
-                However, business information may contain personal information
-                where it identifies or relates to an individual.
-              </p>
-
-              <p>
-                For example, a business contact number may constitute personal
-                information if it identifies an individual depending on the
-                circumstances.
-              </p>
-
-              <p>
-                Businesses using IFC BIZGROWTH are responsible for ensuring
-                that information about individuals submitted through their
-                account is handled lawfully.
-              </p>
-            </section>
-
-            {/* 21 */}
-            <section
-              id="third-party-websites"
-              className="privacy-section"
-            >
-              <span className="privacy-section-number">21</span>
-
-              <h2>Third-Party Websites</h2>
-
-              <p>
-                IFC BIZGROWTH may contain links to business websites,
-                social-media profiles, payment pages, and other external
-                services.
-              </p>
-
-              <p>
-                Once you leave our platform and access a third-party service,
-                that service&apos;s own privacy policy and terms may apply.
-              </p>
-
-              <p>
-                IFC BIZGROWTH is not responsible for the privacy practices or
-                security of third-party websites that we do not control.
-              </p>
-            </section>
-
-            {/* 22 */}
-            <section id="changes" className="privacy-section">
-              <span className="privacy-section-number">22</span>
-
-              <h2>Changes to This Privacy Policy</h2>
-
-              <p>
-                We may update this Privacy Policy when our services,
-                technology, business operations, legal requirements, or data
-                practices change.
-              </p>
-
-              <p>
-                The latest version will be published on this page and the
-                &quot;Last updated&quot; date will be changed accordingly.
-              </p>
-
-              <p>
-                We encourage users to review this policy periodically.
-              </p>
-            </section>
-
-            {/* 23 */}
-            <section id="contact-privacy" className="privacy-section">
-              <span className="privacy-section-number">23</span>
-
-              <h2>Contact &amp; Privacy Enquiries</h2>
-
-              <p>
-                For privacy questions, data-subject requests, complaints about
-                the handling of personal information, or questions about this
-                Privacy Policy, contact IFC BIZGROWTH using the details below.
-              </p>
-
-              <div className="privacy-contact-card">
-                <div className="privacy-contact-item">
-                  <span>General Email</span>
-
-                  <a href="mailto:email@ifcbizgrowth.africa">
-                    email@ifcbizgrowth.africa
-                  </a>
-                </div>
-
-                <div className="privacy-contact-item">
-                  <span>Privacy &amp; Support</span>
-
-                  <a href="mailto:support@ifcbizgrowth.africa">
-                    support@ifcbizgrowth.africa
-                  </a>
-                </div>
-
-                <div className="privacy-contact-item">
-                  <span>Partnerships</span>
-
-                  <a href="mailto:partnership@ifcbizgrowth.africa">
-                    partnership@ifcbizgrowth.africa
-                  </a>
-                </div>
-
-                <div className="privacy-contact-item">
-                  <span>Phone / WhatsApp</span>
-
-                  <a href="tel:+2349129809527">09129809527</a>
-                </div>
-
-                <div className="privacy-contact-item">
-                  <span>Support Hours</span>
-
-                  <strong>Monday – Friday, 8:00 AM – 6:00 PM</strong>
-                </div>
-              </div>
-
-              <p className="privacy-final-note">
-                IFC BIZGROWTH is committed to handling information responsibly
-                and providing users with clear information about how their
-                personal data is processed.
-              </p>
-            </section>
-
-            {/* RELATED LINKS */}
-            <div className="privacy-bottom-links">
-              <Link href="/terms">Terms of Service</Link>
-              <Link href="/contact">Contact IFC BIZGROWTH</Link>
-              <Link href="/about">About IFC BIZGROWTH</Link>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      {/* FOOTER */}
-      <footer className="privacy-footer">
-        <div className="privacy-footer-inner">
-          <div className="privacy-footer-brand">
-            <Image
-              src="/ifc-biz-growth.png"
-              alt="IFC BIZGROWTH"
-              width={155}
-              height={48}
-              className="privacy-footer-logo"
-            />
+          <p className="privacy-updated">
+            Last updated: {lastUpdated}
+          </p>
+        </header>
+
+        <nav className="privacy-toc" aria-label="Privacy policy contents">
+          <h2>Contents</h2>
+
+          <ol>
+            <li><a href="#introduction">Introduction</a></li>
+            <li><a href="#information">Information We Collect</a></li>
+            <li><a href="#use">How We Use Information</a></li>
+            <li><a href="#public-information">Public Business Information</a></li>
+            <li><a href="#sharing">How We Share Information</a></li>
+            <li><a href="#payments">Payments</a></li>
+            <li><a href="#location">Business Location Information</a></li>
+            <li><a href="#verification">Business Verification</a></li>
+            <li><a href="#analytics">Analytics and Advertising</a></li>
+            <li><a href="#storage">Data Storage and Security</a></li>
+            <li><a href="#retention">Data Retention</a></li>
+            <li><a href="#deletion">Account Deletion</a></li>
+            <li><a href="#rights">Your Privacy Rights</a></li>
+            <li><a href="#children">Children's Privacy</a></li>
+            <li><a href="#third-parties">Third-Party Services</a></li>
+            <li><a href="#international">International Data Transfers</a></li>
+            <li><a href="#cookies">Cookies and Local Storage</a></li>
+            <li><a href="#changes">Changes to This Policy</a></li>
+            <li><a href="#contact">Contact Us</a></li>
+          </ol>
+        </nav>
+
+        <article className="privacy-content">
+          <section id="introduction">
+            <h2>1. Introduction</h2>
 
             <p>
-              An African business-growth platform helping businesses improve
-              visibility, reach customers, and grow.
+              IFC BIZGROWTH is a business discovery and growth platform
+              operated by IFC Bridge Lab. It helps people discover businesses,
+              products, services, and business opportunities.
             </p>
-          </div>
 
-          <div className="privacy-footer-links">
-            <div>
-              <h3>Company</h3>
+            <p>
+              This policy applies to our website, mobile application, and
+              related services. By using our services, you acknowledge that
+              you have had the opportunity to read this policy.
+            </p>
 
-              <Link href="/about">About</Link>
-              <Link href="/blog">Blog</Link>
-              <Link href="/contact">Contact</Link>
+            <p>
+              Where applicable, personal information is processed in
+              accordance with relevant data protection laws.
+            </p>
+          </section>
+
+          <section id="information">
+            <h2>2. Information We Collect</h2>
+
+            <p>Depending on how you use our services, we may collect:</p>
+
+            <h3>A. Account information</h3>
+            <ul>
+              <li>Email address and account identifiers.</li>
+              <li>Authentication information and session tokens.</li>
+              <li>Information needed to authenticate your account.</li>
+            </ul>
+
+            <p>
+              Your password is used for authentication. We do not intentionally
+              display your password to other users.
+            </p>
+
+            <h3>B. Business information</h3>
+            <ul>
+              <li>Business name, description, and category.</li>
+              <li>Business email address, telephone number, and website.</li>
+              <li>Country and other business address information.</li>
+              <li>Products, services, prices, currencies, and images.</li>
+              <li>Business promotions and advertising campaign information.</li>
+            </ul>
+
+            <h3>C. Verification information</h3>
+            <p>
+              If you request business verification, we may process registration
+              numbers, registration countries, submitted documents, notes, and
+              the outcome of the verification review.
+            </p>
+
+            <h3>D. Location information</h3>
+            <p>
+              When you provide a business address, we may process that address
+              and associated geographic coordinates to support business
+              location features.
+            </p>
+
+            <h3>E. Transactions and service requests</h3>
+            <p>
+              We may process payment order identifiers, amounts, currencies,
+              payment status, selected services, advertising packages, and
+              related transaction records.
+            </p>
+
+            <h3>F. Usage and technical information</h3>
+            <p>
+              Depending on the features you use, we may process analytics
+              events, interactions with business profiles, products, services,
+              promotions, and technical information needed to operate and
+              secure the platform.
+            </p>
+
+            <h3>G. Communications and uploaded files</h3>
+            <p>
+              We may process information you send through support requests,
+              business forms, verification submissions, and other interactions
+              with our services.
+            </p>
+          </section>
+
+          <section id="use">
+            <h2>3. How We Use Information</h2>
+
+            <p>We may use information to:</p>
+
+            <ul>
+              <li>Create and manage user accounts.</li>
+              <li>Authenticate users and maintain account sessions.</li>
+              <li>Publish and manage business profiles.</li>
+              <li>Help customers discover businesses, products, and services.</li>
+              <li>Process business verification requests.</li>
+              <li>Manage advertising campaigns and marketing requests.</li>
+              <li>Coordinate payment processing and confirm payment status.</li>
+              <li>Provide analytics and measure platform usage.</li>
+              <li>Respond to support requests.</li>
+              <li>Detect abuse, protect accounts, and maintain security.</li>
+              <li>Meet legal obligations and enforce our policies.</li>
+              <li>Improve the reliability and functionality of our services.</li>
+            </ul>
+          </section>
+
+          <section id="public-information">
+            <h2>4. Public Business Information</h2>
+
+            <p>
+              Business owners may choose to make business profiles and related
+              information public. Depending on their settings and the features
+              enabled, this information may include business names,
+              descriptions, contact details, websites, locations, products,
+              services, images, and promotions.
+            </p>
+
+            <p>
+              Public business information may be accessible to visitors who do
+              not have an account. Public pages may also be discovered or
+              indexed by search engines.
+            </p>
+
+            <p>
+              Do not submit sensitive personal information for public display.
+              Business owners are responsible for ensuring that they have
+              permission to publish information and images they submit.
+            </p>
+          </section>
+
+          <section id="sharing">
+            <h2>5. How We Share Information</h2>
+
+            <p>Information may be shared in the following circumstances:</p>
+
+            <ul>
+              <li>
+                <strong>Service providers:</strong> With providers that support
+                hosting, authentication, databases, storage, and other
+                platform operations.
+              </li>
+              <li>
+                <strong>Payment providers:</strong> When necessary to process
+                payments or verify transaction status.
+              </li>
+              <li>
+                <strong>Public visitors:</strong> When business information is
+                intentionally published publicly.
+              </li>
+              <li>
+                <strong>Authorized personnel:</strong> When access is needed
+                to administer the platform, review verification requests, or
+                provide support.
+              </li>
+              <li>
+                <strong>Legal and safety purposes:</strong> When disclosure is
+                required by law or reasonably necessary to protect rights,
+                users, or the platform.
+              </li>
+              <li>
+                <strong>Business changes:</strong> In connection with a
+                merger, restructuring, or transfer of business assets, subject
+                to applicable legal requirements.
+              </li>
+            </ul>
+
+            <p>
+              We do not describe these circumstances as permission to share
+              information indiscriminately. Information should only be
+              disclosed where there is an appropriate operational or legal
+              reason.
+            </p>
+          </section>
+
+          <section id="payments">
+            <h2>6. Payments</h2>
+
+            <p>
+              Some advertising and marketing services may require payment.
+              Payment checkout may be provided by an external payment service.
+            </p>
+
+            <p>
+              Payment providers may collect and process information under
+              their own privacy policies and terms. IFC BIZGROWTH may receive
+              transaction references, amounts, currencies, and payment status
+              to manage orders and provide services.
+            </p>
+
+            <p>
+              The precise information handled by a payment provider depends on
+              the checkout method and the provider used for the transaction.
+            </p>
+          </section>
+
+          <section id="location">
+            <h2>7. Business Location Information</h2>
+
+            <p>
+              If you add a business location, we may process the address you
+              enter and use a geocoding service to convert that address into
+              geographic coordinates.
+            </p>
+
+            <p>
+              Coordinates and address details may be used to display a
+              business location and support location-related discovery
+              features.
+            </p>
+
+            <p>
+              Providing a business address is different from granting access to
+              your device's live GPS location. Refer to your device settings
+              and the permissions actually requested by the app to understand
+              any device-level location access.
+            </p>
+          </section>
+
+          <section id="verification">
+            <h2>8. Business Verification</h2>
+
+            <p>
+              Businesses may submit registration details and supporting
+              documents for verification. These materials may be stored and
+              reviewed by authorized personnel for verification and related
+              administrative purposes.
+            </p>
+
+            <p>
+              Submit only documents you are authorized to provide. Access to
+              verification materials should be restricted to personnel and
+              service providers who need them for legitimate purposes.
+            </p>
+          </section>
+
+          <section id="analytics">
+            <h2>9. Analytics and Advertising</h2>
+
+            <p>
+              IFC BIZGROWTH may record interactions with business profiles,
+              products, services, promotions, contact options, and advertising
+              features to provide analytics and measure performance.
+            </p>
+
+            <p>
+              Depending on the feature, these records may include event types,
+              timestamps, business identifiers, campaign information, and
+              visitor or session identifiers.
+            </p>
+
+            <p>
+              Business owners may receive analytics about activity associated
+              with their businesses. Access to analytics should be controlled
+              according to the user's permissions.
+            </p>
+
+            <p>
+              This section describes platform analytics. It does not mean that
+              the app necessarily uses third-party advertising trackers or
+              advertising SDKs.
+            </p>
+          </section>
+
+          <section id="storage">
+            <h2>10. Data Storage and Security</h2>
+
+            <p>
+              We use technical and organizational measures intended to protect
+              information from unauthorized access, loss, misuse, alteration,
+              or disclosure.
+            </p>
+
+            <p>
+              Information may be processed using database, authentication,
+              hosting, and file-storage services that support the platform.
+              Access controls and security measures depend on the service and
+              the type of information involved.
+            </p>
+
+            <p>
+              No method of electronic storage or internet transmission can be
+              guaranteed to be completely secure.
+            </p>
+          </section>
+
+          <section id="retention">
+            <h2>11. Data Retention</h2>
+
+            <p>
+              We retain information for as long as reasonably necessary to
+              provide the services, maintain accounts, fulfil transactions,
+              resolve disputes, protect the platform, and comply with
+              applicable legal obligations.
+            </p>
+
+            <p>
+              Retention periods may differ by information type. Some
+              transaction or security records may need to be retained after an
+              account is deleted where required or permitted by law.
+            </p>
+          </section>
+
+          <section id="deletion">
+            <h2>12. Account Deletion</h2>
+
+            <p>
+              You can initiate account deletion through the account deletion
+              feature in the app, where available, or through our web-based
+              deletion page.
+            </p>
+
+            <p>
+              <Link href="/delete-account" className="privacy-inline-link">
+                Visit the account deletion page
+              </Link>
+            </p>
+
+            <p>
+              The deletion process may require password verification and a
+              one-time verification code to help protect your account.
+            </p>
+
+            <p>
+              Deletion may remove your account and associated information,
+              including business records and related content that you own,
+              subject to the platform's data relationships and applicable
+              retention obligations.
+            </p>
+
+            <p>
+              A business owned by another person may remain on the platform
+              when you are only a member of that business. Certain records may
+              also be retained where legally required or otherwise permitted.
+            </p>
+
+            <p>
+              Account deletion is intended to be permanent. Review the
+              confirmation screen carefully before completing your request.
+            </p>
+          </section>
+
+          <section id="rights">
+            <h2>13. Your Privacy Rights</h2>
+
+            <p>
+              Depending on the laws that apply to you, you may have rights to
+              request access to, correction of, deletion of, or information
+              about the processing of your personal information.
+            </p>
+
+            <p>
+              You may also have the right to object to or restrict certain
+              processing, or to withdraw consent where processing relies on
+              consent.
+            </p>
+
+            <p>
+              To make a privacy-related request, contact us using the details
+              in the Contact Us section. We may need to verify your identity
+              before responding.
+            </p>
+          </section>
+
+          <section id="children">
+            <h2>14. Children's Privacy</h2>
+
+            <p>
+              Our services are intended for users who are legally permitted
+              to use the relevant features under applicable law and our
+              service terms.
+            </p>
+
+            <p>
+              We do not knowingly collect personal information from children
+              where doing so is prohibited by applicable law. If you believe
+              that a child has provided personal information inappropriately,
+              contact us so we can review the matter.
+            </p>
+
+            <p>
+              Any minimum-age restrictions and parental-consent requirements
+              applicable to a particular service must be followed.
+            </p>
+          </section>
+
+          <section id="third-parties">
+            <h2>15. Third-Party Services</h2>
+
+            <p>
+              Our services may depend on or link to third-party websites and
+              services, including authentication, hosting, storage,
+              geocoding, and payment services.
+            </p>
+
+            <p>
+              Third-party services operate under their own terms and privacy
+              policies. We encourage you to review those policies when using
+              their services.
+            </p>
+          </section>
+
+          <section id="international">
+            <h2>16. International Data Transfers</h2>
+
+            <p>
+              Depending on the providers used and their infrastructure,
+              information may be processed or stored in countries other than
+              the country where you live.
+            </p>
+
+            <p>
+              Where required, appropriate safeguards should be used for
+              international transfers of personal information.
+            </p>
+          </section>
+
+          <section id="cookies">
+            <h2>17. Cookies and Local Storage</h2>
+
+            <p>
+              Our website and services may use cookies, browser storage, or
+              device storage to maintain sessions, remember settings, and
+              support essential functionality.
+            </p>
+
+            <p>
+              The mobile application may use local device storage to maintain
+              authentication sessions. Clearing application data or signing
+              out may affect saved session information.
+            </p>
+          </section>
+
+          <section id="changes">
+            <h2>18. Changes to This Policy</h2>
+
+            <p>
+              We may update this policy when our services, data practices, or
+              legal obligations change. The updated policy will be published
+              on this page with a revised update date.
+            </p>
+
+            <p>
+              If a change requires additional notice under applicable law, we
+              will take appropriate steps to provide that notice.
+            </p>
+          </section>
+
+          <section id="contact">
+            <h2>19. Contact Us</h2>
+
+            <p>
+              If you have questions about this Privacy Policy or how your
+              information is handled, contact us:
+            </p>
+
+            <div className="privacy-contact-card">
+              <p><strong>IFC BIZGROWTH</strong></p>
+              <p>Operated by IFC Bridge Lab</p>
+              <p>
+                Email:{" "}
+                <a href="mailto:support@ifcbizgrowth.africa">
+                  support@ifcbizgrowth.africa
+                </a>
+              </p>
+              <p>
+                General enquiries:{" "}
+                <a href="mailto:contactus@ifcbridgelab.com">
+                  contactus@ifcbridgelab.com
+                </a>
+              </p>
+              <p>
+                Website:{" "}
+                <a
+                  href="https://ifcbizgrowth.africa"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  ifcbizgrowth.africa
+                </a>
+              </p>
             </div>
+          </section>
+        </article>
 
-            <div>
-              <h3>Legal</h3>
+        <footer className="privacy-footer">
+          <Link href="/">Home</Link>
+          <Link href="/contact">Contact</Link>
+          <Link href="/delete-account">Delete Account</Link>
 
-              <Link href="/privacy">Privacy Policy</Link>
-              <Link href="/terms">Terms of Service</Link>
-            </div>
-
-            <div>
-              <h3>Business</h3>
-
-              <Link href="/business/login">Business Login</Link>
-              <Link href="/business/register">Register Business</Link>
-            </div>
-          </div>
-        </div>
-
-        <div className="privacy-footer-bottom">
-          <span>
+          <p>
             © {new Date().getFullYear()} IFC BIZGROWTH. All rights reserved.
-          </span>
-
-          <span>Powered by IFC Bridge Lab</span>
-        </div>
-      </footer>
+          </p>
+        </footer>
+      </div>
     </main>
   );
   }
