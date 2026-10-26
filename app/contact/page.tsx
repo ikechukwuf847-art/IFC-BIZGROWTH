@@ -5,8 +5,8 @@ import Image from "next/image";
 import "./contact.css";
 
 export default function ContactPage(): React.JSX.Element {
-  const whatsappNumber: string = "2349129809527";
-  const phoneNumber: string = "09129809527";
+  const whatsappNumber: string = "2348113153380";
+  const phoneNumber: string = "08113153380";
 
   return (
     <main className="contact-page">
@@ -162,7 +162,7 @@ export default function ContactPage(): React.JSX.Element {
                   Phone
                 </span>
 
-                <h3>09129809527</h3>
+                <h3>IFC BIZGROWTH 📞 +234 8113153380</h3>
 
                 <p>
                   Speak with the IFC BIZGROWTH team directly.
@@ -206,7 +206,7 @@ export default function ContactPage(): React.JSX.Element {
 
             <div className="whatsapp-number">
               <span>WhatsApp</span>
-              <strong>09129809527</strong>
+              <strong>+2348113153380</strong>
             </div>
 
           </div>
@@ -473,8 +473,8 @@ export default function ContactPage(): React.JSX.Element {
                 support@ifcbizgrowth.africa
               </a>
 
-              <a href="tel:09129809527">
-                09129809527
+              <a href="tel:08113153380">
+                IFC BIZGROWTH 📞 08113153380
               </a>
             </div>
 
