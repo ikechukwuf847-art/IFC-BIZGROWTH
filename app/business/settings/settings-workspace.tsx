@@ -409,6 +409,23 @@ export default function SettingsWorkspace({
                   </p>
                 </div>
 
+                <div className="delete-account-box">
+  <div>
+    <h3>Delete account</h3>
+    <p>
+      Permanently delete your IFC BIZGROWTH account and
+      associated data. This action cannot be undone.
+    </p>
+  </div>
+
+  <a
+    href="/account/delete"
+    className="settings-danger-button"
+  >
+    Delete account
+  </a>
+</div>
+
                 <button
                   type="button"
                   className="settings-secondary-button"
