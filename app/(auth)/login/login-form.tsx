@@ -4,6 +4,134 @@ import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { login } from "@/lib/api/auth";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+
+const PENDING_REFERRAL_KEY =
+  "ifc_bizgrowth_pending_agent_referral";
+
+type PendingReferral = {
+  email: string;
+  code: string;
+};
+
+type ReferralIntent = {
+  id: string;
+  referral_code: string;
+};
+
+const supabase = createSupabaseBrowserClient();
+
+async function getPendingReferralCode(
+  email: string,
+): Promise<string | null> {
+  const stored = sessionStorage.getItem(PENDING_REFERRAL_KEY);
+
+  if (!stored) return null;
+
+  try {
+    const pending: PendingReferral = JSON.parse(stored);
+
+    if (
+      pending.email !== email.trim().toLowerCase() ||
+      !pending.code
+    ) {
+      return null;
+    }
+
+    return pending.code.trim().toUpperCase();
+  } catch {
+    return null;
+  }
+}
+
+async function capturePendingReferralCode(
+  email: string,
+): Promise<void> {
+  const referralCode = await getPendingReferralCode(email);
+
+  if (!referralCode) return;
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    throw new Error(
+      "Unable to verify your account before capturing the referral.",
+    );
+  }
+
+  // Check whether this account already has a referral intent.
+  const { data: existingIntent, error: intentError } =
+    await supabase
+      .from("agent_referral_intents")
+      .select("id, referral_code")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+  if (intentError) {
+    throw new Error(
+      "Unable to check your existing referral. Please try again.",
+    );
+  }
+
+  if (existingIntent) {
+    if (
+      existingIntent.referral_code.trim().toUpperCase() ===
+      referralCode
+    ) {
+      sessionStorage.removeItem(PENDING_REFERRAL_KEY);
+      return;
+    }
+
+    throw new Error(
+      "A different agent referral code has already been recorded for this account.",
+    );
+  }
+
+  // Capture the referral against the authenticated account.
+  const { error: captureError } = await supabase.rpc(
+    "capture_agent_referral_code",
+    {
+      p_referral_code: referralCode,
+    },
+  );
+
+  if (captureError) {
+    // Check again in case another request captured it concurrently.
+    const { data: confirmedIntent, error: confirmError } =
+      await supabase
+        .from("agent_referral_intents")
+        .select("id, referral_code")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+    if (
+      !confirmError &&
+      confirmedIntent &&
+      confirmedIntent.referral_code.trim().toUpperCase() ===
+        referralCode
+    ) {
+      sessionStorage.removeItem(PENDING_REFERRAL_KEY);
+      return;
+    }
+
+    if (confirmedIntent) {
+      throw new Error(
+        "A different agent referral code has already been recorded for this account.",
+      );
+    }
+
+    throw new Error(
+      captureError.message ||
+        "Unable to capture your agent referral code. Please try again.",
+    );
+  }
+
+  // Only clear after successful capture.
+  sessionStorage.removeItem(PENDING_REFERRAL_KEY);
+}
 
 export default function LoginForm() {
   const router = useRouter();
@@ -21,20 +149,11 @@ export default function LoginForm() {
   const emailFromUrl =
     searchParams.get("email") || "";
 
-  const [email, setEmail] =
-    useState(emailFromUrl);
-
-  const [password, setPassword] =
-    useState("");
-
-  const [showPassword, setShowPassword] =
-    useState(false);
-
-  const [loading, setLoading] =
-    useState(false);
-
-  const [error, setError] =
-    useState("");
+  const [email, setEmail] = useState(emailFromUrl);
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const [success, setSuccess] = useState(
     verified
@@ -52,8 +171,7 @@ export default function LoginForm() {
     setError("");
     setSuccess("");
 
-    const cleanEmail =
-      email.trim().toLowerCase();
+    const cleanEmail = email.trim().toLowerCase();
 
     if (!cleanEmail) {
       setError("Please enter your email.");
@@ -68,22 +186,7 @@ export default function LoginForm() {
     try {
       setLoading(true);
 
-      /*
-       * Your login Edge Function returns:
-       *
-       * {
-       *   user: {...},
-       *   session: {
-       *     access_token,
-       *     refresh_token,
-       *     ...
-       *   }
-       * }
-       */
-      const response = await login(
-        cleanEmail,
-        password,
-      );
+      const response = await login(cleanEmail, password);
 
       const accessToken =
         response.session?.access_token;
@@ -97,27 +200,17 @@ export default function LoginForm() {
         );
       }
 
-      /*
-       * Send the Supabase tokens to our Next.js
-       * server route.
-       *
-       * The server route creates the proper
-       * Supabase authentication cookies.
-       */
-      const sessionResponse =
-        await fetch("/api/auth/session", {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-
-          body: JSON.stringify({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          }),
-        });
+      // Establish the secure Supabase authentication cookies.
+      const sessionResponse = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        }),
+      });
 
       let sessionData: {
         success?: boolean;
@@ -125,28 +218,22 @@ export default function LoginForm() {
       } = {};
 
       try {
-        sessionData =
-          await sessionResponse.json();
+        sessionData = await sessionResponse.json();
       } catch {
         sessionData = {};
       }
 
-      if (
-        !sessionResponse.ok ||
-        !sessionData.success
-      ) {
+      if (!sessionResponse.ok || !sessionData.success) {
         throw new Error(
           sessionData.error ||
             "Unable to create your secure session.",
         );
       }
 
-      /*
-       * The secure session now exists.
-       *
-       * Send the user to the page they originally
-       * wanted to access.
-       */
+      // Capture any pending agent referral after authentication.
+      await capturePendingReferralCode(cleanEmail);
+
+      // Preserve the existing destination and navigation behavior.
       router.replace(next);
       router.refresh();
     } catch (err) {
@@ -185,7 +272,7 @@ export default function LoginForm() {
             )}
 
             {error && (
-              <div className="auth-error">
+              <div className="auth-error" role="alert">
                 {error}
               </div>
             )}
@@ -228,15 +315,11 @@ export default function LoginForm() {
                   <input
                     id="password"
                     type={
-                      showPassword
-                        ? "text"
-                        : "password"
+                      showPassword ? "text" : "password"
                     }
                     value={password}
                     onChange={(event) =>
-                      setPassword(
-                        event.target.value,
-                      )
+                      setPassword(event.target.value)
                     }
                     placeholder="Enter your password"
                     autoComplete="current-password"
@@ -248,9 +331,7 @@ export default function LoginForm() {
                     type="button"
                     className="password-toggle"
                     onClick={() =>
-                      setShowPassword(
-                        (value) => !value,
-                      )
+                      setShowPassword((value) => !value)
                     }
                     disabled={loading}
                     aria-label={
@@ -259,9 +340,7 @@ export default function LoginForm() {
                         : "Show password"
                     }
                   >
-                    {showPassword
-                      ? "Hide"
-                      : "Show"}
+                    {showPassword ? "Hide" : "Show"}
                   </button>
                 </div>
               </div>
@@ -299,4 +378,4 @@ export default function LoginForm() {
       </section>
     </main>
   );
-}
+    }
