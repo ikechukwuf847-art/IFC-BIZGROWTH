@@ -1312,3 +1312,493 @@ font-size: 34px;
 grid-template-columns: 1fr;
 }
 }
+/* =========================================
+IFC BIZGROWTH — AUTHENTICATION DESIGN
+Login | Responsive | Premium UI
+========================================= */
+
+.auth-page {
+min-height: 100vh;
+width: 100%;
+background: #f5f8ff;
+display: flex;
+align-items: center;
+justify-content: center;
+padding: 45px 24px;
+font-family: Inter, -apple-system, BlinkMacSystemFont,
+"Segoe UI", sans-serif;
+color: #101828;
+box-sizing: border-box;
+}
+
+.auth-page *,
+.auth-page *::before,
+.auth-page *::after {
+box-sizing: border-box;
+}
+
+.auth-section {
+width: 100%;
+max-width: 1120px;
+min-height: 650px;
+background: #ffffff;
+border-radius: 24px;
+overflow: hidden;
+display: flex;
+align-items: stretch;
+box-shadow: 0 25px 80px rgba(16, 24, 40, 0.09);
+border: 1px solid #e9eef8;
+}
+
+.auth-container {
+width: 100%;
+display: flex;
+align-items: center;
+justify-content: center;
+padding: 55px;
+}
+
+/* =========================================
+LOGIN CARD
+========================================= */
+
+.auth-card {
+width: 100%;
+max-width: 440px;
+margin: auto;
+background: #ffffff;
+}
+
+.login-card {
+max-width: 440px;
+}
+
+.auth-card-header {
+margin-bottom: 34px;
+}
+
+.auth-brand {
+display: inline-flex;
+align-items: center;
+font-size: 22px;
+font-weight: 900;
+letter-spacing: -0.8px;
+color: #155eef;
+margin-bottom: 45px;
+}
+
+.auth-brand span {
+color: #101828;
+margin-left: 5px;
+}
+
+.auth-card-header h1,
+.auth-heading h1 {
+font-size: 35px;
+font-weight: 850;
+line-height: 1.2;
+letter-spacing: -1.3px;
+color: #101828;
+margin: 0 0 12px;
+}
+
+.auth-card-header p,
+.auth-heading p {
+color: #667085;
+font-size: 14px;
+line-height: 1.8;
+margin: 0;
+}
+
+/* =========================================
+FORM
+========================================= */
+
+.auth-form {
+display: flex;
+flex-direction: column;
+gap: 23px;
+}
+
+.form-group {
+display: flex;
+flex-direction: column;
+gap: 10px;
+}
+
+.form-group label {
+font-size: 13px;
+font-weight: 750;
+color: #344054;
+}
+
+.form-label-row {
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 12px;
+}
+
+.form-label-row a {
+color: #155eef;
+font-size: 12px;
+font-weight: 700;
+text-decoration: none;
+transition: color 0.2s ease;
+}
+
+.form-label-row a:hover {
+color: #1046bd;
+text-decoration: underline;
+}
+
+.form-group input {
+width: 100%;
+height: 54px;
+padding: 0 16px;
+border: 1px solid #d0d5dd;
+border-radius: 10px;
+outline: none;
+background: #ffffff;
+color: #101828;
+font-size: 14px;
+font-family: inherit;
+transition: all 0.2s ease;
+}
+
+.form-group input::placeholder {
+color: #98a2b3;
+}
+
+.form-group input:hover {
+border-color: #98a2b3;
+}
+
+.form-group input:focus {
+border-color: #155eef;
+box-shadow: 0 0 0 4px rgba(21, 94, 239, 0.10);
+}
+
+.form-group input:disabled {
+background: #f2f4f7;
+cursor: not-allowed;
+opacity: 0.7;
+}
+
+/* =========================================
+PASSWORD FIELD
+========================================= */
+
+.password-input-wrap {
+width: 100%;
+position: relative;
+display: flex;
+align-items: center;
+}
+
+.password-input-wrap input {
+padding-right: 75px;
+}
+
+.password-toggle {
+position: absolute;
+right: 14px;
+background: transparent;
+border: none;
+color: #155eef;
+font-size: 12px;
+font-weight: 750;
+cursor: pointer;
+padding: 8px 3px;
+}
+
+.password-toggle:hover {
+color: #1046bd;
+}
+
+.password-toggle:disabled {
+opacity: 0.5;
+cursor: not-allowed;
+}
+
+/* =========================================
+SUBMIT BUTTON
+========================================= */
+
+.auth-submit {
+width: 100%;
+min-height: 54px;
+border: none;
+border-radius: 10px;
+background: #155eef;
+color: #ffffff;
+font-size: 14px;
+font-weight: 800;
+font-family: inherit;
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 11px;
+cursor: pointer;
+box-shadow: 0 6px 15px rgba(21, 94, 239, 0.18);
+transition: all 0.25s ease;
+margin-top: 5px;
+}
+
+.auth-submit:hover:not(:disabled) {
+background: #1046bd;
+transform: translateY(-2px);
+box-shadow: 0 9px 20px rgba(21, 94, 239, 0.22);
+}
+
+.auth-submit:active:not(:disabled) {
+transform: translateY(0);
+}
+
+.auth-submit:disabled {
+opacity: 0.7;
+cursor: not-allowed;
+}
+
+/* =========================================
+SPINNER
+========================================= */
+
+.auth-spinner {
+display: inline-block;
+width: 19px;
+height: 19px;
+border: 2px solid rgba(255, 255, 255, 0.35);
+border-top-color: #ffffff;
+border-radius: 50%;
+animation: auth-spin 0.7s linear infinite;
+}
+
+@keyframes auth-spin {
+to {
+transform: rotate(360deg);
+}
+}
+
+/* =========================================
+SUCCESS & ERROR MESSAGES
+========================================= */
+
+.auth-success,
+.auth-error {
+width: 100%;
+padding: 14px 15px;
+border-radius: 10px;
+font-size: 13px;
+line-height: 1.6;
+margin-bottom: 22px;
+overflow-wrap: anywhere;
+}
+
+.auth-success {
+color: #027a48;
+background: #ecfdf3;
+border: 1px solid #abefc6;
+}
+
+.auth-error {
+color: #b42318;
+background: #fef3f2;
+border: 1px solid #fecdca;
+}
+
+/* =========================================
+DIVIDER
+========================================= */
+
+.auth-divider {
+display: flex;
+align-items: center;
+gap: 15px;
+margin: 30px 0 23px;
+color: #98a2b3;
+font-size: 12px;
+font-weight: 600;
+white-space: nowrap;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+content: "";
+flex: 1;
+height: 1px;
+background: #eaecf0;
+}
+
+/* =========================================
+SECONDARY BUTTON
+========================================= */
+
+.auth-secondary-button {
+width: 100%;
+min-height: 53px;
+border: 1px solid #d0d5dd;
+border-radius: 10px;
+background: #ffffff;
+color: #344054;
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 13px;
+font-weight: 750;
+text-decoration: none;
+transition: all 0.2s ease;
+}
+
+.auth-secondary-button:hover {
+border-color: #155eef;
+color: #155eef;
+background: #f8faff;
+}
+
+/* =========================================
+LOADING FALLBACK
+========================================= */
+
+.auth-heading {
+margin-bottom: 25px;
+}
+
+.auth-heading h1 {
+font-size: 29px;
+}
+
+.auth-heading p {
+font-size: 13px;
+}
+
+/* =========================================
+TABLET
+========================================= */
+
+@media (max-width: 900px) {
+
+.auth-page {
+padding: 25px;
+}
+
+.auth-section {
+min-height: auto;
+max-width: 650px;
+border-radius: 20px;
+}
+
+.auth-container {
+padding: 55px 45px;
+}
+
+}
+
+/* =========================================
+MOBILE
+========================================= */
+
+@media (max-width: 600px) {
+
+.auth-page {
+min-height: 100vh;
+min-height: 100dvh;
+padding: 0;
+background: #ffffff;
+align-items: flex-start;
+}
+
+.auth-section {
+min-height: 100vh;
+min-height: 100dvh;
+width: 100%;
+border: none;
+border-radius: 0;
+box-shadow: none;
+}
+
+.auth-container {
+padding: 65px 24px 45px;
+align-items: flex-start;
+}
+
+.auth-card {
+max-width: 100%;
+margin: 0 auto;
+}
+
+.auth-card-header {
+margin-bottom: 33px;
+}
+
+.auth-brand {
+font-size: 20px;
+margin-bottom: 55px;
+}
+
+.auth-card-header h1 {
+font-size: 32px;
+}
+
+.auth-card-header p {
+font-size: 13px;
+}
+
+.form-group input {
+height: 53px;
+font-size: 14px;
+}
+
+.auth-submit {
+min-height: 53px;
+}
+
+.auth-divider {
+margin-top: 28px;
+}
+
+}
+
+/* =========================================
+SMALL MOBILE
+========================================= */
+
+@media (max-width: 360px) {
+
+.auth-container {
+padding: 45px 18px 30px;
+}
+
+.auth-brand {
+font-size: 18px;
+margin-bottom: 43px;
+}
+
+.auth-card-header h1 {
+font-size: 29px;
+}
+
+.form-label-row a {
+font-size: 11px;
+}
+
+}
+
+/* =========================================
+ACCESSIBILITY
+========================================= */
+
+.auth-page button:focus-visible,
+.auth-page a:focus-visible,
+.auth-page input:focus-visible {
+outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+.auth-page *,
+.auth-page *::before,
+.auth-page *::after {
+animation-duration: 0.01ms !important;
+transition-duration: 0.01ms !important;
+}
+  }
