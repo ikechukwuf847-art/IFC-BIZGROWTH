@@ -3070,3 +3070,796 @@ transition-duration: 0.01ms !important;
     letter-spacing: 10px;
   }
   }
+/* =========================================
+   IFC BIZGROWTH — RESET PASSWORD
+========================================= */
+
+.auth-page:has(.reset-password-card) {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.08), transparent 38%),
+    #f6f9fe;
+  color: #17243b;
+}
+
+/* MAIN LAYOUT */
+
+.auth-page:has(.reset-password-card) .auth-section {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 55px 20px;
+}
+
+.auth-page:has(.reset-password-card) .auth-container {
+  width: 100%;
+  max-width: 465px;
+  margin: 0 auto;
+}
+
+/* RESET CARD */
+
+.auth-page:has(.reset-password-card) .reset-password-card {
+  width: 100%;
+  padding: 38px;
+  background: #ffffff;
+  border: 1px solid #e5ecf5;
+  border-radius: 19px;
+  box-shadow:
+    0 24px 65px rgba(20, 45, 82, 0.075),
+    0 3px 12px rgba(20, 45, 82, 0.025);
+}
+
+/* BRAND */
+
+.auth-page:has(.reset-password-card) .auth-brand {
+  display: inline-block;
+  margin-bottom: 30px;
+  color: #123b78;
+  font-size: 21px;
+  font-weight: 850;
+  letter-spacing: -0.8px;
+  text-decoration: none;
+}
+
+.auth-page:has(.reset-password-card) .auth-brand span {
+  color: #2878e5;
+}
+
+/* CARD HEADER */
+
+.auth-page:has(.reset-password-card) .auth-card-header {
+  margin-bottom: 28px;
+}
+
+.auth-page:has(.reset-password-card) .auth-heading h1 {
+  margin: 0 0 11px;
+  color: #18365e;
+  font-size: 27px;
+  font-weight: 850;
+  letter-spacing: -1px;
+  line-height: 1.25;
+}
+
+.auth-page:has(.reset-password-card) .auth-heading p {
+  margin: 0;
+  color: #7c899d;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+/* ERROR MESSAGE */
+
+.auth-page:has(.reset-password-card) .auth-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin-bottom: 22px;
+  padding: 14px 15px;
+  background: #fff1f1;
+  border: 1px solid #ffd9d9;
+  border-radius: 10px;
+  color: #c73535;
+}
+
+.auth-page:has(.reset-password-card) .auth-message-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #ffe0e0;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.auth-page:has(.reset-password-card) .auth-error p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+/* FORM */
+
+.auth-page:has(.reset-password-card) .auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.auth-page:has(.reset-password-card) .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.auth-page:has(.reset-password-card) .form-group label {
+  color: #344967;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.auth-page:has(.reset-password-card) .form-group > input,
+.auth-page:has(.reset-password-card) .password-field input {
+  width: 100%;
+  height: 49px;
+  padding: 0 14px;
+  border: 1px solid #dce5f0;
+  border-radius: 9px;
+  outline: none;
+  background: #f9fbfe;
+  color: #243d5c;
+  font-family: inherit;
+  font-size: 13px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.auth-page:has(.reset-password-card) .form-group input::placeholder {
+  color: #a6b1c0;
+}
+
+.auth-page:has(.reset-password-card) .form-group input:focus {
+  background: #ffffff;
+  border-color: #2878e5;
+  box-shadow: 0 0 0 3px rgba(40, 120, 229, 0.1);
+}
+
+.auth-page:has(.reset-password-card) .form-group input:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* OTP HELP TEXT */
+
+.auth-page:has(.reset-password-card) .form-help {
+  color: #8a97a9;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* PASSWORD FIELD */
+
+.auth-page:has(.reset-password-card) .password-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.auth-page:has(.reset-password-card) .password-field input {
+  padding-right: 67px;
+}
+
+.auth-page:has(.reset-password-card) .password-toggle {
+  position: absolute;
+  right: 12px;
+  padding: 6px 4px;
+  border: none;
+  background: transparent;
+  color: #1765cb;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.auth-page:has(.reset-password-card) .password-toggle:hover:not(:disabled) {
+  color: #104b9c;
+}
+
+.auth-page:has(.reset-password-card) .password-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* SUBMIT BUTTON */
+
+.auth-page:has(.reset-password-card) .auth-submit {
+  width: 100%;
+  min-height: 51px;
+  margin-top: 5px;
+  padding: 13px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(110deg, #1765cb, #3289f0);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(23, 101, 203, 0.17);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.auth-page:has(.reset-password-card) .auth-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 23px rgba(23, 101, 203, 0.24);
+}
+
+.auth-page:has(.reset-password-card) .auth-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* SPINNER */
+
+.auth-page:has(.reset-password-card) .auth-spinner {
+  width: 17px;
+  height: 17px;
+  display: inline-block;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: reset-spin 0.7s linear infinite;
+}
+
+.auth-page:has(.reset-password-card) .auth-spinner-blue {
+  width: 23px;
+  height: 23px;
+  border-color: #d8e8ff;
+  border-top-color: #2878e5;
+}
+
+@keyframes reset-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* DIVIDER */
+
+.auth-page:has(.reset-password-card) .auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 26px 0 19px;
+  color: #929daf;
+  font-size: 11px;
+}
+
+.auth-page:has(.reset-password-card) .auth-divider::before,
+.auth-page:has(.reset-password-card) .auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #e9eef5;
+}
+
+/* SECONDARY BUTTON */
+
+.auth-page:has(.reset-password-card) .auth-secondary-button {
+  min-height: 47px;
+  padding: 12px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #dce6f3;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #426184;
+  font-size: 12px;
+  font-weight: 750;
+  text-decoration: none;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.auth-page:has(.reset-password-card) .auth-secondary-button:hover {
+  background: #f3f7fd;
+  border-color: #a9c8ed;
+}
+
+/* SECURITY NOTE */
+
+.auth-page:has(.reset-password-card) .auth-security-note {
+  margin: 22px 0 0;
+  color: #9aa6b6;
+  font-size: 10px;
+  line-height: 1.7;
+  text-align: center;
+}
+
+/* LOADING FALLBACK */
+
+.auth-page:has(.reset-password-card) .auth-loading-area {
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* SUCCESS STATE */
+
+.auth-page:has(.reset-password-card) .reset-success {
+  padding: 12px 0 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.reset-success-icon {
+  width: 67px;
+  height: 67px;
+  margin-bottom: 23px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #e9f9f0;
+  border: 1px solid #c9efd9;
+  color: #159653;
+  font-size: 30px;
+  font-weight: 800;
+  box-shadow: 0 8px 22px rgba(21, 150, 83, 0.08);
+}
+
+.auth-page:has(.reset-password-card) .reset-success h1 {
+  margin: 0 0 12px;
+  color: #18365e;
+  font-size: 23px;
+  font-weight: 850;
+  letter-spacing: -0.7px;
+}
+
+.auth-page:has(.reset-password-card) .reset-success p {
+  max-width: 310px;
+  margin: 0 0 25px;
+  color: #7c899d;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+/* BOTTOM LINK */
+
+.auth-page:has(.reset-password-card) .auth-bottom {
+  margin-top: 23px;
+  text-align: center;
+}
+
+.auth-page:has(.reset-password-card) .auth-bottom a {
+  color: #66809f;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.auth-page:has(.reset-password-card) .auth-bottom a:hover {
+  color: #1765cb;
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 600px) {
+  .auth-page:has(.reset-password-card) .auth-section {
+    padding: 35px 17px;
+  }
+
+  .auth-page:has(.reset-password-card) .reset-password-card {
+    padding: 29px 22px;
+    border-radius: 16px;
+  }
+
+  .auth-page:has(.reset-password-card) .auth-heading h1 {
+    font-size: 24px;
+  }
+
+  .auth-page:has(.reset-password-card) .auth-brand {
+    font-size: 19px;
+    margin-bottom: 25px;
+  }
+}
+
+@media (max-width: 380px) {
+  .auth-page:has(.reset-password-card) .reset-password-card {
+    padding: 25px 17px;
+  }
+
+  .auth-page:has(.reset-password-card) .auth-heading h1 {
+    font-size: 22px;
+  }
+
+  .auth-page:has(.reset-password-card) .auth-form {
+    gap: 17px;
+  }
+    }
+/* =========================================
+   IFC BIZGROWTH — FORGOT PASSWORD
+========================================= */
+
+.auth-page:has(.forgot-password-card) {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.08), transparent 38%),
+    #f6f9fe;
+  color: #17243b;
+}
+
+/* MAIN LAYOUT */
+
+.auth-page:has(.forgot-password-card) .auth-section {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 55px 20px;
+}
+
+.auth-page:has(.forgot-password-card) .auth-container {
+  width: 100%;
+  max-width: 465px;
+  margin: 0 auto;
+}
+
+/* CARD */
+
+.auth-page:has(.forgot-password-card) .forgot-password-card {
+  width: 100%;
+  padding: 38px;
+  background: #ffffff;
+  border: 1px solid #e5ecf5;
+  border-radius: 19px;
+  box-shadow:
+    0 24px 65px rgba(20, 45, 82, 0.075),
+    0 3px 12px rgba(20, 45, 82, 0.025);
+}
+
+/* BRAND */
+
+.auth-page:has(.forgot-password-card) .auth-brand {
+  display: inline-block;
+  margin-bottom: 30px;
+  color: #123b78;
+  font-size: 21px;
+  font-weight: 850;
+  letter-spacing: -0.8px;
+  text-decoration: none;
+}
+
+.auth-page:has(.forgot-password-card) .auth-brand span {
+  color: #2878e5;
+}
+
+/* HEADER */
+
+.auth-page:has(.forgot-password-card) .auth-card-header {
+  margin-bottom: 28px;
+}
+
+.auth-page:has(.forgot-password-card) .auth-heading h1 {
+  margin: 0 0 11px;
+  color: #18365e;
+  font-size: 27px;
+  font-weight: 850;
+  letter-spacing: -1px;
+  line-height: 1.25;
+}
+
+.auth-page:has(.forgot-password-card) .auth-heading p {
+  margin: 0;
+  color: #7c899d;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+/* ERROR AND SUCCESS */
+
+.auth-page:has(.forgot-password-card) .auth-error,
+.auth-page:has(.forgot-password-card) .auth-success {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin-bottom: 22px;
+  padding: 14px 15px;
+  border-radius: 10px;
+}
+
+.auth-page:has(.forgot-password-card) .auth-error {
+  background: #fff1f1;
+  border: 1px solid #ffd9d9;
+  color: #c73535;
+}
+
+.auth-page:has(.forgot-password-card) .auth-success {
+  background: #edfbf3;
+  border: 1px solid #c8f0d8;
+  color: #16834b;
+}
+
+.auth-page:has(.forgot-password-card) .auth-message-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.auth-page:has(.forgot-password-card) .auth-error .auth-message-icon {
+  background: #ffe0e0;
+}
+
+.auth-page:has(.forgot-password-card) .auth-success .auth-message-icon {
+  background: #d6f5e3;
+}
+
+.auth-page:has(.forgot-password-card) .auth-error p,
+.auth-page:has(.forgot-password-card) .auth-success p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+/* FORM */
+
+.auth-page:has(.forgot-password-card) .auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 21px;
+}
+
+.auth-page:has(.forgot-password-card) .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.auth-page:has(.forgot-password-card) .form-group label {
+  color: #344967;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.auth-page:has(.forgot-password-card) .form-group input {
+  width: 100%;
+  height: 50px;
+  padding: 0 14px;
+  border: 1px solid #dce5f0;
+  border-radius: 9px;
+  outline: none;
+  background: #f9fbfe;
+  color: #243d5c;
+  font-family: inherit;
+  font-size: 13px;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.auth-page:has(.forgot-password-card) .form-group input::placeholder {
+  color: #a6b1c0;
+}
+
+.auth-page:has(.forgot-password-card) .form-group input:focus {
+  background: #ffffff;
+  border-color: #2878e5;
+  box-shadow: 0 0 0 3px rgba(40, 120, 229, 0.1);
+}
+
+.auth-page:has(.forgot-password-card) .form-group input:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* SUBMIT BUTTON */
+
+.auth-page:has(.forgot-password-card) .auth-submit {
+  width: 100%;
+  min-height: 51px;
+  margin-top: 4px;
+  padding: 13px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(110deg, #1765cb, #3289f0);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(23, 101, 203, 0.17);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.auth-page:has(.forgot-password-card) .auth-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 23px rgba(23, 101, 203, 0.24);
+}
+
+.auth-page:has(.forgot-password-card) .auth-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* CONTINUE LINK */
+
+.auth-page:has(.forgot-password-card) .auth-submit-link {
+  margin-top: 0;
+}
+
+/* SPINNER */
+
+.auth-page:has(.forgot-password-card) .auth-spinner {
+  width: 17px;
+  height: 17px;
+  display: inline-block;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: forgot-password-spin 0.7s linear infinite;
+}
+
+.auth-page:has(.forgot-password-card) .auth-spinner-blue {
+  width: 23px;
+  height: 23px;
+  border-color: #d8e8ff;
+  border-top-color: #2878e5;
+}
+
+@keyframes forgot-password-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* LOADING AREA */
+
+.auth-page:has(.forgot-password-card) .auth-loading-area {
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* DIVIDER */
+
+.auth-page:has(.forgot-password-card) .auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 26px 0 19px;
+  color: #929daf;
+  font-size: 11px;
+}
+
+.auth-page:has(.forgot-password-card) .auth-divider::before,
+.auth-page:has(.forgot-password-card) .auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #e9eef5;
+}
+
+/* SECONDARY BUTTON */
+
+.auth-page:has(.forgot-password-card) .auth-secondary-button {
+  min-height: 47px;
+  padding: 12px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #dce6f3;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #426184;
+  font-size: 12px;
+  font-weight: 750;
+  text-decoration: none;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.auth-page:has(.forgot-password-card) .auth-secondary-button:hover {
+  background: #f3f7fd;
+  border-color: #a9c8ed;
+}
+
+/* SECURITY NOTE */
+
+.auth-page:has(.forgot-password-card) .auth-security-note {
+  margin: 22px 0 0;
+  color: #9aa6b6;
+  font-size: 10px;
+  line-height: 1.8;
+  text-align: center;
+}
+
+/* BOTTOM LINK */
+
+.auth-page:has(.forgot-password-card) .auth-bottom {
+  margin-top: 23px;
+  text-align: center;
+}
+
+.auth-page:has(.forgot-password-card) .auth-bottom a {
+  color: #66809f;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.auth-page:has(.forgot-password-card) .auth-bottom a:hover {
+  color: #1765cb;
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 600px) {
+  .auth-page:has(.forgot-password-card) .auth-section {
+    padding: 35px 17px;
+  }
+
+  .auth-page:has(.forgot-password-card) .forgot-password-card {
+    padding: 29px 22px;
+    border-radius: 16px;
+  }
+
+  .auth-page:has(.forgot-password-card) .auth-heading h1 {
+    font-size: 24px;
+  }
+
+  .auth-page:has(.forgot-password-card) .auth-brand {
+    font-size: 19px;
+    margin-bottom: 25px;
+  }
+}
+
+@media (max-width: 380px) {
+  .auth-page:has(.forgot-password-card) .forgot-password-card {
+    padding: 25px 17px;
+  }
+
+  .auth-page:has(.forgot-password-card) .auth-heading h1 {
+    font-size: 22px;
+  }
+}
