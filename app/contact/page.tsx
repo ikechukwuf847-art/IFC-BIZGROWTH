@@ -34,7 +34,7 @@ export default function ContactPage(): React.JSX.Element {
             </Link>
           </nav>
 
-          <Link href="/business/login" className="contact-business-btn">
+          <Link href="/login" className="contact-business-btn">
             Business Login
           </Link>
         </div>
@@ -453,11 +453,11 @@ export default function ContactPage(): React.JSX.Element {
                 Find Businesses
               </Link>
 
-              <Link href="/business/register">
+              <Link href="/register">
                 Register Business
               </Link>
 
-              <Link href="/business/login">
+              <Link href="/login">
                 Business Login
               </Link>
             </div>
