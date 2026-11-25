@@ -30,8 +30,10 @@ export default function Home() {
 
           {/* MOBILE NAVIGATION */}
           <details className="mobile-menu">
-            <summary className="mobile-menu-toggle">
-              <span className="mobile-menu-label">Menu</span>
+            <summary
+              className="mobile-menu-toggle"
+              aria-label="Open navigation menu"
+            >
               <span className="mobile-menu-icon" aria-hidden="true">
                 <span />
                 <span />
@@ -40,17 +42,59 @@ export default function Home() {
             </summary>
 
             <nav className="mobile-menu-panel" aria-label="Mobile navigation">
-              <Link href="/businesses">Businesses</Link>
-              <Link href="/categories">Categories</Link>
-              <Link href="/how-it-works">How It Works</Link>
+              <div className="mobile-menu-heading">
+                <span>Explore IFC BIZGROWTH</span>
+                <span className="mobile-menu-subtitle">
+                  Discover. Connect. Grow.
+                </span>
+              </div>
+
+              <div className="mobile-menu-section">
+                <span className="mobile-menu-section-label">DISCOVER</span>
+
+                <Link href="/" className="mobile-menu-link">
+                  Home
+                </Link>
+
+                <Link href="/businesses" className="mobile-menu-link">
+                  Discover Businesses
+                </Link>
+
+                <Link href="/categories" className="mobile-menu-link">
+                  Browse Categories
+                </Link>
+
+                <Link href="/how-it-works" className="mobile-menu-link">
+                  How It Works
+                </Link>
+              </div>
 
               <div className="mobile-menu-divider" />
 
-              <Link href="/login">Log in</Link>
+              <div className="mobile-menu-section">
+                <span className="mobile-menu-section-label">ABOUT</span>
 
-              <Link href="/signup" className="mobile-menu-primary">
-                List Your Business
-              </Link>
+                <Link href="/about" className="mobile-menu-link">
+                  About Us
+                </Link>
+
+                <Link href="/contact" className="mobile-menu-link">
+                  Contact Us
+                </Link>
+              </div>
+
+              <div className="mobile-menu-divider" />
+
+              <div className="mobile-menu-account">
+                <Link href="/login" className="mobile-menu-login">
+                  Log In
+                </Link>
+
+                <Link href="/signup" className="mobile-menu-primary">
+                  List Your Business
+                  <span aria-hidden="true">→</span>
+                </Link>
+              </div>
             </nav>
           </details>
         </div>
@@ -78,33 +122,19 @@ export default function Home() {
             </p>
 
             <div className="hero-actions">
-              <Link
-                href="/businesses"
-                className="hero-primary-button"
-              >
+              <Link href="/businesses" className="hero-primary-button">
                 Explore Businesses →
               </Link>
 
-              <Link
-                href="/signup"
-                className="hero-secondary-button"
-              >
+              <Link href="/signup" className="hero-secondary-button">
                 List Your Business
               </Link>
             </div>
 
             <div className="hero-trust">
-              <div className="hero-trust-item">
-                Business discovery
-              </div>
-
-              <div className="hero-trust-item">
-                Verified businesses
-              </div>
-
-              <div className="hero-trust-item">
-                Direct connections
-              </div>
+              <div className="hero-trust-item">Business discovery</div>
+              <div className="hero-trust-item">Verified businesses</div>
+              <div className="hero-trust-item">Direct connections</div>
             </div>
           </div>
 
@@ -112,9 +142,7 @@ export default function Home() {
           <div className="hero-visual" aria-hidden="true">
             <div className="business-preview">
               <div className="business-preview-header">
-                <div className="business-avatar">
-                  IFC
-                </div>
+                <div className="business-avatar">IFC</div>
               </div>
 
               <div className="business-preview-body">
@@ -137,17 +165,9 @@ export default function Home() {
                 </p>
 
                 <div className="business-preview-tags">
-                  <span className="business-preview-tag">
-                    Business
-                  </span>
-
-                  <span className="business-preview-tag">
-                    Products
-                  </span>
-
-                  <span className="business-preview-tag">
-                    Services
-                  </span>
+                  <span className="business-preview-tag">Business</span>
+                  <span className="business-preview-tag">Products</span>
+                  <span className="business-preview-tag">Services</span>
                 </div>
 
                 <div className="business-preview-actions">
@@ -194,9 +214,7 @@ export default function Home() {
       <section className="section" aria-labelledby="why-heading">
         <div className="section-container">
           <div className="section-heading">
-            <span className="section-label">
-              WHY IFC BIZGROWTH
-            </span>
+            <span className="section-label">WHY IFC BIZGROWTH</span>
 
             <h2 className="section-title" id="why-heading">
               A better way to discover and grow businesses.
@@ -212,9 +230,7 @@ export default function Home() {
           <div className="why-grid">
             <article className="why-card">
               <div className="why-icon" aria-hidden="true">◉</div>
-
               <h3>Discover businesses</h3>
-
               <p>
                 Explore businesses across different industries,
                 locations and categories from one place.
@@ -223,9 +239,7 @@ export default function Home() {
 
             <article className="why-card">
               <div className="why-icon" aria-hidden="true">✓</div>
-
               <h3>Verified businesses</h3>
-
               <p>
                 Businesses can go through our verification process
                 so customers can identify their verification status
@@ -235,9 +249,7 @@ export default function Home() {
 
             <article className="why-card">
               <div className="why-icon" aria-hidden="true">→</div>
-
               <h3>Connect directly</h3>
-
               <p>
                 Find the business information you need and connect
                 using the contact options provided by the business.
@@ -248,50 +260,40 @@ export default function Home() {
       </section>
 
       {/* VERIFICATION */}
-      <section className="section verified-section" aria-labelledby="verification-heading">
+      <section
+        className="section verified-section"
+        aria-labelledby="verification-heading"
+      >
         <div className="section-container">
           <div className="verified-layout">
             <div className="verified-visual" aria-hidden="true">
               <div className="verification-card">
                 <div className="verification-top">
                   <div className="verification-company">
-                    <div className="verification-logo">
-                      ✓
-                    </div>
+                    <div className="verification-logo">✓</div>
 
                     <div>
-                      <strong>
-                        Business Verification
-                      </strong>
-
-                      <span>
-                        Verification status
-                      </span>
+                      <strong>Business Verification</strong>
+                      <span>Verification status</span>
                     </div>
                   </div>
 
-                  <div className="verification-status">
-                    VERIFIED
-                  </div>
+                  <div className="verification-status">VERIFIED</div>
                 </div>
 
                 <div className="verification-list">
                   <div className="verification-list-item">
                     Business identity
                   </div>
-
                   <div className="verification-list-item">
                     Business information
                   </div>
-
                   <div className="verification-list-item">
                     Products and services
                   </div>
-
                   <div className="verification-list-item">
                     Contact information
                   </div>
-
                   <div className="verification-list-item">
                     Business location
                   </div>
@@ -300,9 +302,7 @@ export default function Home() {
             </div>
 
             <div className="verified-content">
-              <span className="section-label">
-                TRUST
-              </span>
+              <span className="section-label">TRUST</span>
 
               <h2 className="section-title" id="verification-heading">
                 Make better decisions before you connect.
@@ -320,10 +320,8 @@ export default function Home() {
                   <div className="verified-point-icon" aria-hidden="true">
                     ✓
                   </div>
-
                   <div>
                     <h4>Clear verification status</h4>
-
                     <p>
                       See whether a business has completed the
                       IFC BIZGROWTH verification process.
@@ -335,13 +333,11 @@ export default function Home() {
                   <div className="verified-point-icon" aria-hidden="true">
                     B
                   </div>
-
                   <div>
                     <h4>Useful business information</h4>
-
                     <p>
-                      View information about what a business
-                      offers, where it operates and how to reach it.
+                      View information about what a business offers,
+                      where it operates and how to reach it.
                     </p>
                   </div>
                 </div>
@@ -350,10 +346,8 @@ export default function Home() {
                   <div className="verified-point-icon" aria-hidden="true">
                     →
                   </div>
-
                   <div>
                     <h4>Connect with businesses</h4>
-
                     <p>
                       Use the available business contact options
                       to start a direct connection.
@@ -370,9 +364,7 @@ export default function Home() {
       <section className="section" aria-labelledby="steps-heading">
         <div className="section-container">
           <div className="section-heading">
-            <span className="section-label">
-              HOW IT WORKS
-            </span>
+            <span className="section-label">HOW IT WORKS</span>
 
             <h2 className="section-title" id="steps-heading">
               Discover. Check. Connect.
@@ -386,12 +378,8 @@ export default function Home() {
 
           <div className="steps-grid">
             <article className="step-card">
-              <div className="step-number" aria-hidden="true">
-                01
-              </div>
-
+              <div className="step-number" aria-hidden="true">01</div>
               <h3>Discover</h3>
-
               <p>
                 Explore businesses, categories, products and
                 services available on IFC BIZGROWTH.
@@ -399,12 +387,8 @@ export default function Home() {
             </article>
 
             <article className="step-card">
-              <div className="step-number" aria-hidden="true">
-                02
-              </div>
-
+              <div className="step-number" aria-hidden="true">02</div>
               <h3>Check</h3>
-
               <p>
                 Review available business information and
                 verification status before making a decision.
@@ -412,12 +396,8 @@ export default function Home() {
             </article>
 
             <article className="step-card">
-              <div className="step-number" aria-hidden="true">
-                03
-              </div>
-
+              <div className="step-number" aria-hidden="true">03</div>
               <h3>Connect</h3>
-
               <p>
                 Contact the business directly using the
                 available contact options.
@@ -428,13 +408,14 @@ export default function Home() {
       </section>
 
       {/* BUSINESS OWNERS */}
-      <section className="section business-owner-section" aria-labelledby="owner-heading">
+      <section
+        className="section business-owner-section"
+        aria-labelledby="owner-heading"
+      >
         <div className="section-container">
           <div className="business-owner-layout">
             <div className="business-owner-content">
-              <span className="section-label">
-                FOR BUSINESS OWNERS
-              </span>
+              <span className="section-label">FOR BUSINESS OWNERS</span>
 
               <h2 className="section-title" id="owner-heading">
                 Give your business a place to be discovered.
@@ -450,33 +431,17 @@ export default function Home() {
                 <div className="owner-benefit">
                   Create your business profile
                 </div>
-
-                <div className="owner-benefit">
-                  Add your products
-                </div>
-
-                <div className="owner-benefit">
-                  Add your services
-                </div>
-
+                <div className="owner-benefit">Add your products</div>
+                <div className="owner-benefit">Add your services</div>
                 <div className="owner-benefit">
                   Provide business information
                 </div>
-
-                <div className="owner-benefit">
-                  Promote your business
-                </div>
-
-                <div className="owner-benefit">
-                  Get marketing support
-                </div>
+                <div className="owner-benefit">Promote your business</div>
+                <div className="owner-benefit">Get marketing support</div>
               </div>
 
               <div className="hero-actions">
-                <Link
-                  href="/signup"
-                  className="hero-primary-button"
-                >
+                <Link href="/signup" className="hero-primary-button">
                   List Your Business →
                 </Link>
               </div>
@@ -485,10 +450,7 @@ export default function Home() {
             <div className="owner-visual" aria-hidden="true">
               <div className="owner-dashboard-card">
                 <div className="owner-dashboard-header">
-                  <strong>
-                    Business Management
-                  </strong>
-
+                  <strong>Business Management</strong>
                   <span className="owner-dashboard-status">
                     YOUR BUSINESS
                   </span>
@@ -499,27 +461,22 @@ export default function Home() {
                     <span>Business profile</span>
                     <span>Manage</span>
                   </div>
-
                   <div className="owner-dashboard-item">
                     <span>Products</span>
                     <span>Manage</span>
                   </div>
-
                   <div className="owner-dashboard-item">
                     <span>Services</span>
                     <span>Manage</span>
                   </div>
-
                   <div className="owner-dashboard-item">
                     <span>Advertising</span>
                     <span>Promote</span>
                   </div>
-
                   <div className="owner-dashboard-item">
                     <span>Marketing</span>
                     <span>Get support</span>
                   </div>
-
                   <div className="owner-dashboard-item">
                     <span>Analytics</span>
                     <span>View</span>
@@ -534,9 +491,7 @@ export default function Home() {
       {/* FINAL CTA */}
       <section className="final-cta" aria-labelledby="final-cta-heading">
         <div className="final-cta-inner">
-          <span className="section-label">
-            IFC BIZGROWTH
-          </span>
+          <span className="section-label">IFC BIZGROWTH</span>
 
           <h2 id="final-cta-heading">
             Discover better.
@@ -550,17 +505,11 @@ export default function Home() {
           </p>
 
           <div className="final-cta-actions">
-            <Link
-              href="/businesses"
-              className="hero-primary-button"
-            >
+            <Link href="/businesses" className="hero-primary-button">
               Explore Businesses
             </Link>
 
-            <Link
-              href="/signup"
-              className="hero-secondary-button"
-            >
+            <Link href="/signup" className="hero-secondary-button">
               List Your Business
             </Link>
           </div>
@@ -585,54 +534,24 @@ export default function Home() {
 
             <div className="footer-column">
               <h4>Discover</h4>
-
-              <Link href="/discover">
-                Businesses
-              </Link>
-
-              <Link href="/categories">
-                Categories
-              </Link>
-
-              <Link href="/how-it-works">
-                How It Works
-              </Link>
+              <Link href="/discover">Businesses</Link>
+              <Link href="/categories">Categories</Link>
+              <Link href="/how-it-works">How It Works</Link>
             </div>
 
             <div className="footer-column">
               <h4>Businesses</h4>
-
-              <Link href="/signup">
-                List Your Business
-              </Link>
-
-              <Link href="/login">
-                Business Login
-              </Link>
-
-              <Link href="/marketing-support">
-                Marketing Support
-              </Link>
+              <Link href="/signup">List Your Business</Link>
+              <Link href="/login">Business Login</Link>
+              <Link href="/marketing-support">Marketing Support</Link>
             </div>
 
             <div className="footer-column">
               <h4>Company</h4>
-
-              <Link href="/about">
-                About IFC BIZGROWTH
-              </Link>
-
-              <Link href="/contact">
-                Contact
-              </Link>
-
-              <Link href="/privacy">
-                Privacy
-              </Link>
-
-              <Link href="/terms">
-                Terms
-              </Link>
+              <Link href="/about">About IFC BIZGROWTH</Link>
+              <Link href="/contact">Contact</Link>
+              <Link href="/privacy">Privacy</Link>
+              <Link href="/terms">Terms</Link>
             </div>
           </div>
 
@@ -642,12 +561,10 @@ export default function Home() {
               All rights reserved.
             </p>
 
-            <p>
-              A product of IFC Bridge Lab
-            </p>
+            <p>A product of IFC Bridge Lab</p>
           </div>
         </div>
       </footer>
     </main>
   );
-              }
+}
