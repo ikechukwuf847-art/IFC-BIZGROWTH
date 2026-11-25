@@ -6,16 +6,18 @@ export default function Home() {
       {/* NAVBAR */}
       <header className="site-navbar">
         <div className="navbar-inner">
-          <Link href="/" className="site-logo">
+          <Link href="/" className="site-logo" aria-label="IFC BIZGROWTH Home">
             IFC <span>BIZGROWTH</span>
           </Link>
 
+          {/* DESKTOP NAVIGATION */}
           <nav className="nav-links" aria-label="Main navigation">
             <Link href="/businesses">Businesses</Link>
             <Link href="/categories">Categories</Link>
             <Link href="/how-it-works">How It Works</Link>
           </nav>
 
+          {/* DESKTOP ACTIONS */}
           <div className="nav-actions">
             <Link href="/login" className="nav-login">
               Log in
@@ -25,6 +27,32 @@ export default function Home() {
               List Your Business
             </Link>
           </div>
+
+          {/* MOBILE NAVIGATION */}
+          <details className="mobile-menu">
+            <summary className="mobile-menu-toggle">
+              <span className="mobile-menu-label">Menu</span>
+              <span className="mobile-menu-icon" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </span>
+            </summary>
+
+            <nav className="mobile-menu-panel" aria-label="Mobile navigation">
+              <Link href="/businesses">Businesses</Link>
+              <Link href="/categories">Categories</Link>
+              <Link href="/how-it-works">How It Works</Link>
+
+              <div className="mobile-menu-divider" />
+
+              <Link href="/login">Log in</Link>
+
+              <Link href="/signup" className="mobile-menu-primary">
+                List Your Business
+              </Link>
+            </nav>
+          </details>
         </div>
       </header>
 
@@ -81,7 +109,7 @@ export default function Home() {
           </div>
 
           {/* HERO VISUAL */}
-          <div className="hero-visual">
+          <div className="hero-visual" aria-hidden="true">
             <div className="business-preview">
               <div className="business-preview-header">
                 <div className="business-avatar">
@@ -138,39 +166,39 @@ export default function Home() {
       </section>
 
       {/* TRUST STRIP */}
-      <section className="trust-strip">
+      <section className="trust-strip" aria-label="Platform features">
         <div className="trust-strip-inner">
           <div className="trust-item">
-            <span className="trust-icon">B</span>
+            <span className="trust-icon" aria-hidden="true">B</span>
             Business Discovery
           </div>
 
           <div className="trust-item">
-            <span className="trust-icon">✓</span>
+            <span className="trust-icon" aria-hidden="true">✓</span>
             Verified Businesses
           </div>
 
           <div className="trust-item">
-            <span className="trust-icon">P</span>
+            <span className="trust-icon" aria-hidden="true">P</span>
             Products & Services
           </div>
 
           <div className="trust-item">
-            <span className="trust-icon">→</span>
+            <span className="trust-icon" aria-hidden="true">→</span>
             Direct Connection
           </div>
         </div>
       </section>
 
       {/* WHY IFC BIZGROWTH */}
-      <section className="section">
+      <section className="section" aria-labelledby="why-heading">
         <div className="section-container">
           <div className="section-heading">
             <span className="section-label">
               WHY IFC BIZGROWTH
             </span>
 
-            <h2 className="section-title">
+            <h2 className="section-title" id="why-heading">
               A better way to discover and grow businesses.
             </h2>
 
@@ -183,7 +211,7 @@ export default function Home() {
 
           <div className="why-grid">
             <article className="why-card">
-              <div className="why-icon">◉</div>
+              <div className="why-icon" aria-hidden="true">◉</div>
 
               <h3>Discover businesses</h3>
 
@@ -194,7 +222,7 @@ export default function Home() {
             </article>
 
             <article className="why-card">
-              <div className="why-icon">✓</div>
+              <div className="why-icon" aria-hidden="true">✓</div>
 
               <h3>Verified businesses</h3>
 
@@ -206,7 +234,7 @@ export default function Home() {
             </article>
 
             <article className="why-card">
-              <div className="why-icon">→</div>
+              <div className="why-icon" aria-hidden="true">→</div>
 
               <h3>Connect directly</h3>
 
@@ -220,10 +248,10 @@ export default function Home() {
       </section>
 
       {/* VERIFICATION */}
-      <section className="section verified-section">
+      <section className="section verified-section" aria-labelledby="verification-heading">
         <div className="section-container">
           <div className="verified-layout">
-            <div className="verified-visual">
+            <div className="verified-visual" aria-hidden="true">
               <div className="verification-card">
                 <div className="verification-top">
                   <div className="verification-company">
@@ -276,7 +304,7 @@ export default function Home() {
                 TRUST
               </span>
 
-              <h2 className="section-title">
+              <h2 className="section-title" id="verification-heading">
                 Make better decisions before you connect.
               </h2>
 
@@ -289,7 +317,7 @@ export default function Home() {
 
               <div className="verified-points">
                 <div className="verified-point">
-                  <div className="verified-point-icon">
+                  <div className="verified-point-icon" aria-hidden="true">
                     ✓
                   </div>
 
@@ -304,7 +332,7 @@ export default function Home() {
                 </div>
 
                 <div className="verified-point">
-                  <div className="verified-point-icon">
+                  <div className="verified-point-icon" aria-hidden="true">
                     B
                   </div>
 
@@ -319,7 +347,7 @@ export default function Home() {
                 </div>
 
                 <div className="verified-point">
-                  <div className="verified-point-icon">
+                  <div className="verified-point-icon" aria-hidden="true">
                     →
                   </div>
 
@@ -339,14 +367,14 @@ export default function Home() {
       </section>
 
       {/* HOW IT WORKS */}
-      <section className="section">
+      <section className="section" aria-labelledby="steps-heading">
         <div className="section-container">
           <div className="section-heading">
             <span className="section-label">
               HOW IT WORKS
             </span>
 
-            <h2 className="section-title">
+            <h2 className="section-title" id="steps-heading">
               Discover. Check. Connect.
             </h2>
 
@@ -358,7 +386,7 @@ export default function Home() {
 
           <div className="steps-grid">
             <article className="step-card">
-              <div className="step-number">
+              <div className="step-number" aria-hidden="true">
                 01
               </div>
 
@@ -371,7 +399,7 @@ export default function Home() {
             </article>
 
             <article className="step-card">
-              <div className="step-number">
+              <div className="step-number" aria-hidden="true">
                 02
               </div>
 
@@ -384,7 +412,7 @@ export default function Home() {
             </article>
 
             <article className="step-card">
-              <div className="step-number">
+              <div className="step-number" aria-hidden="true">
                 03
               </div>
 
@@ -400,7 +428,7 @@ export default function Home() {
       </section>
 
       {/* BUSINESS OWNERS */}
-      <section className="section business-owner-section">
+      <section className="section business-owner-section" aria-labelledby="owner-heading">
         <div className="section-container">
           <div className="business-owner-layout">
             <div className="business-owner-content">
@@ -408,7 +436,7 @@ export default function Home() {
                 FOR BUSINESS OWNERS
               </span>
 
-              <h2 className="section-title">
+              <h2 className="section-title" id="owner-heading">
                 Give your business a place to be discovered.
               </h2>
 
@@ -454,7 +482,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="owner-visual">
+            <div className="owner-visual" aria-hidden="true">
               <div className="owner-dashboard-card">
                 <div className="owner-dashboard-header">
                   <strong>
@@ -468,63 +496,33 @@ export default function Home() {
 
                 <div className="owner-dashboard-items">
                   <div className="owner-dashboard-item">
-                    <span>
-                      Business profile
-                    </span>
-
-                    <span>
-                      Manage
-                    </span>
+                    <span>Business profile</span>
+                    <span>Manage</span>
                   </div>
 
                   <div className="owner-dashboard-item">
-                    <span>
-                      Products
-                    </span>
-
-                    <span>
-                      Manage
-                    </span>
+                    <span>Products</span>
+                    <span>Manage</span>
                   </div>
 
                   <div className="owner-dashboard-item">
-                    <span>
-                      Services
-                    </span>
-
-                    <span>
-                      Manage
-                    </span>
+                    <span>Services</span>
+                    <span>Manage</span>
                   </div>
 
                   <div className="owner-dashboard-item">
-                    <span>
-                      Advertising
-                    </span>
-
-                    <span>
-                      Promote
-                    </span>
+                    <span>Advertising</span>
+                    <span>Promote</span>
                   </div>
 
                   <div className="owner-dashboard-item">
-                    <span>
-                      Marketing
-                    </span>
-
-                    <span>
-                      Get support
-                    </span>
+                    <span>Marketing</span>
+                    <span>Get support</span>
                   </div>
 
                   <div className="owner-dashboard-item">
-                    <span>
-                      Analytics
-                    </span>
-
-                    <span>
-                      View
-                    </span>
+                    <span>Analytics</span>
+                    <span>View</span>
                   </div>
                 </div>
               </div>
@@ -534,13 +532,13 @@ export default function Home() {
       </section>
 
       {/* FINAL CTA */}
-      <section className="final-cta">
+      <section className="final-cta" aria-labelledby="final-cta-heading">
         <div className="final-cta-inner">
           <span className="section-label">
             IFC BIZGROWTH
           </span>
 
-          <h2>
+          <h2 id="final-cta-heading">
             Discover better.
             <br />
             Connect smarter.
@@ -652,4 +650,4 @@ export default function Home() {
       </footer>
     </main>
   );
-        }
+              }
