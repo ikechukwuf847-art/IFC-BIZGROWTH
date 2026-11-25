@@ -4034,3 +4034,23 @@ transition-duration: 0.01ms !important;
     transition: none;
   }
     }
+
+/* MOBILE MENU ICON VISIBILITY FIX */
+
+.mobile-menu-toggle {
+  background: #ffffff;
+  border: 1px solid #dce2ec;
+}
+
+.mobile-menu-icon span {
+  display: block;
+  width: 21px;
+  height: 2.5px;
+  background: #172033 !important;
+  border-radius: 5px;
+}
+
+/* Open menu icon */
+.mobile-menu[open] .mobile-menu-icon span {
+  background: #175bea !important;
+}
