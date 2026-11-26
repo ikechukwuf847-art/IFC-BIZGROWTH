@@ -340,6 +340,24 @@ function StarRating({
   );
 }
 
+function ShareIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <path
+        d="M18 8a3 3 0 1 0-2.83-4H15a3 3 0 0 0 .13.88L8.85 8.04a3.5 3.5 0 1 0 0 7.92l6.28 3.16A3 3 0 1 0 16 17.5c0-.3-.04-.59-.13-.88l-6.28-3.16a3.5 3.5 0 0 0 0-2.92l6.28-3.16c.55.39 1.21.62 1.95.62Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 function Logo({
   src,
   name,
