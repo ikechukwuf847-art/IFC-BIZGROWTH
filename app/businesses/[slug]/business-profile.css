@@ -21,12 +21,6 @@
   max-width: 100%;
 }
 
-.bp-page button,
-.bp-page input,
-.bp-page textarea {
-  font: inherit;
-}
-
 .bp-page button {
   -webkit-tap-highlight-color: transparent;
 }
@@ -2450,4 +2444,17 @@
 .bp-share-action svg {
   width: 19px;
   height: 19px;
+}
+
+.bp-share-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  cursor: pointer;
+  font: inherit;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease;
 }
