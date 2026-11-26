@@ -1608,13 +1608,13 @@ export default function BusinessProfilePage({
             )}
 
             <button
-              type="button"
-              onClick={shareBusiness}
-              className="bp-action"
-            >
-              <span>↗</span>
-              Share
-            </button>
+  type="button"
+  onClick={shareBusiness}
+  className="bp-action"
+>
+  <span>↗</span>
+  Share
+</button>
           </div>
         </div>
       </section>
