@@ -7,39 +7,6 @@ type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
-const SUPABASE_URL =
-  "https://iluczxsqdpohzgbknldh.supabase.co";
-
-/**
- * Convert a business logo storage path into a public URL.
- * Already-public URLs are returned unchanged.
- */
-function getPublicLogoUrl(
-  logoPath: string | null | undefined,
-): string | null {
-  if (!logoPath?.trim()) {
-    return null;
-  }
-
-  const value = logoPath.trim();
-
-  if (/^https?:\/\//i.test(value)) {
-    return value;
-  }
-
-  const cleanPath = value
-    .replace(/^\/+/, "")
-    .replace(/^business-logos\//, "");
-
-  return `${SUPABASE_URL}/storage/v1/object/public/business-logos/${cleanPath
-    .split("/")
-    .map(encodeURIComponent)
-    .join("/")}`;
-}
-
-/**
- * Retrieve only publicly available, active businesses.
- */
 async function getBusiness(slug: string) {
   const supabase = await createSupabaseServerClient();
 
@@ -108,9 +75,22 @@ async function getBusiness(slug: string) {
   };
 }
 
-/**
- * Dynamic SEO metadata for each business profile.
- */
+function getLocationText(
+  location: {
+    city?: string | null;
+    state_region?: string | null;
+  } | null,
+  countryName: string | null,
+) {
+  return [
+    location?.city,
+    location?.state_region,
+    countryName,
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
@@ -129,70 +109,49 @@ export async function generateMetadata({
 
   const { business, location, countryName } = result;
 
-  const logoUrl = getPublicLogoUrl(business.logo_url);
-
   const description =
     business.description?.trim().slice(0, 155) ||
     `Discover ${business.name} on IFC BIZGROWTH. Explore its business information and contact details.`;
 
-  const locationText = [
-    location?.city,
-    location?.state_region,
+  const locationText = getLocationText(
+    location,
     countryName,
-  ]
-    .filter(Boolean)
-    .join(", ");
+  );
 
   const title = locationText
     ? `${business.name} | ${locationText} | IFC BIZGROWTH`
     : `${business.name} | IFC BIZGROWTH`;
 
-  const profilePath = `/businesses/${business.slug}`;
+  const canonicalPath = `/businesses/${business.slug}`;
 
   return {
     title,
     description,
 
     alternates: {
-      canonical: profilePath,
+      canonical: canonicalPath,
     },
 
     openGraph: {
       type: "website",
       title,
       description,
-      url: profilePath,
+      url: canonicalPath,
       siteName: "IFC BIZGROWTH",
-
-      ...(logoUrl
-        ? {
-            images: [
-              {
-                url: logoUrl,
-                alt: `${business.name} logo`,
-              },
-            ],
-          }
-        : {}),
+      images: business.logo_url
+        ? [{ url: business.logo_url }]
+        : [],
     },
 
     twitter: {
-      card: logoUrl
+      card: business.logo_url
         ? "summary_large_image"
         : "summary",
       title,
       description,
-
-      ...(logoUrl
-        ? {
-            images: [
-              {
-                url: logoUrl,
-                alt: `${business.name} logo`,
-              },
-            ],
-          }
-        : {}),
+      images: business.logo_url
+        ? [business.logo_url]
+        : [],
     },
 
     robots: {
@@ -202,9 +161,6 @@ export async function generateMetadata({
   };
 }
 
-/**
- * Business profile page.
- */
 export default async function BusinessPage({
   params,
 }: PageProps) {
@@ -215,60 +171,43 @@ export default async function BusinessPage({
     notFound();
   }
 
-  const { business, location, countryName } = result;
-
-  const logoUrl = getPublicLogoUrl(business.logo_url);
-
-  const locationText = [
-    location?.city,
-    location?.state_region,
+  const {
+    business,
+    location,
     countryName,
-  ]
-    .filter(Boolean)
-    .join(", ");
+  } = result;
 
-  /**
-   * Structured data describing the business.
-   */
+  const locationText = getLocationText(
+    location,
+    countryName,
+  );
+
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "Organization",
-
     name: business.name,
-
-    description:
-      business.description || undefined,
-
+    description: business.description || undefined,
     url: `/businesses/${business.slug}`,
-
-    logo: logoUrl || undefined,
-
+    logo: business.logo_url || undefined,
     email: business.email || undefined,
-
     telephone: business.phone || undefined,
 
     address: location
       ? {
           "@type": "PostalAddress",
-
           streetAddress:
             location.address_line_1 ||
             location.address ||
             undefined,
-
           addressLocality:
             location.city || undefined,
-
           addressRegion:
             location.state_region || undefined,
-
           postalCode:
             location.postal_code || undefined,
-
           addressCountry:
             countryName ||
             location.country_code ||
-            business.country_code ||
             undefined,
         }
       : undefined,
@@ -279,31 +218,31 @@ export default async function BusinessPage({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(structuredData).replace(
-            /</g,
-            "\\u003c",
-          ),
+          __html: JSON.stringify(
+            structuredData,
+          ).replace(/</g, "\\u003c"),
         }}
       />
 
-      <main>
-        <section
-          className="bp-seo-intro"
-          aria-label={`${business.name} business information`}
-        >
-          <h1>{business.name}</h1>
+      <section
+        className="bp-seo-intro"
+        aria-label={`${business.name} business information`}
+      >
+        <h1>{business.name}</h1>
 
-          {locationText && (
-            <p>{locationText}</p>
-          )}
+        {locationText && (
+          <p>{locationText}</p>
+        )}
 
-          {business.description && (
-            <p>{business.description}</p>
-          )}
-        </section>
+        {business.description && (
+          <p>{business.description}</p>
+        )}
+      </section>
 
-        <BusinessProfileClient />
-      </main>
+      {/* Pass server-fetched business data to the client component. */}
+      <BusinessProfileClient
+        initialBusiness={business}
+      />
     </>
   );
-  }
+        }
