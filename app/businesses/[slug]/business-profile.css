@@ -2402,3 +2402,52 @@
     font-size: 13px;
   }
 }
+
+/* ========================================
+   PROFESSIONAL SHARE BUTTONS
+======================================== */
+
+.bp-share-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.bp-share-top svg,
+.bp-share-action svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+.bp-share-top:hover {
+  color: #1769e8;
+  transform: translateY(-1px);
+}
+
+.bp-share-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  cursor: pointer;
+  font: inherit;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.bp-share-action:hover {
+  color: #1769e8;
+  border-color: #1769e8;
+}
+
+.bp-share-action svg {
+  width: 19px;
+  height: 19px;
+}
