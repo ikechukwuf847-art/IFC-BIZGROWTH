@@ -1326,20 +1326,21 @@ export default function BusinessProfilePage({
           </Link>
 
           <button
-            type="button"
-            className="bp-share-top"
-            onClick={() => {
-              void trackEvent(
-                business.id,
-                "share_menu_open",
-              );
+  type="button"
+  className="bp-share-top"
+  onClick={() => {
+    void trackEvent(
+      business.id,
+      "share_menu_open",
+    );
 
-              setShowShare((value) => !value);
-            }}
-            aria-label="Share business"
-          >
-            ↗
-          </button>
+    setShowShare((value) => !value);
+  }}
+  aria-label="Share business"
+  title="Share business"
+>
+  <ShareIcon size={21} />
+</button>
         </div>
 
         {showShare && (
