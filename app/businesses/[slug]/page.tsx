@@ -7,6 +7,11 @@ type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
+type LocationSummary = {
+  city: string | null;
+  state_region: string | null;
+};
+
 async function getBusiness(slug: string) {
   const supabase = await createSupabaseServerClient();
 
@@ -76,10 +81,7 @@ async function getBusiness(slug: string) {
 }
 
 function getLocationText(
-  location: {
-    city?: string | null;
-    state_region?: string | null;
-  } | null,
+  location: LocationSummary | null,
   countryName: string | null,
 ) {
   return [
@@ -171,20 +173,12 @@ export default async function BusinessPage({
     notFound();
   }
 
-  const {
-    business,
-    location,
-    countryName,
-  } = result;
-
-  const locationText = getLocationText(
-    location,
-    countryName,
-  );
+  const { business, location, countryName } = result;
 
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "Organization",
+
     name: business.name,
     description: business.description || undefined,
     url: `/businesses/${business.slug}`,
@@ -218,31 +212,14 @@ export default async function BusinessPage({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(
-            structuredData,
-          ).replace(/</g, "\\u003c"),
+          __html: JSON.stringify(structuredData).replace(
+            /</g,
+            "\\u003c",
+          ),
         }}
       />
 
-      <section
-        className="bp-seo-intro"
-        aria-label={`${business.name} business information`}
-      >
-        <h1>{business.name}</h1>
-
-        {locationText && (
-          <p>{locationText}</p>
-        )}
-
-        {business.description && (
-          <p>{business.description}</p>
-        )}
-      </section>
-
-      {/* Pass server-fetched business data to the client component. */}
-      <BusinessProfileClient
-        initialBusiness={business}
-      />
+      <BusinessProfileClient initialBusiness={business} />
     </>
   );
-        }
+  }
