@@ -1790,19 +1790,25 @@
     letter-spacing: -0.35px;
   }
 
-  .bp-share-menu {
-    position: fixed;
-    top: auto;
-    right: 10px;
-    bottom: 10px;
-    left: 10px;
-    width: auto;
-    max-width: none;
-    padding: 18px;
-    border-radius: 19px;
-    box-shadow: 0 15px 55px rgba(20, 35, 60, 0.2);
-  }
-
+   .bp-share-menu {
+position: fixed !important;
+top: 72px !important;
+right: 12px !important;
+bottom: auto !important;
+left: 12px !important;
+width: auto;
+max-width: none;
+max-height: calc(100dvh - 90px);
+overflow-y: auto;
+overscroll-behavior: contain;
+padding: 18px;
+border: 1px solid #e3e8ef;
+border-radius: 19px;
+background: #fff;
+z-index: 9999;
+box-shadow: 0 15px 55px rgba(20, 35, 60, 0.2);
+   }
+   
   .bp-share-option {
     min-height: 72px;
   }
