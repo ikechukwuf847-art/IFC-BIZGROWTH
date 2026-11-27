@@ -17,6 +17,16 @@ const geistMono = Geist_Mono({
 const siteUrl = "https://ifcbizgrowth.africa";
 const parentUrl = "https://ifcbridgelab.com";
 
+// Official IFC BIZGROWTH social media profiles
+const socialProfiles = [
+  "https://www.facebook.com/ifcbizgrowth",
+  "https://www.instagram.com/ifcbizgrowth",
+  "https://www.tiktok.com/@ifcbizgrowth",
+  "https://x.com/ifcbizgrowth",
+  "https://www.youtube.com/@ifcbizgrowth",
+  "https://www.linkedin.com/company/ifcbizgrowth/",
+];
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
 
@@ -58,6 +68,7 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+
     googleBot: {
       index: true,
       follow: true,
@@ -71,14 +82,22 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_NG",
     siteName: "IFC BIZGROWTH",
+    url: siteUrl,
+
     title: "IFC BIZGROWTH | Discover Businesses Across Africa",
+
     description:
-      "Explore the African business directory. Discover businesses, products, and services and connect with businesses across Africa.",
+      "Discover businesses, products, and services across Africa with IFC BIZGROWTH. Explore the African business directory and connect directly with businesses.",
+
   },
 
   twitter: {
     card: "summary_large_image",
+
+    site: "@ifcbizgrowth",
+
     title: "IFC BIZGROWTH | Discover Businesses Across Africa",
+
     description:
       "Discover businesses, products, and services across Africa with IFC BIZGROWTH.",
   },
@@ -98,48 +117,89 @@ export const metadata: Metadata = {
   },
 };
 
+
+// Global structured data
 const structuredData = {
   "@context": "https://schema.org",
+
   "@graph": [
+
+    // Parent organization
     {
       "@type": "Organization",
+
       "@id": `${parentUrl}/#organization`,
+
       name: "IFC Bridge Lab",
+
       url: parentUrl,
+
       description:
         "IFC Bridge Lab is the parent organization behind IFC BIZGROWTH and its digital business-growth initiatives.",
+
       brand: {
         "@type": "Brand",
+
         "@id": `${siteUrl}/#brand`,
+
         name: "IFC BIZGROWTH",
+
+        alternateName: "IFC BIZGROWTH African Business Discovery Platform",
+
         url: siteUrl,
+
+        description:
+          "IFC BIZGROWTH is an African business discovery platform that helps people discover businesses, products, and services across Africa.",
+
+        sameAs: socialProfiles,
       },
     },
+
+    // IFC BIZGROWTH website
     {
       "@type": "WebSite",
+
       "@id": `${siteUrl}/#website`,
+
       name: "IFC BIZGROWTH",
-      alternateName: "IFC BIZGROWTH African Business Directory",
+
+      alternateName: [
+        "IFC BIZGROWTH African Business Directory",
+        "IFC BIZGROWTH Business Discovery Platform",
+      ],
+
       url: siteUrl,
+
       description:
-        "An African business discovery platform where people can discover businesses, products, and services.",
+        "An African business discovery platform where people can discover businesses, products, and services across different industries and geographical locations.",
+
       publisher: {
         "@id": `${parentUrl}/#organization`,
       },
+
+      about: {
+        "@id": `${siteUrl}/#brand`,
+      },
+
       inLanguage: "en",
     },
+
   ],
 };
+
 
 export default function RootLayout({
   children,
 }: LayoutProps<"/">) {
+
   return (
     <html
       lang="en-NG"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+
       <body className="min-h-full flex flex-col">
+
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -151,7 +211,9 @@ export default function RootLayout({
         />
 
         {children}
+
       </body>
+
     </html>
   );
-    }
+  }
