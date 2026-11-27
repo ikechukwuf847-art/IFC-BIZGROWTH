@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import BusinessProfileClient from "./BusinessProfileClient";
@@ -10,9 +11,12 @@ type PageProps = {
 type LocationSummary = {
   city: string | null;
   state_region: string | null;
+  country_code?: string | null;
 };
 
-async function getBusiness(slug: string) {
+const siteUrl = "https://ifcbizgrowth.africa";
+
+const getBusiness = cache(async (slug: string) => {
   const supabase = await createSupabaseServerClient();
 
   const { data: business, error } = await supabase
@@ -78,7 +82,7 @@ async function getBusiness(slug: string) {
     location,
     countryName,
   };
-}
+});
 
 function getLocationText(
   location: LocationSummary | null,
@@ -87,10 +91,20 @@ function getLocationText(
   return [
     location?.city,
     location?.state_region,
-    countryName,
+    countryName || location?.country_code,
   ]
     .filter(Boolean)
     .join(", ");
+}
+
+function getAbsoluteUrl(path: string | null | undefined) {
+  if (!path) return undefined;
+
+  try {
+    return new URL(path, siteUrl).toString();
+  } catch {
+    return undefined;
+  }
 }
 
 export async function generateMetadata({
@@ -113,7 +127,7 @@ export async function generateMetadata({
 
   const description =
     business.description?.trim().slice(0, 155) ||
-    `Discover ${business.name} on IFC BIZGROWTH. Explore its business information and contact details.`;
+    `Discover ${business.name} on IFC BIZGROWTH. Explore its business information, products, services, and contact details.`;
 
   const locationText = getLocationText(
     location,
@@ -124,41 +138,50 @@ export async function generateMetadata({
     ? `${business.name} | ${locationText} | IFC BIZGROWTH`
     : `${business.name} | IFC BIZGROWTH`;
 
-  const canonicalPath = `/businesses/${business.slug}`;
+  const canonicalUrl = `${siteUrl}/businesses/${business.slug}`;
+  const logoUrl = getAbsoluteUrl(business.logo_url);
 
   return {
     title,
     description,
 
     alternates: {
-      canonical: canonicalPath,
+      canonical: canonicalUrl,
     },
 
     openGraph: {
       type: "website",
       title,
       description,
-      url: canonicalPath,
+      url: canonicalUrl,
       siteName: "IFC BIZGROWTH",
-      images: business.logo_url
-        ? [{ url: business.logo_url }]
+      images: logoUrl
+        ? [
+            {
+              url: logoUrl,
+              alt: `${business.name} logo`,
+            },
+          ]
         : [],
     },
 
     twitter: {
-      card: business.logo_url
+      card: logoUrl
         ? "summary_large_image"
         : "summary",
       title,
       description,
-      images: business.logo_url
-        ? [business.logo_url]
-        : [],
+      images: logoUrl ? [logoUrl] : [],
     },
 
     robots: {
       index: true,
       follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+      },
     },
   };
 }
@@ -175,33 +198,52 @@ export default async function BusinessPage({
 
   const { business, location, countryName } = result;
 
+  const canonicalUrl = `${siteUrl}/businesses/${business.slug}`;
+  const logoUrl = getAbsoluteUrl(business.logo_url);
+  const websiteUrl = getAbsoluteUrl(business.website_url);
+
   const structuredData = {
     "@context": "https://schema.org",
-    "@type": "Organization",
+    "@type": "LocalBusiness",
+    "@id": `${canonicalUrl}#business`,
 
     name: business.name,
+    url: canonicalUrl,
+
     description: business.description || undefined,
-    url: `/businesses/${business.slug}`,
-    logo: business.logo_url || undefined,
+
+    image: logoUrl,
+    logo: logoUrl,
+
     email: business.email || undefined,
     telephone: business.phone || undefined,
+
+    sameAs: websiteUrl ? [websiteUrl] : undefined,
 
     address: location
       ? {
           "@type": "PostalAddress",
+
           streetAddress:
-            location.address_line_1 ||
-            location.address ||
-            undefined,
+            [
+              location.address_line_1 || location.address,
+              location.address_line_2,
+            ]
+              .filter(Boolean)
+              .join(", ") || undefined,
+
           addressLocality:
             location.city || undefined,
+
           addressRegion:
             location.state_region || undefined,
+
           postalCode:
             location.postal_code || undefined,
+
           addressCountry:
-            countryName ||
             location.country_code ||
+            countryName ||
             undefined,
         }
       : undefined,
