@@ -2402,9 +2402,13 @@
 ======================================== */
 
 .bp-share-top {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  color: #172033;
   cursor: pointer;
   transition:
     color 0.2s ease,
@@ -2412,14 +2416,19 @@
     transform 0.2s ease;
 }
 
-.bp-share-top svg,
-.bp-share-action svg {
+.bp-share-top svg {
   display: block;
+  width: 21px;
+  height: 21px;
+  min-width: 21px;
+  min-height: 21px;
   flex-shrink: 0;
+  stroke: currentColor;
 }
 
 .bp-share-top:hover {
   color: #1769e8;
+  background: #e8edf4;
   transform: translateY(-1px);
 }
 
@@ -2435,26 +2444,17 @@
     background 0.2s ease;
 }
 
+.bp-share-action svg {
+  display: block;
+  width: 19px;
+  height: 19px;
+  min-width: 19px;
+  min-height: 19px;
+  flex-shrink: 0;
+  stroke: currentColor;
+}
+
 .bp-share-action:hover {
   color: #1769e8;
   border-color: #1769e8;
-}
-
-.bp-share-action svg {
-  width: 19px;
-  height: 19px;
-}
-
-.bp-share-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-}
-
-.bp-share-action svg {
-  width: 19px;
-  height: 19px;
-  flex-shrink: 0;
-  display: block;
-}
+     }
