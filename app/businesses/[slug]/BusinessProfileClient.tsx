@@ -1610,10 +1610,11 @@ export default function BusinessProfilePage({
             <button
   type="button"
   onClick={shareBusiness}
-  className="bp-action"
+  className="bp-action bp-share-action"
+  aria-label="Share this business"
 >
-  <span>↗</span>
-  Share
+  <ShareIcon size={19} />
+  <span>Share</span>
 </button>
           </div>
         </div>
