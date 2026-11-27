@@ -2444,3 +2444,17 @@
   width: 19px;
   height: 19px;
 }
+
+.bp-share-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+
+.bp-share-action svg {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+  display: block;
+}
