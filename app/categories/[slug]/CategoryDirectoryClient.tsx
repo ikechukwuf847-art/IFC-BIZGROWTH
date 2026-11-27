@@ -2,11 +2,12 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import "./category.css";
 
 const SUPABASE_URL = "https://iluczxsqdpohzgbknldh.supabase.co";
+const PAGE_SIZE = 24;
 
 type Category = {
   id: string;
@@ -232,9 +233,7 @@ function BusinessCard({ business }: { business: Business }) {
         </div>
 
         <div className="business-rating">
-          <span className="rating-stars">
-            ★
-          </span>
+          <span className="rating-stars">★</span>
 
           <span className="rating-value">
             {formatRating(business.average_rating)}
@@ -296,108 +295,55 @@ function BusinessSkeleton() {
   );
 }
 
-export default function CategoryPage() {
-  const params = useParams();
+export default function CategoryDirectoryClient({
+  initialCategory,
+}: {
+  initialCategory: Category;
+}) {
   const searchParams = useSearchParams();
-
-  const slug = Array.isArray(params.slug)
-    ? params.slug[0]
-    : params.slug;
 
   const selectedSubcategory = searchParams.get("subcategory");
 
   const supabase = useMemo(() => createClient(), []);
 
-  const [category, setCategory] = useState<Category | null>(
-    null
-  );
+  /*
+   * The category is provided by the server component.
+   * This avoids fetching it again in the browser.
+   */
+  const [category] = useState<Category>(initialCategory);
 
   const [subcategories, setSubcategories] = useState<
     Subcategory[]
   >([]);
 
-  const [businesses, setBusinesses] = useState<Business[]>(
-    []
-  );
+  const [subcategoriesLoaded, setSubcategoriesLoaded] =
+    useState(false);
 
-  const [loadingCategory, setLoadingCategory] =
-    useState(true);
+  const [businesses, setBusinesses] = useState<Business[]>([]);
 
   const [loadingSubcategories, setLoadingSubcategories] =
-    useState(false);
+    useState(true);
 
   const [loadingBusinesses, setLoadingBusinesses] =
-    useState(false);
+    useState(true);
 
   const [error, setError] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
 
-  /*
-   * Load category
-   */
-  useEffect(() => {
-    if (!slug) return;
+  const [page, setPage] = useState(0);
 
-    let cancelled = false;
-
-    async function loadCategory() {
-      setLoadingCategory(true);
-      setError(null);
-
-      const { data, error: categoryError } = await supabase
-        .from("business_categories")
-        .select(
-          "id,name,slug,description,is_active"
-        )
-        .eq("slug", slug)
-        .eq("is_active", true)
-        .maybeSingle();
-
-      if (cancelled) return;
-
-      if (categoryError) {
-        console.error(categoryError);
-        setError("Unable to load this category.");
-        setCategory(null);
-        setLoadingCategory(false);
-        return;
-      }
-
-      if (!data) {
-        setError("Category not found.");
-        setCategory(null);
-        setLoadingCategory(false);
-        return;
-      }
-
-      setCategory(data);
-      setLoadingCategory(false);
-    }
-
-    loadCategory();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [slug, supabase]);
+  const [hasMore, setHasMore] = useState(false);
 
   /*
-   * Load subcategories
-   *
-   * Important:
-   * We create currentCategory so TypeScript knows
-   * category cannot become null inside the async function.
+   * Load subcategories.
    */
   useEffect(() => {
-    if (!category) return;
-
-    const currentCategory = category;
-
     let cancelled = false;
 
     async function loadSubcategories() {
       setLoadingSubcategories(true);
+      setSubcategoriesLoaded(false);
 
       const { data, error: subcategoryError } =
         await supabase
@@ -405,7 +351,7 @@ export default function CategoryPage() {
           .select(
             "id,category_id,name,slug,description,is_active,sort_order"
           )
-          .eq("category_id", currentCategory.id)
+          .eq("category_id", category.id)
           .eq("is_active", true)
           .order("sort_order", {
             ascending: true,
@@ -424,6 +370,7 @@ export default function CategoryPage() {
       }
 
       setLoadingSubcategories(false);
+      setSubcategoriesLoaded(true);
     }
 
     loadSubcategories();
@@ -431,47 +378,78 @@ export default function CategoryPage() {
     return () => {
       cancelled = true;
     };
-  }, [category, supabase]);
+  }, [category.id, supabase]);
 
   /*
-   * Load businesses
-   *
-   * Important:
-   * currentCategory fixes the TypeScript narrowing error.
+   * Reset pagination when the selected subcategory changes.
    */
   useEffect(() => {
-    if (!category) return;
+    setPage(0);
+  }, [selectedSubcategory]);
 
-    const currentCategory = category;
+  /*
+   * Validate the selected subcategory.
+   */
+  const selectedSubcategoryRecord = useMemo(() => {
+    if (!selectedSubcategory) return null;
+
+    return (
+      subcategories.find(
+        (subcategory) =>
+          subcategory.slug === selectedSubcategory
+      ) ?? null
+    );
+  }, [selectedSubcategory, subcategories]);
+
+  const invalidSubcategory =
+    subcategoriesLoaded &&
+    Boolean(selectedSubcategory) &&
+    !selectedSubcategoryRecord;
+
+  /*
+   * Load businesses using server-side RPC filtering
+   * and pagination.
+   */
+  useEffect(() => {
+    if (!subcategoriesLoaded) return;
 
     let cancelled = false;
 
     async function loadBusinesses() {
       setLoadingBusinesses(true);
+      setError(null);
 
-      const subcategoryId =
-        selectedSubcategory
-          ? subcategories.find(
-              (subcategory) =>
-                subcategory.slug === selectedSubcategory
-            )?.id ?? null
-          : null;
+      /*
+       * Do not interpret an invalid subcategory as
+       * "all businesses in this category".
+       */
+      if (invalidSubcategory) {
+        setBusinesses([]);
+        setHasMore(false);
+        setLoadingBusinesses(false);
+        return;
+      }
+
+      const offset = page * PAGE_SIZE;
 
       const { data, error: businessError } =
         await supabase.rpc(
           "get_public_business_directory",
           {
-            p_search: null,
+            p_search: search.trim() || null,
             p_country_code: null,
             p_city: null,
-            p_category_id: currentCategory.id,
-            p_subcategory_id: subcategoryId,
+            p_category_id: category.id,
+            p_subcategory_id:
+              selectedSubcategoryRecord?.id ?? null,
             p_latitude: null,
             p_longitude: null,
             p_radius_km: null,
             p_featured_only: false,
-            p_limit: 100,
-            p_offset: 0,
+
+            // Fetch one extra result to detect another page.
+            p_limit: PAGE_SIZE + 1,
+            p_offset: offset,
           }
         );
 
@@ -479,23 +457,30 @@ export default function CategoryPage() {
 
       if (businessError) {
         console.error(businessError);
+
         setBusinesses([]);
+        setHasMore(false);
         setError(
           "Unable to load businesses in this category."
         );
+
         setLoadingBusinesses(false);
         return;
       }
 
       const rows = (data ?? []) as Business[];
 
+      const hasNextPage = rows.length > PAGE_SIZE;
+
+      const visibleRows = rows.slice(0, PAGE_SIZE);
+
       /*
-       * Remove duplicate businesses in case the
-       * directory RPC returns multiple category rows.
+       * Remove duplicate businesses if the RPC returns
+       * repeated business records.
        */
       const uniqueBusinesses = Array.from(
         new Map(
-          rows.map((business) => [
+          visibleRows.map((business) => [
             business.business_id,
             business,
           ])
@@ -503,6 +488,7 @@ export default function CategoryPage() {
       );
 
       setBusinesses(uniqueBusinesses);
+      setHasMore(hasNextPage);
       setLoadingBusinesses(false);
     }
 
@@ -512,125 +498,36 @@ export default function CategoryPage() {
       cancelled = true;
     };
   }, [
-    category,
-    selectedSubcategory,
-    subcategories,
+    category.id,
+    page,
+    search,
+    selectedSubcategoryRecord,
+    invalidSubcategory,
+    subcategoriesLoaded,
     supabase,
   ]);
 
-  const filteredBusinesses = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    if (!query) {
-      return businesses;
-    }
-
-    return businesses.filter((business) => {
-      return (
-        business.business_name
-          ?.toLowerCase()
-          .includes(query) ||
-        business.description
-          ?.toLowerCase()
-          .includes(query) ||
-        business.city
-          ?.toLowerCase()
-          .includes(query) ||
-        business.state_region
-          ?.toLowerCase()
-          .includes(query) ||
-        business.subcategory_name
-          ?.toLowerCase()
-          .includes(query)
-      );
-    });
-  }, [businesses, search]);
+  const selectedSubcategoryName =
+    selectedSubcategoryRecord?.name ?? null;
 
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setPage(0);
   }
 
-  const selectedSubcategoryName =
-    selectedSubcategory
-      ? subcategories.find(
-          (subcategory) =>
-            subcategory.slug === selectedSubcategory
-        )?.name
-      : null;
-
-  if (loadingCategory) {
-    return (
-      <main className="category-page">
-        <div className="category-loading">
-          <div className="loading-spinner" />
-          <p>Loading category...</p>
-        </div>
-      </main>
-    );
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    setPage(0);
   }
 
-  if (!category) {
-    return (
-      <main className="category-page">
-        <header className="category-header">
-          <div className="category-header-inner">
-            <Link
-              href="/discover"
-              className="brand"
-            >
-              <span className="brand-mark">IFC</span>
-              <span className="brand-text">
-                BIZGROWTH
-              </span>
-            </Link>
+  function goToPreviousPage() {
+    setPage((current) => Math.max(0, current - 1));
+  }
 
-            <nav className="desktop-nav">
-              <Link href="/discover">Discover</Link>
-              <Link href="/businesses">Businesses</Link>
-              <Link
-                href="/categories"
-                className="active"
-              >
-                Categories
-              </Link>
-            </nav>
-          </div>
-        </header>
-
-        <section className="category-error">
-          <div className="error-icon">
-            <svg
-              viewBox="0 0 24 24"
-              width="30"
-              height="30"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <circle cx="12" cy="12" r="9" />
-              <path d="M12 8v4" />
-              <path d="M12 16h.01" />
-            </svg>
-          </div>
-
-          <h1>Category not found</h1>
-
-          <p>
-            We couldn't find the category you're looking
-            for.
-          </p>
-
-          <Link
-            href="/categories"
-            className="primary-button"
-          >
-            Browse categories
-          </Link>
-        </section>
-
-        <MobileBottomNav />
-      </main>
-    );
+  function goToNextPage() {
+    if (hasMore && !loadingBusinesses) {
+      setPage((current) => current + 1);
+    }
   }
 
   return (
@@ -638,10 +535,7 @@ export default function CategoryPage() {
       {/* HEADER */}
       <header className="category-header">
         <div className="category-header-inner">
-          <Link
-            href="/discover"
-            className="brand"
-          >
+          <Link href="/discover" className="brand">
             <span className="brand-mark">IFC</span>
 
             <span className="brand-text">
@@ -650,18 +544,11 @@ export default function CategoryPage() {
           </Link>
 
           <nav className="desktop-nav">
-            <Link href="/discover">
-              Discover
-            </Link>
+            <Link href="/discover">Discover</Link>
 
-            <Link href="/businesses">
-              Businesses
-            </Link>
+            <Link href="/businesses">Businesses</Link>
 
-            <Link
-              href="/categories"
-              className="active"
-            >
+            <Link href="/categories" className="active">
               Categories
             </Link>
           </nav>
@@ -685,10 +572,7 @@ export default function CategoryPage() {
               </svg>
             </Link>
 
-            <Link
-              href="/login"
-              className="login-button"
-            >
+            <Link href="/login" className="login-button">
               For Businesses
             </Link>
           </div>
@@ -699,15 +583,11 @@ export default function CategoryPage() {
       <section className="category-hero">
         <div className="category-hero-inner">
           <div className="breadcrumb">
-            <Link href="/discover">
-              Home
-            </Link>
+            <Link href="/discover">Home</Link>
 
             <span>/</span>
 
-            <Link href="/categories">
-              Categories
-            </Link>
+            <Link href="/categories">Categories</Link>
 
             <span>/</span>
 
@@ -764,9 +644,7 @@ export default function CategoryPage() {
                   EXPLORE
                 </span>
 
-                <h2>
-                  Browse {category.name}
-                </h2>
+                <h2>Browse {category.name}</h2>
               </div>
             </div>
 
@@ -789,9 +667,7 @@ export default function CategoryPage() {
                 <Link
                   href={`/categories/${category.slug}`}
                   className={`subcategory-card ${
-                    !selectedSubcategory
-                      ? "selected"
-                      : ""
+                    !selectedSubcategory ? "selected" : ""
                   }`}
                 >
                   <div className="subcategory-icon">
@@ -811,60 +687,49 @@ export default function CategoryPage() {
 
                   <div>
                     <strong>All businesses</strong>
-                    <span>
-                      Explore everything
-                    </span>
+                    <span>Explore everything</span>
                   </div>
                 </Link>
 
-                {subcategories.map(
-                  (subcategory) => (
-                    <Link
-                      key={subcategory.id}
-                      href={`/categories/${category.slug}?subcategory=${encodeURIComponent(
-                        subcategory.slug
-                      )}`}
-                      className={`subcategory-card ${
-                        selectedSubcategory ===
-                        subcategory.slug
-                          ? "selected"
-                          : ""
-                      }`}
-                    >
-                      <div className="subcategory-icon">
-                        <svg
-                          viewBox="0 0 24 24"
-                          width="21"
-                          height="21"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <path d="M5 5h6v6H5z" />
-                          <path d="M13 5h6v6h-6z" />
-                          <path d="M5 13h6v6H5z" />
-                          <path d="M13 13h6v6h-6z" />
-                        </svg>
-                      </div>
+                {subcategories.map((subcategory) => (
+                  <Link
+                    key={subcategory.id}
+                    href={`/categories/${category.slug}?subcategory=${encodeURIComponent(
+                      subcategory.slug
+                    )}`}
+                    className={`subcategory-card ${
+                      selectedSubcategory === subcategory.slug
+                        ? "selected"
+                        : ""
+                    }`}
+                  >
+                    <div className="subcategory-icon">
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="21"
+                        height="21"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M5 5h6v6H5z" />
+                        <path d="M13 5h6v6h-6z" />
+                        <path d="M5 13h6v6H5z" />
+                        <path d="M13 13h6v6h-6z" />
+                      </svg>
+                    </div>
 
-                      <div>
-                        <strong>
-                          {subcategory.name}
-                        </strong>
+                    <div>
+                      <strong>{subcategory.name}</strong>
 
-                        {subcategory.description ? (
-                          <span>
-                            {subcategory.description}
-                          </span>
-                        ) : (
-                          <span>
-                            Explore businesses
-                          </span>
-                        )}
-                      </div>
-                    </Link>
-                  )
-                )}
+                      {subcategory.description ? (
+                        <span>{subcategory.description}</span>
+                      ) : (
+                        <span>Explore businesses</span>
+                      )}
+                    </div>
+                  </Link>
+                ))}
               </div>
             )}
           </section>
@@ -884,60 +749,83 @@ export default function CategoryPage() {
                   : `Businesses in ${category.name}`}
               </h2>
 
-              {!loadingBusinesses && (
+              {!loadingBusinesses && !error && (
                 <p>
-                  {filteredBusinesses.length}{" "}
-                  {filteredBusinesses.length === 1
+                  {businesses.length}{" "}
+                  {businesses.length === 1
                     ? "business"
                     : "businesses"}{" "}
-                  found
+                  shown on this page
                 </p>
               )}
             </div>
 
-            {!loadingBusinesses &&
-              businesses.length > 0 && (
-                <form
-                  className="business-search"
-                  onSubmit={handleSearch}
+            {!invalidSubcategory && (
+              <form
+                className="business-search"
+                onSubmit={handleSearch}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    width="18"
-                    height="18"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <circle
-                      cx="11"
-                      cy="11"
-                      r="7"
-                    />
-                    <path d="m20 20-4-4" />
-                  </svg>
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m20 20-4-4" />
+                </svg>
 
-                  <input
-                    type="search"
-                    placeholder="Search businesses..."
-                    value={search}
-                    onChange={(event) =>
-                      setSearch(event.target.value)
-                    }
-                  />
-                </form>
-              )}
+                <input
+                  type="search"
+                  placeholder="Search businesses..."
+                  value={search}
+                  onChange={(event) =>
+                    handleSearchChange(event.target.value)
+                  }
+                  aria-label="Search businesses in this category"
+                />
+              </form>
+            )}
           </div>
 
-          {loadingBusinesses ? (
+          {invalidSubcategory ? (
+            <div className="empty-state">
+              <div className="empty-icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="30"
+                  height="30"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 8v4" />
+                  <path d="M12 16h.01" />
+                </svg>
+              </div>
+
+              <h3>Subcategory not found</h3>
+
+              <p>
+                This subcategory does not exist or is no
+                longer available.
+              </p>
+
+              <Link
+                href={`/categories/${category.slug}`}
+                className="primary-button"
+              >
+                View all businesses in {category.name}
+              </Link>
+            </div>
+          ) : loadingBusinesses ? (
             <div className="business-grid">
-              {Array.from({ length: 6 }).map(
-                (_, index) => (
-                  <BusinessSkeleton
-                    key={index}
-                  />
-                )
-              )}
+              {Array.from({ length: 6 }).map((_, index) => (
+                <BusinessSkeleton key={index} />
+              ))}
             </div>
           ) : error ? (
             <div className="empty-state">
@@ -950,11 +838,7 @@ export default function CategoryPage() {
                   stroke="currentColor"
                   strokeWidth="2"
                 >
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="9"
-                  />
+                  <circle cx="12" cy="12" r="9" />
                   <path d="M12 8v4" />
                   <path d="M12 16h.01" />
                 </svg>
@@ -964,7 +848,7 @@ export default function CategoryPage() {
 
               <p>{error}</p>
             </div>
-          ) : filteredBusinesses.length === 0 ? (
+          ) : businesses.length === 0 ? (
             <div className="empty-state">
               <div className="empty-icon">
                 <svg
@@ -975,11 +859,7 @@ export default function CategoryPage() {
                   stroke="currentColor"
                   strokeWidth="2"
                 >
-                  <circle
-                    cx="11"
-                    cy="11"
-                    r="7"
-                  />
+                  <circle cx="11" cy="11" r="7" />
                   <path d="m20 20-4-4" />
                 </svg>
               </div>
@@ -1000,23 +880,60 @@ export default function CategoryPage() {
                 <button
                   type="button"
                   className="clear-search"
-                  onClick={() => setSearch("")}
+                  onClick={() => handleSearchChange("")}
                 >
                   Clear search
                 </button>
               )}
             </div>
           ) : (
-            <div className="business-grid">
-              {filteredBusinesses.map(
-                (business) => (
+            <>
+              <div className="business-grid">
+                {businesses.map((business) => (
                   <BusinessCard
                     key={business.business_id}
                     business={business}
                   />
-                )
+                ))}
+              </div>
+
+              {/* PAGINATION */}
+              {(page > 0 || hasMore) && (
+                <div
+                  className="category-pagination"
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    gap: "12px",
+                    marginTop: "32px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="clear-search"
+                    onClick={goToPreviousPage}
+                    disabled={page === 0 || loadingBusinesses}
+                  >
+                    Previous
+                  </button>
+
+                  <span>
+                    Page {page + 1}
+                  </span>
+
+                  <button
+                    type="button"
+                    className="clear-search"
+                    onClick={goToNextPage}
+                    disabled={!hasMore || loadingBusinesses}
+                  >
+                    Next
+                  </button>
+                </div>
               )}
-            </div>
+            </>
           )}
         </section>
       </div>
@@ -1025,13 +942,8 @@ export default function CategoryPage() {
       <footer className="category-footer">
         <div className="footer-inner">
           <div className="footer-brand">
-            <Link
-              href="/discover"
-              className="brand"
-            >
-              <span className="brand-mark">
-                IFC
-              </span>
+            <Link href="/discover" className="brand">
+              <span className="brand-mark">IFC</span>
 
               <span className="brand-text">
                 BIZGROWTH
@@ -1048,46 +960,33 @@ export default function CategoryPage() {
             <div>
               <h4>Explore</h4>
 
-              <Link href="/discover">
-                Discover
-              </Link>
+              <Link href="/discover">Discover</Link>
 
-              <Link href="/businesses">
-                Businesses
-              </Link>
+              <Link href="/businesses">Businesses</Link>
 
-              <Link href="/categories">
-                Categories
-              </Link>
+              <Link href="/categories">Categories</Link>
             </div>
 
             <div>
               <h4>Businesses</h4>
 
-              <Link href="/login">
-                Business Login
-              </Link>
+              <Link href="/login">Business Login</Link>
 
-              <Link href="/signup">
-                Create Business
-              </Link>
+              <Link href="/signup">Create Business</Link>
             </div>
           </div>
         </div>
 
         <div className="footer-bottom">
           <span>
-            © {new Date().getFullYear()} IFC
-            BIZGROWTH. All rights reserved.
+            © {new Date().getFullYear()} IFC BIZGROWTH.
+            All rights reserved.
           </span>
 
-          <span>
-            Building digital bridges.
-          </span>
+          <span>Building digital bridges.</span>
         </div>
       </footer>
 
-      {/* MOBILE BOTTOM NAV */}
       <MobileBottomNav />
     </main>
   );
@@ -1121,21 +1020,14 @@ function MobileBottomNav() {
           stroke="currentColor"
           strokeWidth="2"
         >
-          <circle
-            cx="11"
-            cy="11"
-            r="7"
-          />
+          <circle cx="11" cy="11" r="7" />
           <path d="m20 20-4-4" />
         </svg>
 
         <span>Search</span>
       </Link>
 
-      <Link
-        href="/categories"
-        className="active"
-      >
+      <Link href="/categories" className="active">
         <svg
           viewBox="0 0 24 24"
           width="21"
@@ -1144,34 +1036,10 @@ function MobileBottomNav() {
           stroke="currentColor"
           strokeWidth="2"
         >
-          <rect
-            x="4"
-            y="4"
-            width="6"
-            height="6"
-            rx="1"
-          />
-          <rect
-            x="14"
-            y="4"
-            width="6"
-            height="6"
-            rx="1"
-          />
-          <rect
-            x="4"
-            y="14"
-            width="6"
-            height="6"
-            rx="1"
-          />
-          <rect
-            x="14"
-            y="14"
-            width="6"
-            height="6"
-            rx="1"
-          />
+          <rect x="4" y="4" width="6" height="6" rx="1" />
+          <rect x="14" y="4" width="6" height="6" rx="1" />
+          <rect x="4" y="14" width="6" height="6" rx="1" />
+          <rect x="14" y="14" width="6" height="6" rx="1" />
         </svg>
 
         <span>Categories</span>
@@ -1187,11 +1055,7 @@ function MobileBottomNav() {
           strokeWidth="2"
         >
           <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
-          <circle
-            cx="12"
-            cy="10"
-            r="2.5"
-          />
+          <circle cx="12" cy="10" r="2.5" />
         </svg>
 
         <span>Nearby</span>
@@ -1206,21 +1070,9 @@ function MobileBottomNav() {
           stroke="currentColor"
           strokeWidth="2"
         >
-          <circle
-            cx="5"
-            cy="12"
-            r="1"
-          />
-          <circle
-            cx="12"
-            cy="12"
-            r="1"
-          />
-          <circle
-            cx="19"
-            cy="12"
-            r="1"
-          />
+          <circle cx="5" cy="12" r="1" />
+          <circle cx="12" cy="12" r="1" />
+          <circle cx="19" cy="12" r="1" />
         </svg>
 
         <span>More</span>
