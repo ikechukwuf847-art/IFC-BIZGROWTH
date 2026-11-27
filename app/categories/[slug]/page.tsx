@@ -217,7 +217,7 @@ export default async function CategoryPage({
           </main>
         }
       >
-        <CategoryDirectoryClient />
+        <CategoryDirectoryClient initialCategory={category} />
       </Suspense>
     </>
   );
